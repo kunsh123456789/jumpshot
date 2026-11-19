@@ -1,8 +1,8 @@
 # JUMPSHOT
 
-A 2D stickman combo-fighting game for the browser. You don't steer the fighter: you **swipe on a draw pad** and the fighter dashes, targets and strikes on its own. Launch enemies skyward with the **Jumpshot** uppercut, leap after them, juggle them in the air, then spike them into the floor.
+A 2D stickman combo-fighting game for the browser. You **flick on the bottom half of the screen**, and the fighter dashes onto a target and strikes on its own. Launch enemies skyward with the **Jumpshot** uppercut, leap after them, juggle them in the air, then spike them into the floor.
 
-Everything is procedural: a skeletal stickman rig with keyframed poses and 2-bone IK, canvas effects, and WebAudio-synthesized sound and music. The game uses no image or audio files.
+You can position yourself by dragging slowly in the bottom half of the screen. Everything is procedural: a skeletal stickman rig with keyframed poses and 2-bone IK, canvas effects, and WebAudio-synthesized sound and music. The game uses no image or audio files.
 
 ## Run it
 
@@ -30,27 +30,51 @@ npm run preview
 
 ## How to play
 
-| Input | Action |
+The **bottom half of the screen** is the touch area. It is transparent, so you can see the fight through it. Touches that start in the top half only work menus and buttons. One touch does everything, so you don't need to lift your finger:
+
+| Gesture (in the bottom half) | Action |
 |---|---|
-| **Swipe →/←** | Jab, jab, cross string. A long fast swipe does a **Spinning Backfist** (heavy). |
-| **Swipe ↗/↖** | Rising hook (pops the enemy up). Heavy: **Flying Knee** that carries you through enemies. |
-| **Swipe ↑** | **JUMPSHOT launcher**: the enemy flies up and you leap after it. Heavy: a higher launch. |
-| **Swipe ↘/↙** | Leg sweep (trips and knocks down). Heavy: **Slide Kick** through a crowd. Both break shields. |
-| **Swipe ↓** | On the ground: Quake Stomp (hits everything around you). In the air: **SPIKE**. |
-| **Tap** | Dodge (short invincible dash). Tap just before a red-flashing attack lands for a **PERFECT PARRY**: slow-mo, the enemy is stunned, and your next hit is a crit. Parrying darts reflects them. |
-| **In the air** | → air-kick chain · ↗ sky slash · ↑ rising strike · ↓ spike. Swiping toward another airborne enemy air-dashes to it. |
+| **Drag slowly** left/right | **Move.** It works like a floating stick: the further your finger is from where you touched down, the faster you run |
+| **Flick** in a direction | **Attack** that way. Keep dragging after a flick to keep running |
+| **Long, fast flick** | The **heavy** version of the attack |
+| **Fast zig-zag** | Each sharp turn fires the next attack |
+| **Tap** | Dodge. Tap just before a red-flashing attack lands for a **PERFECT PARRY** |
 
-- Swipes register the moment the stroke passes a short distance, so you don't need to lift your finger. When you **zig-zag without lifting**, each sharp turn fires the next attack.
-- When you swipe during an attack, the swipe is buffered and fires as soon as the attack can be cancelled.
+| Flick | On the ground | In the air |
+|---|---|---|
+| **→ / ←** | Jab, jab, cross string. Heavy: **Spinning Backfist** | Air-kick chain. Heavy: **Air Cannon** |
+| **↗ / ↖** | Rising hook. Heavy: **Flying Knee** | Sky slash |
+| **↑** | **JUMPSHOT launcher**: the enemy flies up and you leap after it | Rising strike |
+| **↘ / ↙** | Leg sweep. Heavy: **Slide Kick** (both break shields) | Spike |
+| **↓** | Quake Stomp | **SPIKE** |
+
+- Your attacks dash you onto the nearest enemy in the flick's direction, so positioning matters: walk into a group, keep away from a Brute, chase a Thrower, or line enemies up to bowl them into each other.
+- When you flick during an attack, the attack is buffered and fires as soon as the current one can be cancelled.
 - **Super Meter** finishers each cost half the meter:
-  - **JUMPSHOT FINISHER**: after a launcher and 5+ air hits, swipe ↓ in the air.
-  - **FLURRY**: in a 15+ hit combo, do a long heavy swipe in any direction.
-- The style rank (D → SSS) rises with long, varied, aerial combos, parries and finishers. It multiplies your score and fills the Super Meter.
-- Between waves you pick 1 of 3 upgrades. An elite arrives every 5th wave and a boss every 10th.
+  - **JUMPSHOT FINISHER**: after a launcher and 5+ air hits, flick ↓ in the air.
+  - **FLURRY**: in a 15+ hit combo, do a long heavy flick in any direction.
+- The style rank (D → SSS) multiplies your score and fills the Super Meter. Between waves you pick 1 of 3 upgrades. An elite arrives every 5th wave and a boss every 10th.
+- **Settings** include volume, screen shake, hit-stop strength, **Flick sensitivity**, the **Touch area** height (35–60% of the screen), left-handed mode, reduced flashes and the debug overlay.
 
-**Keyboard (for testing):** WASD or the arrow keys swipe, and you can press two at once for a diagonal. Hold **Shift** for heavy and press **Space** to tap. **Esc/P** pauses. The **`** key toggles the debug overlay, which shows the last swipe direction, length, speed, the input buffer and the move-start latency.
+**Keyboard**
 
-**Dev shortcut:** add `?wave=N` to the URL to start a run at wave N, for example `?wave=10` for the boss.
+| Key | Action |
+|---|---|
+| **A / D** or **← / →** | Move (hold) |
+| **I / J / K / L** | Attack up / left / down / right. Press two at once for a diagonal, for example I+L = ↗ |
+| **Shift** + attack | Heavy |
+| **Space** | Tap (dodge/parry) |
+| **Esc / P** | Pause |
+| **`** | Debug panel: FPS, sim tick rate, interpolation alpha, frame-time graph, pop detector, input state, buffer |
+| **[** | 0.1× slow motion (toggle) |
+| **]** | Freeze and step one frame per press |
+| **\** | Resume normal speed |
+
+**Dev URL flags**
+- `?wave=N` starts a run at wave N.
+- `?manual` drives the loop from `window.__advance(ms)`, for deterministic refresh-rate tests.
+
+See **SMOOTHNESS.md** for how the animation pipeline works and how to tune its feel.
 
 ## Project layout
 
@@ -64,7 +88,7 @@ src/
   data/            tuning.ts, moves.ts, enemies.ts, waves.ts, upgrades.ts: every tunable lives here
   render/          rig (FK + 2-bone IK), animator (blending, spring head, verlet scarf, trails), poser,
                    stickman renderer, particles/afterimages/floating text, backgrounds, HUD, FX director
-  ui/              draw pad (gesture recognizer + trail), menus (DOM), tutorial, debug overlay
+  ui/              pad (drag-to-move + flick recognizer + trail), menus (DOM), tutorial, debug overlay, pop detector
 ```
 
 See **TUNING.md** for every tunable value and **DECISIONS.md** for the judgment calls.
