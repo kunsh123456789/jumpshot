@@ -69,7 +69,7 @@ export class AnimLab {
     this.active = false;
     this.root?.remove();
     this.root = null;
-    if (location.hash === '#lab') history.replaceState(null, '', location.pathname + location.search);
+    try { if (location.hash === '#lab') history.replaceState(null, '', location.pathname + location.search); } catch { /* sandboxed */ }
     this.onExit();
   }
 
