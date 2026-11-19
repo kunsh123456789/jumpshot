@@ -8,6 +8,7 @@ const WALL_R = WORLD.arenaW - WORLD.wallMargin;
 
 /** Enemy physics: gravity, juggle stall, ground/wall bounces, landings, reaction timers. */
 export function enemyPhysics(w: World, e: Fighter): void {
+  if (e.splat > 0) e.splat--;
   const airState = e.state === 'air' || e.state === 'ko';
   if (airState || !e.grounded) {
     let g = PHYS.gravity * e.gravityScale;
@@ -33,6 +34,8 @@ export function enemyPhysics(w: World, e: Fighter): void {
         e.spinVel = -e.spinVel;
         e.hitstop = 5;
         e.flash = 3;
+        e.splat = 12;
+        e.facing = dir;
         w.combo.registerHit('wall', 4, { air: true, multi: false, bounce: true, finisher: false, launcher: false, bowl: false, ko: false });
         e.hp -= 4;
         w.events.emit('wallImpact', { x: e.x - dir * 10, y: e.cy, power: Math.min(1.5, speed / 900), dir });

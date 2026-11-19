@@ -30,7 +30,7 @@ const P = {
 };
 
 // Clip ids (for cross-fade detection). Moves use 1000 + index.
-const CLIP = { idle: 1, walk: 2, dash: 3, air: 4, fall: 5, land: 6, dodge: 7, flinch: 8, tumble: 9, lying: 10, getup: 11, stunned: 12, jump: 13, taunt: 14, burst: 15, guardbreak: 16, ko: 17, windup: 18, attack: 19, recover: 20, airDash: 21 };
+const CLIP = { idle: 1, walk: 2, dash: 3, air: 4, fall: 5, land: 6, dodge: 7, flinch: 8, tumble: 9, lying: 10, getup: 11, stunned: 12, jump: 13, taunt: 14, burst: 15, guardbreak: 16, ko: 17, windup: 18, attack: 19, recover: 20, airDash: 21, wallSplat: 22 };
 
 const tmp = new Float32Array(POSE_N);
 let moveClipCounter = 1000;
@@ -137,6 +137,11 @@ export function poseFighter(f: Fighter, time: number): void {
       break;
     }
     case 'air': case 'ko': {
+      if (f.splat > 0) {
+        a.play(CLIP.wallSplat, 1);
+        out.set(P.wallSplat);
+        break;
+      }
       a.play(st === 'ko' ? CLIP.ko : CLIP.tumble, 3);
       out.set(P.tumble);
       out[Ch.spin] = f.spinAngle;

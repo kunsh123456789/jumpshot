@@ -133,7 +133,6 @@ export const COMBO = {
   juggleGravityPerHit: 0.045,
   juggleStallDecay: 0.06,
   /** Grounded burst escape. */
-  burstHitThreshold: 11,
   burstChance: 0.28,
   burstPush: 620,
   /** Air juggles allow an escape burst after burstThreshold * this many hits on one enemy. */
@@ -176,7 +175,6 @@ export const SUPER = {
   orbGain: 12,
   jumpshotMinJuggle: 5,
   flurryMinCombo: 15,
-  flurryHits: 9,
 } as const;
 
 export const SCORE = {

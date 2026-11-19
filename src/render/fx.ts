@@ -4,7 +4,7 @@ import type { TimeControl } from '../core/time';
 import type { DrawPad } from '../ui/pad';
 import { effects } from './effects';
 import { audio } from '../core/audio';
-import { JUICE, STYLE } from '../data/tuning';
+import { JUICE, PLAYER, STYLE } from '../data/tuning';
 import { settings } from '../core/settings';
 import type { Fighter } from '../sim/fighter';
 
@@ -78,6 +78,7 @@ export class FxDirector {
     ev.on('groundImpact', (e) => {
       if (e.fighter.team === 'player') { if (e.power > 0.2) effects.dust(e.x, e.y, 0.2); return; }
       effects.dust(e.x, e.y, e.power);
+      e.fighter.anim.impulseSquash(0.25 * e.power, -0.3 * e.power);
       if (e.bounce || e.power > 0.8) {
         effects.crater(e.x, e.y, e.power, '#ffffff');
         this.cam.shake(6 + e.power * 10, 0, 1, 0.3);
@@ -126,7 +127,7 @@ export class FxDirector {
       if (!settings.reduceFlashes) { effects.screenFlash = 0.25; effects.screenFlashColor = '#ff2020'; }
     });
     ev.on('parry', (e) => {
-      this.time.slowmo(0.22, 0.45);
+      this.time.slowmo(PLAYER.parrySlowmoScale, PLAYER.parrySlowmoSec);
       effects.hitSpark(e.x, e.y, 1, 0, 1.2, '#ffe14a', true);
       const r = effects.spawn(2, e.x, e.y, 0, 0, 0.5, 20, '#ffffff'); r.size2 = 240;
       this.cam.punchZoom(0.7);

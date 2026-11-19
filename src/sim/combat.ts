@@ -1,7 +1,7 @@
 import type { World } from './world';
 import type { Fighter } from './fighter';
 import type { MoveDef } from '../data/moves';
-import { COMBO, JUICE, PHYS, PLAYER, SUPER } from '../data/tuning';
+import { COMBO, JUICE, PHYS, PLAYER, SCORE, SUPER } from '../data/tuning';
 import { settings } from '../core/settings';
 import { simRng } from '../core/rng';
 import type { EnemyAttack } from '../data/enemies';
@@ -167,7 +167,7 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
       p.vy = m.selfVY !== 0 ? m.selfVY : -80;
       const ph = p.height - COMBO.juggleCeiling;
       if (ph > 0 && p.vy < 0) p.vy *= Math.max(0, 1 - ph / COMBO.juggleCeilingFade);
-      p.stall = PLAYER.maxAirStalls > 0 ? PHYS.stallFrames + s.airStallBonus + 1 : 0;
+      p.stall = PHYS.playerAirStallFrames + s.airStallBonus;
       p.stallCount++;
     }
   }
@@ -313,6 +313,7 @@ export function shockwave(w: World, x: number, y: number, radius: number, damage
 /** KO: dramatic launch, then dissolve on landing. */
 export function ko(w: World, v: Fighter, dirX: number): void {
   if (!v.alive) return;
+  const wasAirborne = !v.grounded;
   v.alive = false;
   v.hp = 0;
   if (v.hasToken) w.ai.releaseToken(v);
@@ -327,7 +328,7 @@ export function ko(w: World, v: Fighter, dirX: number): void {
   v.bowlCount = 0;
   w.combo.totalKOs++;
   w.combo.addStyle(5);
-  w.combo.score += (v.def?.score ?? 100);
+  w.combo.score += (v.def?.score ?? 100) + SCORE.koBonus + (wasAirborne ? SCORE.koLaunchBonus : 0);
   let last = true;
   for (const e of w.enemies) if (e.alive) { last = false; break; }
   if (last && w.waves.remainingToSpawn() > 0) last = false;

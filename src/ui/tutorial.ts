@@ -9,8 +9,8 @@ interface Step { text: string; sub: string; hint: number; label: string; dummyAt
 const STEPS: Step[] = [
   { text: 'SWIPE RIGHT → TO STRIKE', sub: 'swipe on the pad — your fighter dashes in automatically', hint: 0, label: 'SWIPE →' },
   { text: 'SWIPE UP ↑ — JUMPSHOT!', sub: 'the launcher sends them skyward and you leap after them', hint: 2, label: 'SWIPE ↑' },
-  { text: 'SWIPE AGAIN IN THE AIR', sub: 'juggle them: each air hit keeps you both floating (3 air hits)', hint: 0, label: 'SWIPE → → →' },
-  { text: 'SWIPE DOWN ↓ TO SPIKE', sub: 'launch, juggle, then spike them into the ground', hint: 6, label: 'SWIPE ↓ (IN THE AIR)' },
+  { text: 'LAUNCH ↑ THEN SWIPE → IN THE AIR', sub: 'juggle them: each air hit keeps you both floating (3 air hits in one jump)', hint: 0, label: '↑  then  → → →' },
+  { text: 'LAUNCH ↑ THEN SWIPE DOWN ↓', sub: 'spike them into the ground from the air', hint: 6, label: '↑  then  ↓' },
   { text: 'TAP JUST BEFORE THE RED FLASH HITS', sub: 'tap = dodge · tap at the last moment = PERFECT PARRY', hint: -2, label: 'TAP', dummyAttacks: true },
   { text: 'SCRIBBLE TO CHAIN A 10-HIT COMBO', sub: 'zig-zag strokes fire attacks without lifting your finger', hint: -1, label: '' },
 ];
@@ -73,6 +73,7 @@ export class Tutorial {
       if (e.kind === 'dummy') { if (e.hp < 1000) e.hp = e.maxHp; }
     }
     if (this.step === 5 && this.doneTimer === 0 && w.combo.hits >= 10) this.advance();
+    if (this.step === 2 && w.player.grounded && this.progress > 0 && w.player.state !== 'move') this.progress = 0;
     if (this.doneTimer > 0) {
       this.doneTimer -= dt;
       if (this.doneTimer <= 0) {

@@ -13,7 +13,7 @@ export interface HitFlags {
   ko: boolean;
 }
 
-const RECENT_N = 6;
+const RECENT_N = COMBO.repeatWindow;
 
 /** Combo counter, damage scaling, style rank, super meter and score. */
 export class ComboTracker {

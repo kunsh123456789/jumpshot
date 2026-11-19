@@ -24,12 +24,9 @@ export class Menus {
   }
 
   placePause(): void {
-    this.pauseBtn.style.right = settings.leftHanded ? '' : 'max(10px, env(safe-area-inset-right))';
-    this.pauseBtn.style.left = settings.leftHanded ? 'max(10px, env(safe-area-inset-left))' : '';
-    const portrait = window.innerHeight > window.innerWidth * 1.05;
-    this.pauseBtn.style.top = portrait ? '' : 'max(10px, env(safe-area-inset-top))';
-    this.pauseBtn.style.bottom = portrait ? '' : '';
-    if (portrait) this.pauseBtn.style.top = '8px';
+    const st = this.pauseBtn.style;
+    st.right = settings.leftHanded ? '' : 'max(10px, env(safe-area-inset-right))';
+    st.left = settings.leftHanded ? 'max(10px, env(safe-area-inset-left))' : '';
   }
 
   private layer(id: string, cls = 'layer'): HTMLElement {
@@ -231,8 +228,8 @@ export class Menus {
     if (onSkip) {
       const b = this.btn(el, 'SKIP TUTORIAL ›', onSkip, 'btn small');
       b.style.position = 'absolute';
-      b.style.top = '12px';
-      b.style.left = '12px';
+      b.style.top = '62px';
+      b.style.right = '10px';
       b.style.pointerEvents = 'auto';
     }
   }

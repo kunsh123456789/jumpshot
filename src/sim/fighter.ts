@@ -85,6 +85,8 @@ export class Fighter {
   dizzy = 0;
   /** One off-the-ground hit per knockdown; cleared on get-up. */
   otgUsed = false;
+  /** Frames to show the wall-splat pose after a wall bounce. */
+  splat = 0;
 
   // ---- Player extras ----
   parryWindow = 0;

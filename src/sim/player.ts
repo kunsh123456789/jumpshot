@@ -64,9 +64,15 @@ export class PlayerController {
     if (p.parryWindow > 0) p.parryWindow--;
     if (p.flash > 0) p.flash--;
 
-    // Age the buffer (never during hit-stop, see above).
-    for (let i = this.buf.length - 1; i >= 0; i--) {
-      if (++this.buf[i].age > INPUT.bufferFrames) this.release(i);
+    // Age the buffer only while the player could act: never during hit-stop (above)
+    // or while committed to a move before its cancel window, so long dashes and
+    // heavy startups never eat a queued swipe.
+    const cancelStart = p.move ? p.effStartup + p.move.cancelFrom - w.stats.cancelEarly : 0;
+    const committed = (p.state === 'move' && p.moveFrame < cancelStart) || p.state === 'hurt' || (p.state === 'dodge' && p.stateFrame < 6);
+    if (!committed) {
+      for (let i = this.buf.length - 1; i >= 0; i--) {
+        if (++this.buf[i].age > INPUT.bufferFrames) this.release(i);
+      }
     }
     this.bufDesc = this.buf.map((b) => (b.ev.kind === 'tap' ? 'TAP' : ['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'][b.ev.dir] + (b.heavy ? '!' : '')) + ':' + b.age).join(' ');
 
@@ -155,6 +161,8 @@ export class PlayerController {
     }
 
     let useAir = airborne;
+    // Airborne but low, chasing a grounded target: drop into a ground move instead.
+    if (airborne && target && target.grounded && p.height < 140) useAir = false;
     if (!airborne && target && dc !== 'down') {
       const h = target.height;
       if (dc === 'up' ? h > 150 : h > PLAYER.airborneHeight) useAir = true;
