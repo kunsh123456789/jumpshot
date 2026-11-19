@@ -1,0 +1,149 @@
+import { Animator } from '../render/animator';
+import type { MoveDef } from '../data/moves';
+import type { EnemyAttack, EnemyDef, EnemyKind } from '../data/enemies';
+import { WORLD } from '../data/tuning';
+
+export type FState =
+  | 'idle' | 'walk' | 'move' | 'dodge' | 'hitstun' | 'air' | 'knockdown' | 'getup'
+  | 'stunned' | 'ko' | 'dead' | 'windup' | 'attack' | 'recover' | 'burst' | 'land'
+  | 'jumpFollow' | 'fall' | 'guardbreak' | 'taunt' | 'hurt';
+
+export const MAX_HITLIST = 12;
+
+let nextId = 1;
+
+export class Fighter {
+  id = nextId++;
+  team: 'player' | 'enemy';
+  kind: EnemyKind | 'player';
+  def: EnemyDef | null;
+
+  // Physics (feet position).
+  x = 0; y = WORLD.groundY; px = 0; py = WORLD.groundY;
+  vx = 0; vy = 0;
+  facing = 1;
+  scale = 1;
+  grounded = true;
+  gravityScale = 1;
+  stall = 0;
+
+  hp = 100; maxHp = 100;
+  poise = 0; maxPoise = 0; poiseTimer = 0;
+  alive = true;
+  /** Remove from world when true. */
+  remove = false;
+
+  state: FState = 'idle';
+  stateFrame = 0;
+  /** Frames left in timed states (hitstun, knockdown, ...). */
+  timer = 0;
+
+  hitstop = 0;
+  flash = 0;
+  invuln = 0;
+  /** Victim shake during hitstop (direction of hit). */
+  hitDirX = 0; hitDirY = 0;
+
+  // ---- Player move execution ----
+  move: MoveDef | null = null;
+  moveFrame = 0;
+  effStartup = 0;
+  target: Fighter | null = null;
+  dashFrames = 0;
+  dashFromX = 0; dashFromY = 0; dashToX = 0; dashToY = 0;
+  hitList = new Int32Array(MAX_HITLIST);
+  hitCount = 0;
+  multiHitDone = 0;
+  moveHit = false;
+  /** Which stroke id started this move (for heavy upgrades). */
+  strokeId = -1;
+  crossUp = false;
+
+  // ---- Enemy attack execution ----
+  attack: EnemyAttack | null = null;
+  attackHit = false;
+  telegraph = 0;
+  hasToken = false;
+
+  // ---- Reaction / juggle state ----
+  juggleHits = 0;
+  comboHits = 0;
+  groundBounces = 0;
+  wallBounces = 0;
+  spiked = false;
+  knockdownOnLand = false;
+  impactShock: { radius: number; damage: number } | null = null;
+  spinVel = 0;
+  spinAngle = 0;
+  bowlIds = new Int32Array(8);
+  bowlCount = 0;
+  lastHitBy = 0;
+  koLaunched = false;
+  deadTimer = 0;
+  guardBroken = 0;
+  blockFlash = 0;
+  dizzy = 0;
+
+  anim: Animator;
+  color: string;
+  accent: string;
+  thickness: number;
+
+  constructor(team: 'player' | 'enemy', def: EnemyDef | null) {
+    this.team = team;
+    this.def = def;
+    this.kind = def ? def.kind : 'player';
+    if (def) {
+      this.hp = this.maxHp = def.hp;
+      this.poise = this.maxPoise = def.poise;
+      this.scale = def.scale;
+      this.color = def.color;
+      this.accent = def.accent;
+      this.thickness = def.thickness;
+    } else {
+      this.color = '#f4f6ff';
+      this.accent = '#ff3d5a';
+      this.thickness = 6;
+    }
+    this.anim = new Animator(team === 'player' || !!def?.scarf);
+  }
+
+  setState(s: FState, timer = 0): void {
+    this.state = s;
+    this.stateFrame = 0;
+    this.timer = timer;
+  }
+
+  /** Height of the feet above the ground. */
+  get height(): number { return WORLD.groundY - this.y; }
+  get airborne(): boolean { return !this.grounded; }
+  /** Center of the hurtbox. */
+  get cx(): number { return this.x; }
+  get cy(): number {
+    if (this.state === 'knockdown') return this.y - 18 * this.scale;
+    return this.y - 62 * this.scale;
+  }
+  get hurtR(): number { return (this.state === 'knockdown' ? 34 : 40) * this.scale; }
+
+  /** True if the fighter is in a "being comboed" state. */
+  get inHitState(): boolean {
+    const s = this.state;
+    return s === 'hitstun' || s === 'air' || s === 'knockdown' || s === 'stunned' || s === 'guardbreak';
+  }
+  get canBeHit(): boolean {
+    return this.alive && this.invuln <= 0 && this.state !== 'ko' && this.state !== 'dead' && this.state !== 'getup';
+  }
+  alreadyHit(id: number): boolean {
+    for (let i = 0; i < this.hitCount; i++) if (this.hitList[i] === id) return true;
+    return false;
+  }
+  markHit(id: number): void {
+    if (this.hitCount < MAX_HITLIST) this.hitList[this.hitCount++] = id;
+  }
+  resetCombo(): void {
+    this.juggleHits = 0;
+    this.comboHits = 0;
+    this.groundBounces = 0;
+    this.wallBounces = 0;
+  }
+}

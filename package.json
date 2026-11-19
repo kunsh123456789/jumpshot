@@ -1,0 +1,17 @@
+{
+  "name": "jumpshot",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Jumpshot - a 2D stickman combo-fighting game driven by swipe gestures.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^7.3.8"
+  }
+}
