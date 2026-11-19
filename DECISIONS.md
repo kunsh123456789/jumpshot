@@ -51,7 +51,7 @@ These are the judgment calls made where the brief was silent or where two requir
 
 - **Menus.** They are DOM overlays, which are crisper and more accessible than canvas widgets, especially sliders on mobile. The title stickman, HUD, pad and all gameplay visuals are canvas.
 - **Upgrade icons.** They are emoji text glyphs, not image assets.
-- **Portrait mode.** It crops the 1280×720 logical view to a 760-unit-wide band so fighters stay readable, and keeps the pad at 42% or more of the screen height. In left-handed mode the landscape pad shifts to the left and the pause button moves to the left.
+- **Portrait mode.** It crops the 1280×720 logical view to a 760-unit-wide band so fighters stay readable, and keeps the pad at 42% or more of the screen height. In left-handed mode the landscape pad shifts to the left side of the screen. The pause button stays top-right, because the HP bar owns the top-left corner.
 - **Music.** It is a procedural 124 BPM groove, and an arpeggio layer intensifies with style rank.
 
 ## Deliberately skipped

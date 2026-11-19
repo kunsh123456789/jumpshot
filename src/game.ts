@@ -130,6 +130,9 @@ export class Game {
     this.world.reset();
     this.stacks = {};
     this.nextWave = 1;
+    this.pad.demo = false;
+    this.pad.hint = -1;
+    this.pad.hintLabel = '';
     this.hud.visible = true;
     this.menus.pauseBtn.style.display = '';
     this.effectsReset();

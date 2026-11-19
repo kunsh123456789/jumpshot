@@ -1,5 +1,6 @@
 import { Game } from './game';
 import { layout } from './core/layout';
+import { audio } from './core/audio';
 import { SIM_DT } from './data/tuning';
 import { loadSave, loadSettings } from './core/settings';
 
@@ -15,6 +16,10 @@ const game = new Game(canvas);
 const qs = new URLSearchParams(location.search);
 const startWave = parseInt(qs.get('wave') ?? '', 10);
 if (startWave > 0) game.devStart(startWave);
+
+// Audio must be unlocked inside a real user-gesture handler (iOS/Android policy).
+const unlock = () => audio.unlock();
+for (const t of ['pointerdown', 'touchend', 'keydown', 'click']) document.addEventListener(t, unlock, { capture: true, passive: true });
 
 // Prevent page scrolling / pinch-zoom / context menus on mobile.
 const stop = (e: Event) => e.preventDefault();

@@ -25,8 +25,9 @@ export class Menus {
 
   placePause(): void {
     const st = this.pauseBtn.style;
-    st.right = settings.leftHanded ? '' : 'max(10px, env(safe-area-inset-right))';
-    st.left = settings.leftHanded ? 'max(10px, env(safe-area-inset-left))' : '';
+    // Always top-right: the HP bar owns the top-left corner in both handedness modes.
+    st.right = 'max(10px, env(safe-area-inset-right))';
+    st.left = '';
   }
 
   private layer(id: string, cls = 'layer'): HTMLElement {
