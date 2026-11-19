@@ -104,7 +104,7 @@ export const PLAYER = {
   maxAirStalls: 16,
   landingRecovery: 4,
   hpRegenSRank: 1.2, // hp per second while at S rank or higher
-  scale: 1,
+  scale: 1.1,
 } as const;
 
 export const COMBO = {
@@ -132,6 +132,9 @@ export const COMBO = {
   burstHitThreshold: 11,
   burstChance: 0.28,
   burstPush: 620,
+  /** Height above which upward juggle knockback fades out (keeps juggles on screen). */
+  juggleCeiling: 280,
+  juggleCeilingFade: 170,
   groundBounces: 1,
   wallBounces: 1,
   summaryMinHits: 3,
@@ -199,13 +202,18 @@ export const JUICE = {
 export const CAMERA = {
   followRate: 6.5,
   zoomRate: 3.5,
+  /** Faster rate used when zooming OUT so launches stay framed. */
+  zoomOutRate: 9,
   baseZoom: 1,
   minZoom: 0.8,
   crowdSpreadStart: 420,
   crowdSpreadFull: 1100,
-  aerialHeightStart: 120,
-  aerialZoom: 0.9,
-  aerialFollowY: 0.45,
+  aerialHeightStart: 90,
+  /** World units kept visible above the highest fighter's feet when aerial. */
+  aerialHeadroom: 200,
+  minAerialZoom: 0.7,
+  /** Only when even min zoom can't fit, pan up by this fraction of the overflow. */
+  aerialFollowY: 0.8,
   lookAheadX: 40,
 } as const;
 

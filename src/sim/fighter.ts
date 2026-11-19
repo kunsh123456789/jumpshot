@@ -19,7 +19,7 @@ export class Fighter {
   def: EnemyDef | null;
 
   // Physics (feet position).
-  x = 0; y = WORLD.groundY; px = 0; py = WORLD.groundY;
+  x = 0; y: number = WORLD.groundY; px = 0; py: number = WORLD.groundY;
   vx = 0; vy = 0;
   facing = 1;
   scale = 1;
@@ -84,6 +84,29 @@ export class Fighter {
   blockFlash = 0;
   dizzy = 0;
 
+  // ---- Player extras ----
+  parryWindow = 0;
+  critTimer = 0;
+  stallCount = 0;
+  followTarget: Fighter | null = null;
+  dodgeFromX = 0; dodgeToX = 0;
+  dodgeHit = 0;
+
+  // ---- AI state ----
+  ai = {
+    cooldown: 60,
+    think: 0,
+    holdOff: 0,
+    strafe: 1,
+    tokenTime: 0,
+    pattern: 0,
+    meteorTimer: 0,
+    summonTimer: 0,
+    phase: 1,
+    spawnWalk: 0,
+    stagger: 0,
+  };
+
   anim: Animator;
   color: string;
   accent: string;
@@ -103,7 +126,7 @@ export class Fighter {
     } else {
       this.color = '#f4f6ff';
       this.accent = '#ff3d5a';
-      this.thickness = 6;
+      this.thickness = 6.5;
     }
     this.anim = new Animator(team === 'player' || !!def?.scarf);
   }

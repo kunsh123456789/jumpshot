@@ -4,11 +4,11 @@ import { settings } from './settings';
 
 /** Camera with action-centroid tracking, zoom, trauma shake, directional kick and punch-zoom. */
 export class Camera {
-  x = WORLD.arenaW / 2;
-  y = WORLD.groundY;
+  x: number = WORLD.arenaW / 2;
+  y: number = WORLD.groundY;
   zoom = 1;
-  targetX = WORLD.arenaW / 2;
-  targetY = WORLD.groundY;
+  targetX: number = WORLD.arenaW / 2;
+  targetY: number = WORLD.groundY;
   targetZoom = 1;
   /** Extra zoom requested by finishers (multiplicative, eased). */
   focusZoom = 0;
@@ -55,7 +55,7 @@ export class Camera {
 
     this.x += (this.targetX - this.x) * damp(CAMERA.followRate, dt);
     this.y += (this.targetY - this.y) * damp(CAMERA.followRate * 0.8, dt);
-    this.zoom += (this.targetZoom - this.zoom) * damp(CAMERA.zoomRate, dt);
+    this.zoom += (this.targetZoom - this.zoom) * damp(this.targetZoom < this.zoom ? CAMERA.zoomOutRate : CAMERA.zoomRate, dt);
     this.punch += (0 - this.punch) * damp(7, dt);
 
     const z = this.effectiveZoom();

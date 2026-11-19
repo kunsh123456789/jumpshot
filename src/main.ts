@@ -1,4 +1,5 @@
 import { Game } from './game';
+import { layout } from './core/layout';
 import { SIM_DT } from './data/tuning';
 import { loadSave, loadSettings } from './core/settings';
 
@@ -8,6 +9,7 @@ loadSave();
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const game = new Game(canvas);
 (window as unknown as { __jumpshot: Game }).__jumpshot = game;
+(window as unknown as { __layout: typeof layout }).__layout = layout;
 
 // Prevent page scrolling / pinch-zoom / context menus on mobile.
 const stop = (e: Event) => e.preventDefault();
