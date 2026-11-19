@@ -47,6 +47,43 @@ export class Effects {
   screenFlashColor = '#ffffff';
   /** Red damage vignette 0..1 */
   hurtVignette = 0;
+  /** Impact frame: inverted-color flash time left (s). */
+  invert = 0;
+  /** Speed-line bursts radiating from contact points. */
+  private slX = new Float32Array(6); private slY = new Float32Array(6); private slT = new Float32Array(6);
+  private slA = new Float32Array(6); private slH = new Uint8Array(6); private slHead = 0;
+
+  /** Radial speed lines from a contact point (impact frame). */
+  speedLines(x: number, y: number, dirX: number, dirY: number, heavy: boolean): void {
+    const i = this.slHead; this.slHead = (i + 1) % 6;
+    this.slX[i] = x; this.slY[i] = y; this.slT[i] = 0.0001; this.slA[i] = Math.atan2(dirY, dirX); this.slH[i] = heavy ? 1 : 0;
+  }
+
+  drawSpeedLines(ctx: CanvasRenderingContext2D, life: number, count: number): void {
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 6; i++) {
+      const t = this.slT[i];
+      if (t <= 0 || t > life) continue;
+      const k = t / life;
+      const heavy = this.slH[i] === 1;
+      const n = heavy ? count : Math.round(count * 0.6);
+      const r0 = (heavy ? 40 : 28) + k * 60, len = (heavy ? 150 : 80) * (1 - k * 0.5);
+      ctx.globalAlpha = (1 - k) * (heavy ? 0.9 : 0.7);
+      ctx.strokeStyle = '#ffffff';
+      ctx.beginPath();
+      for (let j = 0; j < n; j++) {
+        // biased toward the hit direction, but radiating all round
+        const a = this.slA[i] + ((j / n) * Math.PI * 2) + Math.sin(j * 12.9898) * 0.15;
+        const bias = 0.6 + 0.4 * Math.cos(a - this.slA[i]);
+        const c = Math.cos(a), s = Math.sin(a);
+        ctx.moveTo(this.slX[i] + c * r0, this.slY[i] + s * r0);
+        ctx.lineTo(this.slX[i] + c * (r0 + len * bias), this.slY[i] + s * (r0 + len * bias));
+      }
+      ctx.lineWidth = heavy ? 3 : 2;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
 
   spawn(kind: number, x: number, y: number, vx: number, vy: number, life: number, size: number, color: string, additive = true): Particle {
     const p = this.parts.acquire();
@@ -61,12 +98,13 @@ export class Effects {
     const len = Math.hypot(dx, dy) || 1;
     const nx = dx / len, ny = dy / len;
     const w = Math.min(1.4, weight);
-    const star = this.spawn(PK.star, x, y, 0, 0, 0.16 + w * 0.08, 34 + w * 46 + (crit ? 30 : 0), crit ? '#fff27a' : color);
+    // Brief: the spark pops for ~2-4 frames so the frozen contact pose stays readable.
+    const star = this.spawn(PK.star, x, y, 0, 0, 0.055 + w * 0.025, 22 + w * 30 + (crit ? 20 : 0), crit ? '#fff27a' : color);
     star.size2 = 6 + Math.floor(w * 4);
     star.rot = Math.atan2(ny, nx);
-    this.spawn(PK.flash, x, y, 0, 0, 0.09 + w * 0.04, 40 + w * 50, '#ffffff');
-    const ring = this.spawn(PK.ring, x, y, 0, 0, 0.22 + w * 0.1, 10, color);
-    ring.size2 = 60 + w * 90;
+    this.spawn(PK.flash, x, y, 0, 0, 0.03, 14 + w * 18, '#ffffff');
+    const ring = this.spawn(PK.ring, x, y, 0, 0, 0.12 + w * 0.05, 10, color);
+    ring.size2 = 30 + w * 50;
     // speed lines
     const n = 6 + Math.floor(w * 10);
     for (let i = 0; i < n; i++) {
@@ -169,33 +207,35 @@ export class Effects {
       t.y += t.vy * dt; t.x += t.vx * dt;
     }
     this.screenFlash = Math.max(0, this.screenFlash - dt * 6);
+    this.invert = Math.max(0, this.invert - dt);
+    for (let i = 0; i < 6; i++) if (this.slT[i] > 0) this.slT[i] += dt;
     this.hurtVignette = Math.max(0, this.hurtVignette - dt * 2.2);
   }
 
-  clear(): void { this.parts.clear(); this.ghosts.clear(); this.texts.clear(); this.screenFlash = 0; this.hurtVignette = 0; }
+  clear(): void { this.parts.clear(); this.ghosts.clear(); this.texts.clear(); this.screenFlash = 0; this.hurtVignette = 0; this.invert = 0; this.slT.fill(0); }
 
   // ---------------- drawing (world space) ----------------
   drawGhosts(ctx: CanvasRenderingContext2D): void {
     const gs = this.ghosts;
     if (gs.count === 0) return;
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalCompositeOperation = 'source-over';
     for (let i = 0; i < gs.count; i++) {
       const g = gs.items[i];
       const k = 1 - g.life / g.max;
-      ctx.globalAlpha = k * 0.42;
+      ctx.globalAlpha = k * 0.3;
       ctx.strokeStyle = g.color;
       ctx.lineWidth = g.width * g.scale;
       const jn = g.joints;
       ctx.beginPath();
       seg(ctx, jn, J.hip, J.chest); seg(ctx, jn, J.chest, J.neck);
-      seg(ctx, jn, J.chest, J.elbA); seg(ctx, jn, J.elbA, J.handA);
-      seg(ctx, jn, J.chest, J.elbB); seg(ctx, jn, J.elbB, J.handB);
-      seg(ctx, jn, J.hip, J.kneeA); seg(ctx, jn, J.kneeA, J.footA);
-      seg(ctx, jn, J.hip, J.kneeB); seg(ctx, jn, J.kneeB, J.footB);
+      seg(ctx, jn, J.shA, J.elbA); seg(ctx, jn, J.elbA, J.handA);
+      seg(ctx, jn, J.shB, J.elbB); seg(ctx, jn, J.elbB, J.handB);
+      seg(ctx, jn, J.hipA, J.kneeA); seg(ctx, jn, J.kneeA, J.footA);
+      seg(ctx, jn, J.hipB, J.kneeB); seg(ctx, jn, J.kneeB, J.footB);
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(jn[J.head * 2], jn[J.head * 2 + 1], RIG.headR * g.scale, 0, TAU);
+      ctx.arc(jn[J.head * 2], jn[J.head * 2 + 1], RIG.headR * g.scale * 0.95, 0, TAU);
       ctx.fillStyle = g.color;
       ctx.fill();
     }

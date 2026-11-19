@@ -60,8 +60,37 @@ The player can also change these in-game settings: **Flick sensitivity** (divide
 | wallSoft | Speed eases to zero within this distance of a wall |
 | runThreshold | Below this speed the run animation hands back to idle |
 
-## ANIM (animation smoothness)
-Springs, crossfades, turns, follow-through, the run cycle, air-stall easing, hit-stop vibration, trails and the pop detector. Every key is listed with its default in **SMOOTHNESS.md**.
+## ANIM (pose-to-pose playback and presentation)
+| Key | Purpose |
+|---|---|
+| fadeFrames, fadeCancel, fadeHit, fadeLand | Interruption crossfade lengths. These are the ONLY blends: snap-out from the current pose into the new animation |
+| leadHips, leadTorso, leadUpperArm, lagHead | Staggered timing (frames): hips, torso and upper arms sample slightly ahead of the clock, and the head trails. The striking forearm or leg is exact, so contact stays on its frame |
+| turnFrames, turnFramesAttack | Eased facing turn |
+| headLook | Head tilt toward the target in idle |
+| runRateMin, runRateMax | The run/walk loop plays at speed ÷ runSpeed, clamped |
+| skidMinSpeed | Speed above which stopping plays the skid animation |
+| tauntIdleFrames | Idle time before the player taunts |
+| smearSamples, smearAlpha, smearTailAlpha | Smear-frame sampling and opacity |
+| invertSec, speedLineSec, speedLines | Impact frames: inverted flash (heavy hits) and speed-line bursts |
+| reflectAlpha, reflectSquash | Ground reflection |
+| lineScale | Uniform line width multiplier |
+| apexBand, apexGravity, stallEaseIn, stallEaseOut | Jump-arc weight (hang at the apex, eased air-stall gravity) |
+| popAngle, popSpin, popRoot, impactSnapFrames | Pop detector thresholds |
+| hitstopShakeAmp, hitstopShakeHz | Victim vibration during hit-stop |
+| trailLife, ghostInterval | Trail ribbon length and whole-body echo spacing |
+
+## data/anims/ (authored animations)
+Each animation is `anim({ id, len, loop?, base?, strike?, reach?, keys })`. Each key is `{ f, p, e?, hold?, smear?, impact?, trail?, sfx? }`:
+
+| Field | Meaning |
+|---|---|
+| `f` | Frame (60 Hz ticks) |
+| `p` | The pose, layered over the `base` pose (`ground` stance, `air` or `lying`). The channels are: rootX, rootY, lean, head, aU, aL, bU, bL, laU, laL, lbU, lbL, spin, plant, footA, footB, flex, liftA, liftB, stretch. Angles are absolute from straight down (+ is toward facing); elbows and knees are relative |
+| `e` | Easing into the key: snapIn, snapOut, inOut, out, in, overshoot, hold |
+| `smear` | Limbs drawn as smears on the frame before the key and on the key itself |
+| `impact` | The contact key. For player attacks it lands on the move's first active frame; for enemy attacks the anticipation before it is stretched over the windup |
+
+The proportions of each fighter kind are in `RIGS` in `render/rig.ts`. The easiest way to edit poses is the Animation Lab (`#lab`), whose export uses this exact format.
 
 ## INPUT
 | Key | Purpose |
@@ -137,7 +166,7 @@ Springs, crossfades, turns, follow-through, the run cycle, air-stall easing, hit
 | shakeMax, shakeRotMax, shakeDecay | Screen shake caps (px, radians) and trauma decay. The shake setting multiplies these |
 | punchZoomMax | Cap on the punch-in zoom from hits |
 | slowmoLastEnemyScale/Sec, slowmoFinisherScale/Sec | Slow-mo on the last enemy of a wave and on finishers |
-| flashFrames | Frames the victim flashes white |
+| flashFrames | Frames the victim flashes white (2, so the contact pose stays readable) |
 | hitstopMaxFrames | Hit-stop cap (after the hit-stop setting multiplier) |
 | comboPitchPerHit, comboPitchCap | How fast hit sounds rise in pitch as the combo grows |
 | damageNumberLife | Lifetime of floating damage numbers |

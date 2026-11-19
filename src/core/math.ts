@@ -37,6 +37,13 @@ export const ease = {
   inQuad: (t: number) => t * t,
   outQuad: (t: number) => t * (2 - t),
   inOutSine: (t: number) => 0.5 - 0.5 * Math.cos(Math.PI * t),
+  /** Very fast start, long settle. */
+  snapOut: (t: number) => 1 - Math.pow(1 - t, 4),
+  /** Slow start, hard arrival. */
+  snapIn: (t: number) => t * t * t,
+  inOutCubic: (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
+  /** Arrives past the target and settles back. */
+  overshoot: (t: number) => { const c1 = 1.7, c3 = c1 + 1; const u = t - 1; return 1 + c3 * u * u * u + c1 * u * u; },
   inOutQuad: (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
   outCubic: (t: number) => { const u = t - 1; return u * u * u + 1; },
   inCubic: (t: number) => t * t * t,

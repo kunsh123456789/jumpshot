@@ -74,7 +74,20 @@ The **bottom half of the screen** is the touch area. It is transparent, so you c
 - `?wave=N` starts a run at wave N.
 - `?manual` drives the loop from `window.__advance(ms)`, for deterministic refresh-rate tests.
 
-See **SMOOTHNESS.md** for how the animation pipeline works and how to tune its feel.
+## Animation Lab
+
+Open the lab with **`#lab`** at the end of the URL, or press **F2** in game. In the lab you can:
+
+- Pick any animation and play, loop or scrub it. **Space** plays and pauses; **← / →** step one frame.
+- Set the playback speed from 0.1× to 2×.
+- Turn on onion skin. Every key pose is ghosted: earlier keys in blue, later keys in orange, the contact key in red.
+- Turn on limb arcs, which plot the hand and foot paths over the whole animation.
+- Turn on hold-on-contact, which freezes for the move's hit-stop.
+- Turn on **vs dummy**, which plays a reacting enemy at the gameplay stand-off distance so you can check contact timing.
+
+Click a key marker on the timeline to edit that key. Every joint has a slider, and each key has an easing selector. Edits apply live. **Export** copies the animation to the clipboard and logs it to the console, in the exact format of `src/data/anims/*.ts`, ready to paste back in.
+
+All animation data lives in `src/data/anims/`. See ANIMATION_DIAGNOSIS.md for why the animation system was rebuilt pose-to-pose, and `reference/README.md` for how to drop in reference GIF frames.
 
 ## Project layout
 
@@ -86,9 +99,11 @@ src/
   sim/             fighter entity, player controller (buffer/targeting/magnetism/cancels), combat resolver,
                    enemy physics + bowling, token AI, combo/style/super tracker, waves, projectiles/hazards/pickups
   data/            tuning.ts, moves.ts, enemies.ts, waves.ts, upgrades.ts: every tunable lives here
-  render/          rig (FK + 2-bone IK), animator (blending, spring head, verlet scarf, trails), poser,
+  data/anims/      authored key-pose animations (locomotion, player ground/air, reactions, enemies)
+  render/          rig (FK + 2-bone IK, per-kind proportions), animPlayer (key evaluation, easing, staggered leads),
+                   animator (pose-to-pose playback, interruption crossfades, smears), poser (gameplay -> animation time),
                    stickman renderer, particles/afterimages/floating text, backgrounds, HUD, FX director
-  ui/              pad (drag-to-move + flick recognizer + trail), menus (DOM), tutorial, debug overlay, pop detector
+  ui/              pad (drag-to-move + flick recognizer + trail), menus (DOM), tutorial, debug overlay, pop detector, Animation Lab
 ```
 
 See **TUNING.md** for every tunable value and **DECISIONS.md** for the judgment calls.

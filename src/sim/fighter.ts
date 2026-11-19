@@ -2,9 +2,8 @@ import { Animator } from '../render/animator';
 import type { MoveDef } from '../data/moves';
 import type { EnemyAttack, EnemyDef, EnemyKind } from '../data/enemies';
 import { WORLD } from '../data/tuning';
-import { STANCE, makePose } from '../render/rig';
-
-const STANCE_POSE = makePose(STANCE);
+import { RIGS } from '../render/rig';
+import { getAnim } from '../data/anims';
 
 export type FState =
   | 'idle' | 'walk' | 'move' | 'dodge' | 'hitstun' | 'air' | 'knockdown' | 'getup'
@@ -94,6 +93,14 @@ export class Fighter {
   otgUsed = false;
   /** Ticks of hit-impact reaction (an intentional animation snap for the pop detector). */
   impact = 0;
+  // ---- Presentation cues (written by the sim, read only by the animation layer) ----
+  /** Increments on every hit taken (restarts the hit-react animation). */
+  hitSerial = 0;
+  hitHeavy = false;
+  hitBehind = false;
+  /** One-shot animation cue (e.g. 'parry', 'bounce') and its serial. */
+  cue = '';
+  cueSerial = 0;
   /** World point the head looks toward (set each tick). */
   lookX = 0; lookY = 0; hasLook = false;
   /** Frames to show the wall-splat pose after a wall bounce. */
@@ -144,8 +151,10 @@ export class Fighter {
       this.thickness = 6.5;
     }
     this.anim = new Animator(team === 'player' || !!def?.scarf);
-    this.anim.target.set(STANCE_POSE);
+    this.anim.rig = RIGS[this.kind] ?? RIGS.grunt;
+    this.anim.show(getAnim(this.kind, 'idle'), 0, 0);
     this.anim.snap(1);
+    this.anim.sfxEnabled = team === 'player';
   }
 
   /** Spawn/teleport: snap the animation to the current facing (intentional discontinuity). */

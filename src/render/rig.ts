@@ -17,8 +17,10 @@ export const Ch = {
   laU: 8, laL: 9, lbU: 10, lbL: 11,  // legs
   spin: 12, plant: 13, footA: 14, footB: 15, flex: 16,
   liftA: 17, liftB: 18,
+  /** Authored squash & stretch of the whole skeleton's lengths (1 = rest). */
+  stretch: 19,
 } as const;
-export const POSE_N = 19;
+export const POSE_N = 20;
 export type ChName = keyof typeof Ch;
 export type PoseSpec = Partial<Record<ChName, number>>;
 
@@ -30,12 +32,33 @@ export const IS_ANGLE: readonly boolean[] = (() => {
   return a;
 })();
 
-export const RIG = {
-  hipH: 64, torso: 46, neck: 7, headR: 11.5,
-  upperArm: 26, foreArm: 25, thigh: 35, shin: 35,
+/** Skeleton proportions (world units at scale 1). Each fighter kind has its own. */
+export interface RigDims {
+  hipH: number; torso: number; neck: number; headR: number;
+  upperArm: number; foreArm: number; thigh: number; shin: number;
   /** Half shoulder / hip spread seen from the side, plus counter-rotation amounts. */
-  shoulderHalf: 2.5, hipHalf: 2, shoulderTwist: 5, hipTwist: 3,
-} as const;
+  shoulderHalf: number; hipHalf: number; shoulderTwist: number; hipTwist: number;
+}
+
+/** Long, lean, readable stick proportions with a slightly large head. */
+export const RIG: RigDims = {
+  hipH: 68, torso: 44, neck: 6, headR: 13.5,
+  upperArm: 30, foreArm: 29, thigh: 38, shin: 37,
+  shoulderHalf: 2.5, hipHalf: 2, shoulderTwist: 6, hipTwist: 3.5,
+};
+
+export const RIGS: Record<string, RigDims> = {
+  player: RIG,
+  elite: RIG,
+  grunt: { ...RIG, upperArm: 28, foreArm: 27, headR: 13 },
+  dummy: { ...RIG, upperArm: 28, foreArm: 27, headR: 13 },
+  shield: { ...RIG, upperArm: 28, foreArm: 27, torso: 46 },
+  thrower: { ...RIG, torso: 42, upperArm: 30, foreArm: 30, headR: 12.5 },
+  rusher: { ...RIG, hipH: 72, torso: 40, thigh: 40, shin: 39, headR: 12.5 },
+  kicker: { ...RIG, hipH: 74, torso: 39, thigh: 41, shin: 41, upperArm: 27, foreArm: 26 },
+  brute: { ...RIG, hipH: 58, torso: 54, neck: 4, headR: 14, upperArm: 32, foreArm: 31, thigh: 32, shin: 32, shoulderHalf: 8, hipHalf: 6, shoulderTwist: 8 },
+  boss: { ...RIG, hipH: 60, torso: 52, neck: 4, headR: 13.5, upperArm: 31, foreArm: 31, thigh: 34, shin: 33, shoulderHalf: 7, hipHalf: 5, shoulderTwist: 8 },
+};
 
 // Joint indices into a Float32Array of (x, y) pairs.
 export const J = {
@@ -50,7 +73,7 @@ export const STANCE: PoseSpec = {
   rootX: 0, rootY: -6, lean: 0.14, head: -0.06,
   aU: 0.95, aL: 1.9, bU: 0.45, bL: 2.15,
   laU: 0.25, laL: -0.4, lbU: -0.25, lbL: -0.3,
-  spin: 0, plant: 1, footA: 18, footB: -19, flex: 0, liftA: 0, liftB: 0,
+  spin: 0, plant: 1, footA: 18, footB: -19, flex: 0, liftA: 0, liftB: 0, stretch: 1,
 };
 
 /** Build a pose array from a spec layered on top of a base spec. */
@@ -128,41 +151,43 @@ const tmpIK = new Float32Array(JOINT_N * 2);
  * s = scale. Runs both in the sim tick and at render time on interpolated poses.
  */
 export function computeJoints(
-  p: Float32Array, bx: number, by: number, f: number, s: number, groundY: number,
-  out: Float32Array,
+  p: Float32Array, bx: number, by: number, f: number, s0: number, groundY: number,
+  out: Float32Array, R: RigDims = RIG,
 ): void {
-  const hipX = bx + p[Ch.rootX] * f * s;
-  const hipY = by - (RIG.hipH + p[Ch.rootY]) * s;
+  // Authored stretch scales the skeleton's lengths (not the head).
+  const s = s0 * (p[Ch.stretch] || 1);
+  const hipX = bx + p[Ch.rootX] * f * s0;
+  const hipY = by - (R.hipH + p[Ch.rootY]) * s;
   const set = (j: number, x: number, y: number) => { out[j * 2] = x; out[j * 2 + 1] = y; };
   set(J.hip, hipX, hipY);
 
   const lean = p[Ch.lean];
   const sx = Math.sin(lean), cy = Math.cos(lean);
-  const chestX = hipX + sx * RIG.torso * s * f;
-  const chestY = hipY - cy * RIG.torso * s;
+  const chestX = hipX + sx * R.torso * s * f;
+  const chestY = hipY - cy * R.torso * s;
   set(J.chest, chestX, chestY);
   const flex = p[Ch.flex] * s;
   set(J.spineC, (hipX + chestX) / 2 - cy * flex * f, (hipY + chestY) / 2 - sx * flex);
 
   const ha = lean + p[Ch.head];
-  const nX = chestX + Math.sin(ha) * RIG.neck * s * f;
-  const nY = chestY - Math.cos(ha) * RIG.neck * s;
+  const nX = chestX + Math.sin(ha) * R.neck * s * f;
+  const nY = chestY - Math.cos(ha) * R.neck * s;
   set(J.neck, nX, nY);
-  set(J.head, nX + Math.sin(ha) * RIG.headR * s * f, nY - Math.cos(ha) * RIG.headR * s);
+  set(J.head, nX + Math.sin(ha) * R.headR * s * f, nY - Math.cos(ha) * R.headR * s);
 
   // Counter-rotation: when one arm reaches forward the shoulders turn into
   // the strike and the hips turn the opposite way.
   const twist = clamp((Math.sin(p[Ch.aU]) - Math.sin(p[Ch.bU])) * 0.45, -0.7, 0.7);
   const shBaseX = chestX - sx * 3 * s * f, shBaseY = chestY + 3 * s;
-  set(J.shA, shBaseX + (RIG.shoulderHalf + RIG.shoulderTwist * twist) * s * f, shBaseY);
-  set(J.shB, shBaseX + (-RIG.shoulderHalf + RIG.shoulderTwist * twist) * s * f, shBaseY);
-  set(J.hipA, hipX + (RIG.hipHalf - RIG.hipTwist * twist) * s * f, hipY);
-  set(J.hipB, hipX + (-RIG.hipHalf - RIG.hipTwist * twist) * s * f, hipY);
+  set(J.shA, shBaseX + (R.shoulderHalf + R.shoulderTwist * twist) * s * f, shBaseY);
+  set(J.shB, shBaseX + (-R.shoulderHalf + R.shoulderTwist * twist) * s * f, shBaseY);
+  set(J.hipA, hipX + (R.hipHalf - R.hipTwist * twist) * s * f, hipY);
+  set(J.hipB, hipX + (-R.hipHalf - R.hipTwist * twist) * s * f, hipY);
 
-  limb(out, J.shA, J.elbA, J.handA, p[Ch.aU], p[Ch.aL], RIG.upperArm * s, RIG.foreArm * s, f);
-  limb(out, J.shB, J.elbB, J.handB, p[Ch.bU], p[Ch.bL], RIG.upperArm * s, RIG.foreArm * s, f);
-  limb(out, J.hipA, J.kneeA, J.footA, p[Ch.laU], p[Ch.laL], RIG.thigh * s, RIG.shin * s, f);
-  limb(out, J.hipB, J.kneeB, J.footB, p[Ch.lbU], p[Ch.lbL], RIG.thigh * s, RIG.shin * s, f);
+  limb(out, J.shA, J.elbA, J.handA, p[Ch.aU], p[Ch.aL], R.upperArm * s, R.foreArm * s, f);
+  limb(out, J.shB, J.elbB, J.handB, p[Ch.bU], p[Ch.bL], R.upperArm * s, R.foreArm * s, f);
+  limb(out, J.hipA, J.kneeA, J.footA, p[Ch.laU], p[Ch.laL], R.thigh * s, R.shin * s, f);
+  limb(out, J.hipB, J.kneeB, J.footB, p[Ch.lbU], p[Ch.lbL], R.thigh * s, R.shin * s, f);
 
   // Legs IK (planted feet), blended by plant weight.
   const plant = p[Ch.plant];
@@ -171,8 +196,8 @@ export function computeJoints(
     tmpIK[J.hipB * 2] = out[J.hipB * 2]; tmpIK[J.hipB * 2 + 1] = out[J.hipB * 2 + 1];
     const footY = Math.min(by, groundY);
     const bend = -f;
-    ik2(tmpIK, J.hipA, J.kneeA, J.footA, bx + p[Ch.footA] * f * s, footY - p[Ch.liftA] * s, RIG.thigh * s, RIG.shin * s, bend);
-    ik2(tmpIK, J.hipB, J.kneeB, J.footB, bx + p[Ch.footB] * f * s, footY - p[Ch.liftB] * s, RIG.thigh * s, RIG.shin * s, bend);
+    ik2(tmpIK, J.hipA, J.kneeA, J.footA, bx + p[Ch.footA] * f * s, footY - p[Ch.liftA] * s, R.thigh * s, R.shin * s, bend);
+    ik2(tmpIK, J.hipB, J.kneeB, J.footB, bx + p[Ch.footB] * f * s, footY - p[Ch.liftB] * s, R.thigh * s, R.shin * s, bend);
     for (let j = J.kneeA; j <= J.footB; j++) {
       out[j * 2] += (tmpIK[j * 2] - out[j * 2]) * plant;
       out[j * 2 + 1] += (tmpIK[j * 2 + 1] - out[j * 2 + 1]) * plant;

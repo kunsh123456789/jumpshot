@@ -4,7 +4,8 @@ import type { TimeControl } from '../core/time';
 import type { DrawPad } from '../ui/pad';
 import { effects } from './effects';
 import { audio } from '../core/audio';
-import { JUICE, PLAYER, STYLE } from '../data/tuning';
+import { ANIM, JUICE, PLAYER, STYLE } from '../data/tuning';
+import { setAnimSfx } from './animator';
 import { settings } from '../core/settings';
 import type { Fighter } from '../sim/fighter';
 
@@ -27,11 +28,17 @@ export class FxDirector {
 
   bind(w: World): void {
     const ev = w.events;
+    // Keyframe sound cues (player only: footsteps, landings).
+    setAnimSfx((sfx) => { if (sfx === 'step') audio.step(); else if (sfx === 'land') audio.step(true); });
     ev.on('hit', (e) => {
       const m = e.move;
       const weight = e.weight;
       const color = e.kind === 'armor' ? '#c9b6ff' : m ? m.trail.color : e.kind === 'bowl' ? '#ffd23f' : e.kind === 'shock' ? '#9fd8ff' : e.kind === 'reflect' ? '#3fe0ff' : '#ffffff';
       effects.hitSpark(e.x, e.y, e.dirX, e.dirY * 0.8, weight, color, e.crit);
+      // Impact frame: speed lines on every hit; inverted flash reserved for heavy hits, launchers, spikes, finishers.
+      const big = weight >= 0.75 || e.kind === 'launch' || e.kind === 'spike' || e.kind === 'finisher';
+      effects.speedLines(e.x, e.y, e.dirX, e.dirY, big);
+      if (big && !settings.reduceFlashes) effects.invert = ANIM.invertSec;
       const heavy = weight >= 0.75;
       this.cam.shake(Math.min(JUICE.shakeMax, e.shake * (e.crit ? 1.3 : 1)), e.dirX, e.dirY, heavy ? weight * 0.6 : 0);
       if (e.zoom > 0) this.cam.punchZoom(e.zoom);

@@ -1,6 +1,7 @@
 import { layout } from '../core/layout';
 import type { Camera } from '../core/camera';
-import { WORLD } from '../data/tuning';
+import { ANIM, WORLD } from '../data/tuning';
+import { settings } from '../core/settings';
 import type { World } from '../sim/world';
 import { Background } from './background';
 import { drawFighter, drawShadow, drawTrail } from './stickman';
@@ -84,8 +85,17 @@ export class Renderer {
     if (this.drawExtras) this.drawExtras(ctx, alpha, time);
     for (const f of order) drawTrail(ctx, f, time);
     effects.drawParticles(ctx, true);
+    effects.drawSpeedLines(ctx, ANIM.speedLineSec, ANIM.speedLines);
     effects.drawTexts(ctx);
     ctx.restore();
+
+    // Impact frame: a 1-2 frame inverted-color flash on heavy hits.
+    if (effects.invert > 0 && !settings.reduceFlashes) {
+      ctx.globalCompositeOperation = 'difference';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(layout.viewX0, layout.viewY0, layout.viewW, layout.viewH);
+      ctx.globalCompositeOperation = 'source-over';
+    }
 
     // Screen-space overlays inside the world rect.
     if (effects.screenFlash > 0) {

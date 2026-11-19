@@ -114,7 +114,7 @@ function add(m: MoveInput): MoveDef { const d = def(m); MOVES[d.id] = d; return 
 add({
   id: 'jab1', family: 'jab', name: 'Jab', tags: ['light', 'string'],
   startup: 4, active: 3, recovery: 13, damage: 6, hitstun: 20, kbX: 140, kbY: 0,
-  hitstop: 3, shake: 2.5, hitbox: { x: 58, y: 92, r: 36 }, reach: 60,
+  hitstop: 3, shake: 2.5, hitbox: { x: 58, y: 92, r: 36 }, reach: 72,
   cancelInto: LIGHT_CANCEL, next: 'jab2', sound: 'punch', weight: 0.25,
   trail: { limb: 'handA', color: C_LIGHT, width: 9 },
   poses: {
@@ -126,7 +126,7 @@ add({
 add({
   id: 'jab2', family: 'jab', name: 'Jab', tags: ['light', 'string'],
   startup: 4, active: 3, recovery: 13, damage: 6, hitstun: 20, kbX: 150, kbY: 0,
-  hitstop: 3, shake: 2.5, hitbox: { x: 58, y: 92, r: 36 }, reach: 60,
+  hitstop: 3, shake: 2.5, hitbox: { x: 58, y: 92, r: 36 }, reach: 72,
   cancelInto: LIGHT_CANCEL, next: 'cross', sound: 'punch', weight: 0.25,
   trail: { limb: 'handB', color: C_LIGHT, width: 9 },
   poses: {
@@ -138,7 +138,7 @@ add({
 add({
   id: 'cross', family: 'jab', name: 'Cross', tags: ['light', 'string'],
   startup: 5, active: 3, recovery: 16, damage: 10, hitstun: 26, kbX: 330, kbY: -40,
-  hitstop: 5, shake: 5, zoom: 0.15, hitbox: { x: 62, y: 92, r: 38 }, reach: 62,
+  hitstop: 5, shake: 5, zoom: 0.15, hitbox: { x: 62, y: 92, r: 38 }, reach: 76,
   cancelInto: LIGHT_CANCEL, next: 'jab1', sound: 'punch', weight: 0.45,
   trail: { limb: 'handA', color: C_LIGHT, width: 11 },
   poses: {
@@ -150,7 +150,7 @@ add({
 add({
   id: 'backfist', name: 'Spinning Backfist', tags: ['heavy'],
   startup: 10, active: 4, recovery: 20, damage: 18, hitstun: 32, kbX: 820, kbY: -170,
-  hitstop: 8, shake: 11, zoom: 0.5, poise: 2.2, hitbox: { x: 66, y: 94, r: 42 }, reach: 64,
+  hitstop: 8, shake: 11, zoom: 0.5, poise: 2.2, hitbox: { x: 66, y: 94, r: 42 }, reach: 78,
   cancelInto: HEAVY_CANCEL, sound: 'heavy', weight: 0.85, afterimage: true,
   trail: { limb: 'handA', color: C_HEAVY, width: 15 },
   poses: {
@@ -164,7 +164,7 @@ add({
 add({
   id: 'hook', name: 'Rising Hook', tags: ['light', 'rising'],
   startup: 5, active: 4, recovery: 15, damage: 9, hitstun: 28, kbX: 170, kbY: -560,
-  hitstop: 5, shake: 5, zoom: 0.15, hitbox: { x: 54, y: 104, r: 40 }, reach: 56,
+  hitstop: 5, shake: 5, zoom: 0.15, hitbox: { x: 54, y: 104, r: 40 }, reach: 68,
   cancelInto: LIGHT_CANCEL, sound: 'punch', weight: 0.45,
   trail: { limb: 'handA', color: C_LIGHT, width: 11 },
   poses: {
@@ -190,7 +190,7 @@ add({
 add({
   id: 'launcher', family: 'launcher', name: 'Jumpshot', tags: ['launcher'],
   startup: 6, active: 4, recovery: 16, damage: 10, hitstun: 40, kbX: 40, kbY: 0,
-  hitstop: 6, shake: 7, zoom: 0.3, poise: 1.6, hitbox: { x: 50, y: 96, r: 44 }, reach: 50,
+  hitstop: 6, shake: 7, zoom: 0.3, poise: 1.6, hitbox: { x: 50, y: 96, r: 44 }, reach: 64,
   launch: -1180, follow: true, cancelFrom: 2, cancelInto: ['air', 'dodge', 'special'],
   sound: 'launch', weight: 0.6, afterimage: true,
   trail: { limb: 'handA', color: C_LAUNCH, width: 14 },
@@ -203,7 +203,7 @@ add({
 add({
   id: 'launcherH', family: 'launcher', name: 'Jumpshot+', tags: ['launcher', 'heavy'],
   startup: 9, active: 4, recovery: 18, damage: 14, hitstun: 44, kbX: 40, kbY: 0,
-  hitstop: 8, shake: 10, zoom: 0.5, poise: 2.5, hitbox: { x: 50, y: 96, r: 46 }, reach: 50,
+  hitstop: 8, shake: 10, zoom: 0.5, poise: 2.5, hitbox: { x: 50, y: 96, r: 46 }, reach: 64,
   launch: -1460, follow: true, cancelFrom: 2, cancelInto: ['air', 'dodge', 'special'],
   sound: 'launch', weight: 0.9, afterimage: true,
   trail: { limb: 'handA', color: C_LAUNCH, width: 18 },
@@ -218,7 +218,7 @@ add({
 add({
   id: 'sweep', name: 'Leg Sweep', tags: ['light', 'sweep', 'guardbreak'],
   startup: 5, active: 4, recovery: 16, damage: 8, hitstun: 30, kbX: 160, kbY: -380,
-  hitstop: 4, shake: 4, hitbox: { x: 62, y: 22, r: 40 }, reach: 58, knockdown: true,
+  hitstop: 4, shake: 4, hitbox: { x: 62, y: 22, r: 40 }, reach: 70, knockdown: true,
   cancelInto: LIGHT_CANCEL, sound: 'kick', weight: 0.4,
   trail: { limb: 'footA', color: C_LIGHT, width: 11 },
   poses: {
@@ -281,28 +281,28 @@ const airKickPose = (leg: 'A' | 'B', spin: number) => leg === 'A'
 add({
   id: 'akick1', family: 'akick', name: 'Air Kick', tags: ['air', 'light'],
   startup: 4, active: 3, recovery: 12, damage: 6, hitstun: 30, kbX: 110, kbY: -340,
-  hitstop: 4, shake: 3, hitbox: { x: 58, y: 70, r: 42 }, reach: 58, selfVY: -150,
+  hitstop: 4, shake: 3, hitbox: { x: 58, y: 70, r: 42 }, reach: 68, selfVY: -150,
   cancelInto: AIR_CANCEL, next: 'akick2', sound: 'kick', weight: 0.3,
   trail: { limb: 'footA', color: C_AIR, width: 11 }, poses: airKickPose('A', 0.05),
 });
 add({
   id: 'akick2', family: 'akick', name: 'Air Kick', tags: ['air', 'light'],
   startup: 4, active: 3, recovery: 12, damage: 6, hitstun: 30, kbX: 120, kbY: -340,
-  hitstop: 4, shake: 3, hitbox: { x: 58, y: 70, r: 42 }, reach: 58, selfVY: -150,
+  hitstop: 4, shake: 3, hitbox: { x: 58, y: 70, r: 42 }, reach: 68, selfVY: -150,
   cancelInto: AIR_CANCEL, next: 'akick3', sound: 'kick', weight: 0.3,
   trail: { limb: 'footB', color: C_AIR, width: 11 }, poses: airKickPose('B', 0.1),
 });
 add({
   id: 'akick3', family: 'akick', name: 'Air Roundhouse', tags: ['air', 'light'],
   startup: 5, active: 3, recovery: 14, damage: 9, hitstun: 32, kbX: 260, kbY: -360,
-  hitstop: 5, shake: 5, zoom: 0.15, hitbox: { x: 60, y: 72, r: 44 }, reach: 60, selfVY: -170,
+  hitstop: 5, shake: 5, zoom: 0.15, hitbox: { x: 60, y: 72, r: 44 }, reach: 70, selfVY: -170,
   cancelInto: AIR_CANCEL, next: 'akick1', sound: 'kick', weight: 0.45, afterimage: true,
   trail: { limb: 'footA', color: C_AIR, width: 13 }, poses: airKickPose('A', 0.45),
 });
 add({
   id: 'aheavy', name: 'Air Cannon', tags: ['air', 'heavy'],
   startup: 7, active: 4, recovery: 16, damage: 13, hitstun: 36, kbX: 980, kbY: -160,
-  hitstop: 8, shake: 11, zoom: 0.45, poise: 2.2, hitbox: { x: 62, y: 72, r: 46 }, reach: 60, selfVY: -120,
+  hitstop: 8, shake: 11, zoom: 0.45, poise: 2.2, hitbox: { x: 62, y: 72, r: 46 }, reach: 70, selfVY: -120,
   cancelInto: AIR_CANCEL, sound: 'heavy', weight: 0.85, afterimage: true,
   trail: { limb: 'footB', color: C_HEAVY, width: 16 },
   poses: {
@@ -316,7 +316,7 @@ add({
 add({
   id: 'aslash', name: 'Sky Slash', tags: ['air', 'light'],
   startup: 5, active: 4, recovery: 14, damage: 8, hitstun: 34, kbX: 430, kbY: -430,
-  hitstop: 5, shake: 5, zoom: 0.15, hitbox: { x: 58, y: 78, r: 46 }, reach: 56, selfVY: -260,
+  hitstop: 5, shake: 5, zoom: 0.15, hitbox: { x: 58, y: 78, r: 46 }, reach: 66, selfVY: -260,
   cancelInto: AIR_CANCEL, sound: 'slash', weight: 0.5, afterimage: true,
   trail: { limb: 'handA', color: C_AIR, width: 14 },
   poses: {
@@ -328,7 +328,7 @@ add({
 add({
   id: 'aslashH', family: 'aslash', name: 'Gale Slash', tags: ['air', 'heavy'],
   startup: 7, active: 4, recovery: 16, damage: 12, hitstun: 36, kbX: 720, kbY: -560,
-  hitstop: 7, shake: 9, zoom: 0.35, poise: 2, hitbox: { x: 60, y: 78, r: 48 }, reach: 58, selfVY: -320,
+  hitstop: 7, shake: 9, zoom: 0.35, poise: 2, hitbox: { x: 60, y: 78, r: 48 }, reach: 68, selfVY: -320,
   cancelInto: AIR_CANCEL, sound: 'slash', weight: 0.8, afterimage: true,
   trail: { limb: 'handA', color: C_HEAVY, width: 17 },
   poses: {
@@ -342,7 +342,7 @@ add({
 add({
   id: 'arise', family: 'arise', name: 'Rising Strike', tags: ['air', 'light', 'rising'],
   startup: 5, active: 4, recovery: 14, damage: 8, hitstun: 36, kbX: 40, kbY: -900,
-  hitstop: 5, shake: 6, zoom: 0.2, hitbox: { x: 40, y: 100, r: 46 }, reach: 40, selfVY: -820,
+  hitstop: 5, shake: 6, zoom: 0.2, hitbox: { x: 40, y: 100, r: 46 }, reach: 52, selfVY: -820,
   cancelInto: AIR_CANCEL, sound: 'launch', weight: 0.55, afterimage: true,
   trail: { limb: 'handA', color: C_LAUNCH, width: 13 },
   poses: {
@@ -356,7 +356,7 @@ add({
 add({
   id: 'spike', family: 'spike', name: 'Spike', tags: ['air', 'down', 'light'],
   startup: 6, active: 3, recovery: 18, damage: 12, hitstun: 40, kbX: 280, kbY: 1750,
-  hitstop: 8, shake: 12, zoom: 0.45, poise: 2, hitbox: { x: 50, y: 66, r: 48 }, reach: 46,
+  hitstop: 8, shake: 12, zoom: 0.45, poise: 2, hitbox: { x: 50, y: 66, r: 48 }, reach: 56,
   spike: true, selfVY: -380, cancelInto: ['dodge', 'special'], sound: 'spike', weight: 0.85, afterimage: true,
   trail: { limb: 'footA', color: C_SPIKE, width: 16 },
   poses: {
@@ -370,7 +370,7 @@ add({
 add({
   id: 'jumpshotFinisher', family: 'finisher', name: 'JUMPSHOT FINISHER', tags: ['air', 'down', 'special', 'finisher'],
   startup: 16, active: 4, recovery: 22, damage: 38, hitstun: 60, kbX: 0, kbY: 2900,
-  hitstop: 9, shake: 22, zoom: 1, poise: 6, hitbox: { x: 40, y: 70, r: 60 }, reach: 36,
+  hitstop: 9, shake: 22, zoom: 1, poise: 6, hitbox: { x: 40, y: 70, r: 60 }, reach: 48,
   spike: true, selfVY: -420, cancelInto: ['dodge'], sound: 'finisher', weight: 1, afterimage: true,
   impactShock: { radius: 340, damage: 22 },
   trail: { limb: 'footA', color: C_SPECIAL, width: 22 },
@@ -383,7 +383,7 @@ add({
 add({
   id: 'flurry', family: 'flurry', name: 'FLURRY', tags: ['special', 'finisher'],
   startup: 4, active: 28, recovery: 2, damage: 4, hitstun: 30, kbX: 30, kbY: 0,
-  hitstop: 2, shake: 4, zoom: 0.2, poise: 1.5, hitbox: { x: 56, y: 88, r: 46 }, reach: 54,
+  hitstop: 2, shake: 4, zoom: 0.2, poise: 1.5, hitbox: { x: 56, y: 88, r: 46 }, reach: 68,
   multiHit: { interval: 3, count: 9, then: 'flurryEnd' }, cancelFrom: 99, cancelInto: [],
   sound: 'punch', weight: 0.4, afterimage: true,
   trail: { limb: 'handA', color: C_SPECIAL, width: 13 },
@@ -397,7 +397,7 @@ add({
 add({
   id: 'flurryEnd', family: 'flurry', name: 'FLURRY', tags: ['special', 'finisher'],
   startup: 3, active: 4, recovery: 22, damage: 22, hitstun: 50, kbX: 1150, kbY: -420,
-  hitstop: 9, shake: 18, zoom: 0.8, poise: 5, hitbox: { x: 62, y: 90, r: 52 }, reach: 58,
+  hitstop: 9, shake: 18, zoom: 0.8, poise: 5, hitbox: { x: 62, y: 90, r: 52 }, reach: 72,
   dash: false, cancelInto: ['dodge', 'launcher'], sound: 'heavy', weight: 1, afterimage: true,
   trail: { limb: 'footA', color: C_SPECIAL, width: 20 },
   poses: {

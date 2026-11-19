@@ -16,6 +16,7 @@ import { DebugOverlay } from './ui/debug';
 import { Menus } from './ui/menus';
 import { Tutorial } from './ui/tutorial';
 import { PopDetector } from './ui/popDetector';
+import { AnimLab } from './ui/lab';
 import { CAMERA, WAVES_T, WORLD, SCORE } from './data/tuning';
 import { UPGRADES, type UpgradeDef } from './data/upgrades';
 import { fxRng } from './core/rng';
@@ -37,6 +38,7 @@ export class Game {
   readonly fx: FxDirector;
   readonly tutorial: Tutorial;
   readonly pops = new PopDetector();
+  readonly lab = new AnimLab();
   state: GState = 'title';
   paused = false;
   /** Debug time controls: [ toggles 0.1x, ] freezes and steps one frame, \ resumes. */
@@ -65,6 +67,12 @@ export class Game {
     this.keyboard.onDebugResume = () => { this.debugFrozen = false; this.debugScale = 1; };
     this.menus.onPause = () => this.togglePause();
     window.addEventListener('jumpshot-debug', () => { this.debug.visible = settings.debug; });
+    // Animation Lab: #lab route or F2.
+    window.addEventListener('keydown', (e) => {
+      if (this.lab.onKey(e)) return;
+      if (e.code === 'F2') { e.preventDefault(); if (this.lab.active) this.lab.exit(); else this.openLab(); }
+    }, { capture: true });
+    window.addEventListener('hashchange', () => { if (location.hash === '#lab') this.openLab(); else if (this.lab.active) this.lab.exit(); });
     this.debug.visible = settings.debug;
     this.fx = new FxDirector(this.cam, this.time, this.pad);
     this.fx.bind(this.world);
@@ -77,6 +85,13 @@ export class Game {
     this.world.events.on('waveClear', () => this.onWaveClear());
     this.publishPadTop();
     this.toTitle();
+  }
+
+  openLab(): void {
+    if (this.state === 'playing' && !this.paused) this.togglePause();
+    this.menus.closeAll();
+    this.lab.onExit = () => { this.menus.closeAll(); this.paused = false; this.toTitle(); };
+    this.lab.enter();
   }
 
   private publishPadTop(): void { (window as unknown as { __padTop: number }).__padTop = layout.pad.y; }

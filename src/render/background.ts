@@ -133,6 +133,8 @@ function buildVolcano(): Arena {
 }
 
 const AMB_N = 90;
+/** Background contrast control (pose readability). */
+const BG_LAYER_ALPHA = 0.5;
 
 export class Background {
   private arenas = new Map<ArenaId, Arena>();
@@ -202,7 +204,10 @@ export class Background {
       const y = WORLD.groundScreenY - (LAYER_H + l.y) * lz + (cam.y - WORLD.groundY) * -0.2 * z;
       const w = LAYER_W * lz;
       const x0 = WORLD.viewW / 2 + (off - WORLD.viewW / 2) * lz;
+      // Dimmed layers keep the backdrop calm so stick poses read instantly.
+      ctx.globalAlpha = BG_LAYER_ALPHA;
       for (let x = x0 - w; x < WORLD.viewW + w; x += w) ctx.drawImage(l.canvas, x, y, w, LAYER_H * lz);
+      ctx.globalAlpha = 1;
     }
   }
 
@@ -255,7 +260,7 @@ export class Background {
     ctx.strokeStyle = amb.color;
     for (let i = 0; i < AMB_N; i++) {
       if (this.al[i] <= 0) continue;
-      ctx.globalAlpha = Math.min(1, this.al[i]) * 0.6;
+      ctx.globalAlpha = Math.min(1, this.al[i]) * 0.35;
       if (amb.vy > 100) {
         ctx.lineWidth = amb.size;
         ctx.beginPath(); ctx.moveTo(this.ax[i], this.ay[i]); ctx.lineTo(this.ax[i] + amb.vx * 0.04, this.ay[i] + amb.vy * 0.04); ctx.stroke();

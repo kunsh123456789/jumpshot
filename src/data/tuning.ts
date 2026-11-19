@@ -40,72 +40,62 @@ export const PHYS = {
   separationPush: 0.35,
 } as const;
 
-/** Animation feel: springs, blends, turns, run cycle, pop detector. See SMOOTHNESS.md. */
+/** Pose-to-pose animation playback and presentation. Poses/timing live in data/anims/. */
 export const ANIM = {
-  /** Critically damped spring angular frequency (rad/s) per phase. Higher = snappier. */
-  springStrike: 95,
-  springAnticipation: 55,
-  springHitReact: 60,
-  springLocomotion: 38,
-  springRecovery: 30,
-  springIdle: 22,
-  /** Per-part stiffness multipliers (overlapping action: these parts trail the torso). */
-  headLag: 0.6,
-  rearArmLag: 0.78,
-  leanLag: 0.85,
-  /** Crossfade lengths (frames). */
-  blendDefault: 5,
-  blendMoveMin: 3,
-  blendMoveMax: 5,
-  blendHitReact: 4,
-  blendLand: 3,
-  blendGetup: 6,
-  /** Adaptive crossfade: extend blends so joints move at most blendMaxRate rad/frame (up to +blendExtraMax frames). */
-  blendMaxRate: 0.42,
-  blendExtraMax: 6,
-  /** Outgoing pose keeps its momentum during a crossfade, decaying by this per frame. */
-  outgoingMomentum: 0.55,
-  outgoingMaxVel: 6,
-  /** Eased facing turn (frames) instead of an instant mirror. */
-  turnFrames: 5,
-  turnFramesAttack: 4,
-  /** After a magnetism dash, the wind-up gets at least this many frames (overlaps the dash). */
-  minAnticFrames: 6,
-  /** The dash pose is pre-blended this far toward the move's wind-up (limbs don't detour). */
-  dashTowardAntic: 0.45,
-  /** Follow-through: limbs carry past the contact pose by this fraction of the swing. */
-  carryPast: 0.14,
-  carryFrac: 0.3,
-  /** Max head tilt toward the target (rad). */
-  headLook: 0.35,
-  /** Run cycle: stride grows with speed so cadence matches ground speed (feet stay planted). */
-  strideBase: 40,
-  stridePerSpeed: 0.1,
-  strideMax: 90,
-  footLift: 15,
-  runBounce: 5,
-  runLeanPerSpeed: 0.0006,
-  accelLean: 0.00012,
-  maxAccelLean: 0.28,
-  /** Apex hang: gravity multiplier when |vy| is below apexBand (eases the top of arcs). */
+  /** Crossfades happen ONLY on interruption (cancel, hit, state change), from the current pose. */
+  fadeFrames: 3,
+  fadeCancel: 3,
+  fadeHit: 1,
+  fadeLand: 2,
+  /** Staggered timing (frames): hips lead, torso next, upper arms next, the striking limb is exact, head trails. */
+  leadHips: 1,
+  leadTorso: 0.5,
+  leadUpperArm: 0.5,
+  lagHead: 1,
+  /** Eased facing turn (frames). */
+  turnFrames: 4,
+  turnFramesAttack: 3,
+  /** Max head tilt toward the target in idle/run (rad). */
+  headLook: 0.3,
+  /** Run/walk loop playback: rate = speed / runSpeed, clamped. */
+  runRateMin: 0.45,
+  runRateMax: 1.35,
+  /** Below this speed (units/s) stopping from a run plays the skid instead of snapping to idle. */
+  skidMinSpeed: 150,
+  /** Player taunts after this many idle frames with nothing happening. */
+  tauntIdleFrames: 480,
+  /** Smears: sub-samples along the swept arc, and fill alpha (recent / older half). */
+  smearSamples: 6,
+  smearAlpha: 0.85,
+  smearTailAlpha: 0.35,
+  /** Impact frames: inverted-color flash (heavy hits) and speed-line burst durations (s). */
+  invertSec: 0.03,
+  speedLineSec: 0.12,
+  speedLines: 18,
+  /** Ground reflection alpha and vertical squash. */
+  reflectAlpha: 0.13,
+  reflectSquash: 0.5,
+  /** Uniform line width multiplier applied to each fighter's thickness. */
+  lineScale: 1.25,
+  /** Apex hang: gravity multiplier when |vy| is below apexBand (quick up, hang, fast down). */
   apexBand: 220,
   apexGravity: 0.6,
   /** Air-stall gravity blends in/out over these frames instead of switching. */
   stallEaseIn: 2,
   stallEaseOut: 7,
-  /** Pop detector thresholds per sim tick. */
-  popAngle: 0.5,
-  popSpin: 0.9,
+  /** Pop detector thresholds per sim tick (authored snaps are exempt). */
+  popAngle: 0.9,
+  popSpin: 1.2,
   popRoot: 120,
   /** Ticks after a hit during which the reaction counts as an intentional snap. */
   impactSnapFrames: 5,
   /** Hit-stop victim vibration (render-time, px amplitude and Hz). */
-  hitstopShakeAmp: 3,
+  hitstopShakeAmp: 2.5,
   hitstopShakeHz: 38,
   /** Motion trail lifetime (seconds of scaled time). */
-  trailLife: 0.11,
-  /** Afterimage spawn interval during dashes (seconds of render time). */
-  ghostInterval: 0.022,
+  trailLife: 0.07,
+  /** Afterimage (whole-body echo) spawn interval during dashes/launches (seconds). */
+  ghostInterval: 0.03,
 } as const;
 
 export const PAD = {
@@ -287,7 +277,7 @@ export const JUICE = {
   slowmoLastEnemySec: 0.7,
   slowmoFinisherScale: 0.25,
   slowmoFinisherSec: 0.55,
-  flashFrames: 3,
+  flashFrames: 2,
   hitstopMaxFrames: 9,
   /** Hit sound pitch climbs with combo: 1 + perHit*min(combo, cap). */
   comboPitchPerHit: 0.011,

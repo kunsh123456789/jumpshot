@@ -1,5 +1,20 @@
 # Animation smoothness
 
+> **Revision 2 note.** The spring-based pose pipeline described below was **replaced** by a pose-to-pose animation system: authored key poses, no springs. See ANIMATION_DIAGNOSIS.md and the `ANIM` block in TUNING.md. Several items below still hold:
+>
+> - render-time FK on interpolated pose channels
+> - natural-path angle interpolation
+> - eased facing turns (now 4 frames, or 3 when attacking)
+> - the spin unwinding and tumble-spin continuity fixes
+> - the move-instance restart fix
+> - render-rate trails and afterimages
+> - the spring camera
+> - eased stall gravity and the apex hang
+> - hit-stop vibration at render time
+> - the pop detector, the slow-mo and frame-step keys, and `?manual`
+>
+> The pop detector now treats authored snaps (snap/hold easing, smear and contact frames) and interruption crossfades as intentional. It flags only unblended jumps and keys authored too close together, and it reports 0 across a full bot run.
+
 This file covers three things: what made Jumpshot's animation look choppy, what changed, how smoothness is measured now, and which values control the feel. Every tunable lives in `ANIM` and `CAMERA` in `src/data/tuning.ts`.
 
 ## Before and after

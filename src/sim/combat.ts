@@ -87,6 +87,9 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   v.hp -= dmg;
   v.flash = JUICE.flashFrames;
   v.impact = ANIM.impactSnapFrames;
+  v.hitSerial++;
+  v.hitHeavy = m.weight >= 0.7 || m.launch !== 0 || m.spike;
+  v.hitBehind = v.facing === dirX && v.grounded && !v.inHitState;
   v.lastHitBy = p.id;
   v.comboHits++;
   v.invuln = 0;
@@ -261,6 +264,9 @@ export function sideHit(w: World, v: Fighter, dmg: number, dirX: number, vy: num
   if (!v.canBeHit) return;
   v.hp -= dmg;
   v.impact = ANIM.impactSnapFrames;
+  v.hitSerial++;
+  v.hitHeavy = kind !== 'shock';
+  v.hitBehind = false;
   v.flash = JUICE.flashFrames;
   v.comboHits++;
   if (v.hasToken) w.ai.releaseToken(v);
@@ -371,6 +377,7 @@ export function parry(w: World, e: Fighter | null, projectile: boolean): void {
   p.parryWindow = 0;
   if (s.parryHeal > 0) p.hp = Math.min(p.maxHp, p.hp + s.parryHeal);
   if (p.state === 'dodge') { p.setState(p.grounded ? 'idle' : 'fall'); p.vx = 0; }
+  p.cue = 'parry'; p.cueSerial++;
   if (e) {
     if (e.hasToken) w.ai.releaseToken(e);
     e.attack = null; e.telegraph = 0;
@@ -391,6 +398,10 @@ export function hurtPlayer(w: World, dmg: number, dirX: number, kbX: number, kbY
   if (p.invuln > 0 || !p.alive) return;
   p.hp -= dmg;
   p.impact = ANIM.impactSnapFrames;
+  p.hitSerial++;
+  p.hitHeavy = dmg >= 14 || kbY < -300;
+  p.hitBehind = p.facing === dirX;
+  p.hitDirX = dirX;
   p.move = null;
   p.followTarget = null;
   p.invuln = PLAYER.hurtInvulnFrames;

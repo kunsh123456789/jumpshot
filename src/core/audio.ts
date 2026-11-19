@@ -155,6 +155,14 @@ class Audio {
     this.noiseBurst(t, 0.16, 0.18, 'bandpass', 2400, 1.5, 700);
   }
 
+  /** Soft footstep / landing scuff (keyframe sfx). */
+  step(heavy = false): void {
+    if (!this.ok('step', 0.06)) return;
+    const t = this.ctx!.currentTime;
+    this.noiseBurst(t, heavy ? 0.09 : 0.05, heavy ? 0.22 : 0.08, 'lowpass', heavy ? 700 : 1100, 0.7, 200);
+    if (heavy) this.tone(t, 'sine', 120, 50, 0.08, 0.2);
+  }
+
   hurt(): void {
     if (!this.ok('hurt', 0.06)) return;
     const t = this.ctx!.currentTime;

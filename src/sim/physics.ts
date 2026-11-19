@@ -84,6 +84,7 @@ export function enemyPhysics(w: World, e: Fighter): void {
       }
       if (e.spiked && vy > PHYS.groundBounceMinVy && w.combo.hits > 0 && w.combo.canGroundBounce() && e.alive) {
         w.combo.groundBouncesUsed++;
+        e.cue = 'bounce'; e.cueSerial++;
         e.spiked = false;
         e.vy = PHYS.groundBounceVy * Math.min(1.15, vy / 1600 + 0.4);
         e.vx *= 0.5;

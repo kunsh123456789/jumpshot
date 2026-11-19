@@ -17,6 +17,7 @@ const qs = new URLSearchParams(location.search);
 // Dev/testing: ?wave=N starts a run at wave N (skips the tutorial).
 const startWave = parseInt(qs.get('wave') ?? '', 10);
 if (startWave > 0) game.devStart(startWave);
+if (location.hash === '#lab') game.openLab();
 
 // Audio must be unlocked inside a real user-gesture handler (iOS/Android policy).
 const unlock = () => audio.unlock();
@@ -47,7 +48,7 @@ function frame(now: number): void {
   const dbg = game.debugScale;
   game.time.update(real * dbg);
   let steps = 0;
-  if (!game.paused) {
+  if (!game.paused && !game.lab.active) {
     if (game.debugFrozen) {
       while (game.stepRequests > 0) { game.step(); game.stepRequests--; steps++; }
       acc = 0;
@@ -61,6 +62,7 @@ function frame(now: number): void {
       if (steps >= MAX_STEPS) acc = 0;
     }
   }
+  if (game.lab.active) { game.lab.frame(game.renderer.ctx, real); return; }
   const frozen = game.paused || game.debugFrozen;
   game.render(frozen && game.debugFrozen ? 1 : acc / SIM_DT, frozen ? 0 : real * dbg, steps, real);
 }
