@@ -146,7 +146,7 @@ export class Hud {
     }
     if (p.critTimer > 0) {
       ctx.textAlign = 'center';
-      outlineText(ctx, 'CRIT READY', p.x !== undefined ? layout.world.x + layout.world.w / 2 : 0, r.y + r.h * 0.18, '#ffe14a', 4, 'center');
+      outlineText(ctx, 'CRIT READY', r.x + r.w / 2, r.y + r.h * 0.42, '#ffe14a', 4, 'center');
     }
 
     // ---- Combo summary ----
@@ -172,9 +172,9 @@ export class Hud {
       ctx.fillStyle = FxDirector.rankColor(ce.maxRank);
       ctx.font = `900 italic ${Math.round(14 * u)}px system-ui, sans-serif`;
       ctx.fillText(STYLE.ranks[ce.maxRank], bx + 12 * u + tw, by + 36 * u);
-      ctx.fillStyle = '#ffe14a';
+      ctx.fillStyle = ce.dropped ? '#ff5050' : '#ffe14a';
       ctx.font = `900 italic ${Math.round(13 * u)}px system-ui, sans-serif`;
-      ctx.fillText(`+${ce.bonus.toLocaleString()} STYLE`, bx + 12 * u, by + 56 * u);
+      ctx.fillText(ce.dropped ? 'COMBO BROKEN' : `+${ce.bonus.toLocaleString()} STYLE`, bx + 12 * u, by + 56 * u);
       ctx.globalAlpha = 1;
     }
 

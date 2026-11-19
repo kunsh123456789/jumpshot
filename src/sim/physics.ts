@@ -114,7 +114,7 @@ export function enemyPhysics(w: World, e: Fighter): void {
       if (--e.timer <= 0) { e.setState('getup', e.kind === 'boss' ? 26 : 20); }
       break;
     case 'getup':
-      if (--e.timer <= 0) { e.setState('idle'); e.juggleHits = 0; e.gravityScale = 1; e.comboHits = Math.min(e.comboHits, 4); e.invuln = 4; }
+      if (--e.timer <= 0) { e.setState('idle'); e.juggleHits = 0; e.gravityScale = 1; e.comboHits = Math.min(e.comboHits, 4); e.invuln = 4; e.otgUsed = false; }
       break;
     case 'stunned': case 'burst': case 'guardbreak':
       if (--e.timer <= 0) e.setState('idle');

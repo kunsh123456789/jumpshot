@@ -83,6 +83,8 @@ export class Fighter {
   guardBroken = 0;
   blockFlash = 0;
   dizzy = 0;
+  /** One off-the-ground hit per knockdown; cleared on get-up. */
+  otgUsed = false;
 
   // ---- Player extras ----
   parryWindow = 0;
@@ -154,6 +156,7 @@ export class Fighter {
     return s === 'hitstun' || s === 'air' || s === 'knockdown' || s === 'stunned' || s === 'guardbreak';
   }
   get canBeHit(): boolean {
+    if (this.state === 'knockdown' && this.otgUsed) return false;
     return this.alive && this.invuln <= 0 && this.state !== 'ko' && this.state !== 'dead' && this.state !== 'getup';
   }
   alreadyHit(id: number): boolean {

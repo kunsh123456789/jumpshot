@@ -38,7 +38,7 @@ export interface SimEvents {
   guardBreak: { x: number; y: number; enemy: Fighter };
   finisher: { kind: 'jumpshot' | 'flurry'; x: number; y: number };
   rankUp: { rank: number };
-  comboEnd: { hits: number; damage: number; maxRank: number; bonus: number; finisher: boolean };
+  comboEnd: { hits: number; damage: number; maxRank: number; bonus: number; finisher: boolean; dropped: boolean };
   pickup: { kind: 'health' | 'orb'; x: number; y: number };
   projectile: { x: number; y: number; kind: 'throw' | 'reflect' };
   meteorWarn: { x: number };

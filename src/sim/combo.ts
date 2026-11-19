@@ -167,7 +167,7 @@ export class ComboTracker {
       this.bestHits = this.hits; this.bestDamage = Math.round(this.damage); this.bestRank = this.maxRank;
     }
     if (this.hits >= COMBO.summaryMinHits) {
-      this.bus.emit('comboEnd', { hits: this.hits, damage: Math.round(this.damage), maxRank: this.maxRank, bonus, finisher: this.finisherUsed });
+      this.bus.emit('comboEnd', { hits: this.hits, damage: Math.round(this.damage), maxRank: this.maxRank, bonus, finisher: this.finisherUsed, dropped });
     }
     this.hits = 0; this.damage = 0; this.sinceHit = 0; this.idleFrames = 0;
     this.launcherUsed = false; this.finisherUsed = false;

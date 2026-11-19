@@ -15,6 +15,8 @@ export class Layout {
   world: Rect = { x: 0, y: 0, w: 1, h: 1 };
   /** world units -> css px */
   scale = 1;
+  /** Logical (1280x720) sub-rectangle actually shown in the world rect (portrait crops it). */
+  viewX0 = 0; viewY0 = 0; viewW: number = WORLD.viewW; viewH: number = WORLD.viewH;
   pad: Rect = { x: 0, y: 0, w: 1, h: 1 };
   /** Scale factor for HUD/UI drawn in css px. */
   ui = 1;
@@ -27,6 +29,7 @@ export class Layout {
     if (!this.portrait) {
       const s = Math.min(cssW / vw, cssH / vh);
       this.scale = s;
+      this.viewX0 = 0; this.viewY0 = 0; this.viewW = vw; this.viewH = vh;
       this.world = { x: (cssW - vw * s) / 2, y: (cssH - vh * s) / 2, w: vw * s, h: vh * s };
       const ph = cssH * PAD.landscapeHeight;
       const pw = Math.min(cssW * PAD.landscapeWidth, ph * 2.6);
@@ -41,14 +44,19 @@ export class Layout {
       this.ui = Math.max(0.55, Math.min(1.3, Math.min(cssW / 1280, cssH / 720) * 1.05));
       this.hudTop = this.world.y;
     } else {
-      // Portrait: world on top (full width), pad below and large.
+      // Portrait: world on top (full width, horizontally cropped so fighters stay
+      // readable), pad below and large.
       const hudStrip = Math.min(64, cssH * 0.07);
-      const s = cssW / vw;
+      const cropW = PAD.portraitViewW;
+      const s = cssW / cropW;
       this.scale = s;
-      const worldH = vh * s;
-      this.world = { x: 0, y: hudStrip, w: cssW, h: worldH };
+      this.viewX0 = (vw - cropW) / 2;
+      this.viewY0 = PAD.portraitViewTop;
+      this.viewW = cropW;
+      this.viewH = PAD.portraitViewBottom - PAD.portraitViewTop;
+      this.world = { x: 0, y: hudStrip, w: cssW, h: this.viewH * s };
       const margin = 12;
-      const floorTop = hudStrip + (WORLD.groundScreenY + 30) * s;
+      const floorTop = hudStrip + (WORLD.groundScreenY + 30 - this.viewY0) * s;
       const minPadH = cssH * PAD.portraitMinHeight;
       const top = Math.min(floorTop, cssH - minPadH - margin);
       this.pad = { x: margin, y: top, w: cssW - margin * 2, h: cssH - top - margin };

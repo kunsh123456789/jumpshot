@@ -19,7 +19,7 @@ export class FxDirector {
   popups: Popup[] = [];
   comboPop = 0;
   rankSlam = 0;
-  lastComboEnd: { hits: number; damage: number; maxRank: number; bonus: number } | null = null;
+  lastComboEnd: { hits: number; damage: number; maxRank: number; bonus: number; dropped: boolean } | null = null;
   comboEndT = 0;
   bossBarFlash = 0;
 

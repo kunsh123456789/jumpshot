@@ -118,6 +118,13 @@ export class Game {
     this.menus.banner('READY?', 'the real fight starts now', 1400);
   }
 
+  /** Dev helper: jump straight into a run at a given wave. */
+  devStart(wave: number): void {
+    this.startRun();
+    this.nextWave = wave;
+    this.beginCountdown();
+  }
+
   startRun(): void {
     this.menus.closeAll();
     this.world.reset();
@@ -352,6 +359,6 @@ export class Game {
       this.cam.targetX += (px - this.cam.targetX) * k;
       this.cam.targetY += (py - 60 + (WORLD.groundScreenY - 330) / ez - this.cam.targetY) * k;
     }
-    if (this.state === 'title') { this.cam.targetZoom = 1.25; this.cam.targetY = WORLD.groundY - 40; }
+    if (this.state === 'title') { this.cam.targetZoom = 1.25; this.cam.targetY = WORLD.groundY; }
   }
 }

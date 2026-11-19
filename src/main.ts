@@ -11,6 +11,11 @@ const game = new Game(canvas);
 (window as unknown as { __jumpshot: Game }).__jumpshot = game;
 (window as unknown as { __layout: typeof layout }).__layout = layout;
 
+// Dev/testing: ?wave=N starts a run at wave N (skips the tutorial).
+const qs = new URLSearchParams(location.search);
+const startWave = parseInt(qs.get('wave') ?? '', 10);
+if (startWave > 0) game.devStart(startWave);
+
 // Prevent page scrolling / pinch-zoom / context menus on mobile.
 const stop = (e: Event) => e.preventDefault();
 document.addEventListener('touchmove', stop, { passive: false });

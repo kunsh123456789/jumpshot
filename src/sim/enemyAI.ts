@@ -53,7 +53,6 @@ export class EnemyAI {
     if (!e.hasToken) e.ai.tokenTime++;
     if (e.guardBroken > 0) e.guardBroken--;
     if (e.blockFlash > 0) e.blockFlash--;
-    if (e.flash > 0) e.flash--;
     if (e.invuln > 0) e.invuln--;
     // Poise regenerates after a quiet period.
     if (e.maxPoise > 0 && e.poise < e.maxPoise && !e.inHitState && e.ai.stagger === 0) {

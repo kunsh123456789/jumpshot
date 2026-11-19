@@ -1,6 +1,7 @@
 import { CAMERA, JUICE, WORLD } from '../data/tuning';
 import { clamp, damp } from './math';
 import { settings } from './settings';
+import { layout } from './layout';
 
 /** Camera with action-centroid tracking, zoom, trauma shake, directional kick and punch-zoom. */
 export class Camera {
@@ -59,7 +60,7 @@ export class Camera {
     this.punch += (0 - this.punch) * damp(7, dt);
 
     const z = this.effectiveZoom();
-    const half = WORLD.viewW / 2 / z;
+    const half = layout.viewW / 2 / z;
     this.x = clamp(this.x, half - 10, WORLD.arenaW - half + 10);
 
     // Trauma shake (squared for nicer falloff) using layered sines (no allocation).
@@ -93,6 +94,6 @@ export class Camera {
   toViewX(wx: number): number { return (wx - this.x) * this.effectiveZoom() + WORLD.viewW / 2; }
   toViewY(wy: number): number { return (wy - this.y) * this.effectiveZoom() + WORLD.groundScreenY; }
   /** Visible world-space x range. */
-  viewLeft(): number { return this.x - WORLD.viewW / 2 / this.effectiveZoom(); }
-  viewRight(): number { return this.x + WORLD.viewW / 2 / this.effectiveZoom(); }
+  viewLeft(): number { return this.x - layout.viewW / 2 / this.effectiveZoom(); }
+  viewRight(): number { return this.x + layout.viewW / 2 / this.effectiveZoom(); }
 }

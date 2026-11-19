@@ -159,13 +159,13 @@ const base = {
 export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   dummy: { ...base, kind: 'dummy', name: 'Dummy', hp: 99999, color: '#c9b48a', accent: '#8a7a5a', attacks: [PUNCH], score: 0, cost: 0, cooldown: 140, burstThreshold: 999 },
   grunt: { ...base, kind: 'grunt', name: 'Grunt', hp: 72, color: '#ff5f5f', accent: '#b83a3a', attacks: [PUNCH], score: 100, cost: 1 },
-  rusher: { ...base, kind: 'rusher', name: 'Rusher', hp: 52, color: '#ffd23f', accent: '#b8901a', walkSpeed: 230, holdDist: 360, attacks: [LUNGE], score: 140, cost: 1.4, thickness: 4.5, cooldown: 90 },
+  rusher: { ...base, kind: 'rusher', name: 'Rusher', hp: 52, color: '#ff9a3a', accent: '#b8601a', walkSpeed: 230, holdDist: 360, attacks: [LUNGE], score: 140, cost: 1.4, thickness: 4.5, cooldown: 90 },
   brute: { ...base, kind: 'brute', name: 'Brute', hp: 180, poise: 26, scale: 1.32, thickness: 8.5, color: '#b276ff', accent: '#6c3fb0', walkSpeed: 95, holdDist: 200, attacks: [SLAM], weight: 0.62, launchMult: 0.8, burstThreshold: 8, score: 300, cost: 3, cooldown: 100 },
   kicker: { ...base, kind: 'kicker', name: 'Kicker', hp: 74, color: '#4dff9a', accent: '#28a862', walkSpeed: 190, holdDist: 210, attacks: [KICK], score: 150, cost: 1.5, cooldown: 60 },
   thrower: { ...base, kind: 'thrower', name: 'Thrower', hp: 58, color: '#3fe0ff', accent: '#1f8aa8', walkSpeed: 160, holdDist: 470, attacks: [THROW], score: 160, cost: 1.6, thickness: 4.5, cooldown: 110 },
   shield: { ...base, kind: 'shield', name: 'Shield', hp: 95, color: '#6f9bff', accent: '#3a5ab8', walkSpeed: 120, holdDist: 170, attacks: [BASH], blocksFront: true, score: 220, cost: 2.2, thickness: 6, cooldown: 85 },
   elite: { ...base, kind: 'elite', name: 'RONIN', hp: 380, poise: 18, poiseRegenFrames: 100, scale: 1.12, thickness: 6.5, color: '#ff4dd2', accent: '#ffd0f4', walkSpeed: 210, holdDist: 200, attacks: [E_COMBO, E_LUNGE, E_KICK], weight: 0.85, burstThreshold: 9, score: 1500, cost: 6, cooldown: 45, hpBar: true, scarf: true },
-  boss: { ...base, kind: 'boss', name: 'THE COLOSSUS', hp: 1500, poise: 70, poiseRegenFrames: 200, scale: 2.0, thickness: 12, color: '#ff3b3b', accent: '#ffcf4a', walkSpeed: 90, holdDist: 230, attacks: [B_HAMMER, B_SWEEP, B_RUSH], weight: 0.38, launchMult: 0.7, burstThreshold: 7, score: 8000, cost: 20, cooldown: 40, hpBar: true, scarf: true },
+  boss: { ...base, kind: 'boss', name: 'THE COLOSSUS', hp: 1500, poise: 70, poiseRegenFrames: 200, scale: 2.0, thickness: 12, color: '#ffd23f', accent: '#ff3b3b', walkSpeed: 90, holdDist: 230, attacks: [B_HAMMER, B_SWEEP, B_RUSH], weight: 0.38, launchMult: 0.7, burstThreshold: 7, score: 8000, cost: 20, cooldown: 40, hpBar: true, scarf: true },
 };
 
 export const BOSS = {

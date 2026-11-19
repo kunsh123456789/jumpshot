@@ -94,6 +94,7 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
 
   const wasAir = !v.grounded || v.state === 'air';
   const lying = v.state === 'knockdown';
+  if (lying) v.otgUsed = true;
   const weight = v.def ? v.def.weight : 1;
   const launchMult = (v.def ? v.def.launchMult : 1) * s.launchMult;
   const hsScale = Math.max(COMBO.hitstunScaleFloor, 1 - COMBO.hitstunScalePerHit * v.comboHits);
@@ -172,9 +173,11 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   }
   if (m.follow) p.followTarget = v;
 
-  // ---- Grounded burst escape ----
-  if (v.alive && v.hp > 0 && !wasAir && v.grounded && v.def && v.comboHits > v.def.burstThreshold && !finisher && simRng.chance(COMBO.burstChance)) {
-    burst(w, v);
+  // ---- Burst escape (anti-infinite): grounded strings, and very long juggles ----
+  if (v.alive && v.hp > 0 && v.def && !finisher) {
+    const t = v.def.burstThreshold;
+    if (!wasAir && v.grounded && v.comboHits > t && simRng.chance(COMBO.burstChance)) burst(w, v);
+    else if (wasAir && v.comboHits > t * COMBO.airBurstFactor && simRng.chance(COMBO.burstChance)) burst(w, v);
   }
 
   const air = wasAir || !p.grounded;
@@ -211,14 +214,19 @@ function emitHit(w: World, p: Fighter, v: Fighter, m: MoveDef | null, dmg: numbe
 
 function burst(w: World, v: Fighter): void {
   const p = w.player;
+  const air = !v.grounded;
   v.setState('burst', 22);
-  v.invuln = 26;
-  v.vx = 0; v.vy = 0;
+  v.invuln = 30;
+  v.vx = 0; v.vy = air ? -260 : 0;
+  v.stall = 0; v.spiked = false; v.knockdownOnLand = false;
   v.comboHits = 0;
+  v.juggleHits = 0; v.gravityScale = 1;
   const dir = Math.sign(p.x - v.x) || 1;
-  if (Math.abs(p.x - v.x) < 260 && p.grounded) {
-    p.vx = dir * 620;
+  if (Math.abs(p.x - v.x) < 260 && Math.abs(p.y - v.y) < 220) {
+    p.vx = dir * COMBO.burstPush;
+    if (!p.grounded) p.vy = -200;
     p.move = null;
+    p.followTarget = null;
     p.setState('hurt', 14);
   }
   w.events.emit('burst', { x: v.x, y: v.cy, enemy: v });

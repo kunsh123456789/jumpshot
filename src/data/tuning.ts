@@ -46,6 +46,10 @@ export const PAD = {
   landscapeWidth: 0.56,
   /** Minimum fraction of screen height for the pad in portrait. */
   portraitMinHeight: 0.42,
+  /** Portrait crop of the 1280x720 view: visible logical width and vertical band. */
+  portraitViewW: 760,
+  portraitViewTop: 30,
+  portraitViewBottom: 560,
   /** Swipe commits after this distance (fraction of pad's short side * sensitivity). */
   minDistFrac: 0.075,
   minDistPx: 16,
@@ -132,6 +136,8 @@ export const COMBO = {
   burstHitThreshold: 11,
   burstChance: 0.28,
   burstPush: 620,
+  /** Air juggles allow an escape burst after burstThreshold * this many hits on one enemy. */
+  airBurstFactor: 2.4,
   /** Height above which upward juggle knockback fades out (keeps juggles on screen). */
   juggleCeiling: 280,
   juggleCeilingFade: 170,

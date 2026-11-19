@@ -96,6 +96,7 @@ export class World {
 
     this.ai.distribute(this);
     for (const e of this.enemies) {
+      if (e.flash > 0) e.flash--;
       if (e.hitstop > 0) {
         e.hitstop--;
         // victim jitter along the hit direction
@@ -126,6 +127,7 @@ export class World {
     let anyHit = false;
     for (const e of this.enemies) if (e.alive && (e.inHitState || e.hitstop > 0)) { anyHit = true; break; }
     this.combo.update(anyHit);
+    if (this.combo.hits === 0) for (const e of this.enemies) if (!e.inHitState) e.comboHits = 0;
     this.waves.update(this);
     this.updateVisuals();
   }

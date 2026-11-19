@@ -34,7 +34,7 @@ export class Renderer {
   /** Set transform to logical view space (1280x720) inside the world rect. */
   viewTransform(): void {
     const d = layout.dpr, s = layout.scale, r = layout.world;
-    this.ctx.setTransform(d * s, 0, 0, d * s, d * r.x, d * r.y);
+    this.ctx.setTransform(d * s, 0, 0, d * s, d * (r.x - layout.viewX0 * s), d * (r.y - layout.viewY0 * s));
   }
   cssTransform(): void {
     const d = layout.dpr;
@@ -50,7 +50,7 @@ export class Renderer {
     this.viewTransform();
     ctx.save();
     ctx.beginPath();
-    ctx.rect(0, 0, WORLD.viewW, WORLD.viewH);
+    ctx.rect(layout.viewX0, layout.viewY0, layout.viewW, layout.viewH);
     ctx.clip();
     this.bg.update(dt, cam);
     this.bg.drawSky(ctx, cam);
@@ -86,7 +86,7 @@ export class Renderer {
     if (effects.screenFlash > 0) {
       ctx.globalAlpha = Math.min(1, effects.screenFlash) * 0.55;
       ctx.fillStyle = effects.screenFlashColor;
-      ctx.fillRect(0, 0, WORLD.viewW, WORLD.viewH);
+      ctx.fillRect(layout.viewX0, layout.viewY0, layout.viewW, layout.viewH);
       ctx.globalAlpha = 1;
     }
   }

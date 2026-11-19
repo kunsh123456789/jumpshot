@@ -83,7 +83,7 @@ export class Menus {
     el.appendChild(row);
     // keep the prompt above the pad
     const padTop = (window as unknown as { __padTop?: number }).__padTop;
-    if (padTop) { pr.style.position = 'absolute'; pr.style.top = Math.max(0, padTop - 52) + 'px'; pr.style.marginBottom = '0'; }
+    if (padTop) { pr.style.position = 'absolute'; pr.style.top = (padTop + 18) + 'px'; pr.style.marginBottom = '0'; }
   }
 
   // ---------------- Pause ----------------
