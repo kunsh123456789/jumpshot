@@ -4,7 +4,8 @@ export interface Settings {
   musicVolume: number;    // 0..1
   shake: number;          // 0..1.5 multiplier
   hitstop: number;        // 0..1.5 multiplier
-  sensitivity: number;    // 0.5..1.6 (higher = shorter swipes commit)
+  sensitivity: number;    // 0.5..1.6 (higher = softer/shorter flicks attack)
+  padRegion: number;      // 0.35..0.6 fraction of the screen (from the bottom) used as the pad
   leftHanded: boolean;
   debug: boolean;
   reduceFlashes: boolean;
@@ -18,6 +19,7 @@ export const settings: Settings = {
   shake: 1,
   hitstop: 1,
   sensitivity: 1,
+  padRegion: 0.5,
   leftHanded: false,
   debug: false,
   reduceFlashes: false,
@@ -34,8 +36,8 @@ export function saveSettings(): void {
 }
 
 const SAVE_KEY = 'jumpshot.save.v1';
-export interface SaveData { highScore: number; tutorialDone: boolean; bestCombo: number; bestWave: number }
-export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0 };
+export interface SaveData { highScore: number; tutorialDone: boolean; bestCombo: number; bestWave: number; padHintSeen: boolean }
+export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false };
 export function loadSave(): void {
   try {
     const raw = localStorage.getItem(SAVE_KEY);

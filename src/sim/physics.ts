@@ -1,6 +1,22 @@
 import type { World } from './world';
 import type { Fighter } from './fighter';
-import { PHYS, WORLD } from '../data/tuning';
+import { ANIM, PHYS, WORLD } from '../data/tuning';
+
+/**
+ * Gravity multiplier with eased air-stall (blends in over stallEaseIn frames and
+ * out over stallEaseOut) and an apex hang that softens the top of every arc.
+ * Also decrements the stall counter.
+ */
+export function airGravity(f: Fighter): number {
+  if (f.stall > 0) { f.stall--; f.stallMix = Math.min(1, f.stallMix + 1 / ANIM.stallEaseIn); }
+  else f.stallMix = Math.max(0, f.stallMix - 1 / ANIM.stallEaseOut);
+  const m = f.stallMix * f.stallMix * (3 - 2 * f.stallMix);
+  let g = 1 + (PHYS.stallGravity - 1) * m;
+  if (m > 0 && f.vy > 60) f.vy *= 1 - 0.2 * m;
+  const av = Math.abs(f.vy);
+  if (av < ANIM.apexBand) g *= ANIM.apexGravity + (1 - ANIM.apexGravity) * (av / ANIM.apexBand);
+  return g;
+}
 import { shockwave, sideHit } from './combat';
 
 const WALL_L = WORLD.wallMargin;
@@ -11,15 +27,14 @@ export function enemyPhysics(w: World, e: Fighter): void {
   if (e.splat > 0) e.splat--;
   const airState = e.state === 'air' || e.state === 'ko';
   if (airState || !e.grounded) {
-    let g = PHYS.gravity * e.gravityScale;
-    if (e.stall > 0) { e.stall--; g *= PHYS.stallGravity; if (e.vy > 0) e.vy *= 0.85; }
+    const g = PHYS.gravity * e.gravityScale * airGravity(e);
     e.vy = Math.min(PHYS.maxFall * 1.4, e.vy + g / 60);
     e.vx *= PHYS.airDrag;
     e.x += e.vx / 60;
     e.y += e.vy / 60;
-    e.spinAngle += e.spinVel * (e.stall > 0 ? 0.4 : 1);
-    if (e.spinAngle > Math.PI * 4) e.spinAngle -= Math.PI * 2;
-    if (e.spinAngle < -Math.PI * 4) e.spinAngle += Math.PI * 2;
+    // No wrapping here: a 2*pi jump in the target would make the pose spring
+    // chase it backwards. The animator unwinds spin on clip changes instead.
+    e.spinAngle += e.spinVel * (0.4 + 0.6 * (1 - e.stallMix));
 
     // Walls.
     if (e.x < WALL_L || e.x > WALL_R) {
@@ -84,6 +99,7 @@ export function enemyPhysics(w: World, e: Fighter): void {
       e.grounded = true;
       e.vy = 0;
       e.stall = 0;
+      e.spinAngle = 0;
       const hard = vy > 650 || e.knockdownOnLand || e.state === 'air';
       e.knockdownOnLand = false;
       if (hard) {

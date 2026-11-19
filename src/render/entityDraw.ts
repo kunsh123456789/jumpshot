@@ -9,15 +9,16 @@ export function drawEntities(ctx: CanvasRenderingContext2D, w: World, alpha: num
   // Meteor warnings + falling pillars.
   for (let i = 0; i < E.meteors.count; i++) {
     const m = E.meteors.items[i];
-    const k = Math.min(1, m.t / m.warn);
+    const mt = m.t + alpha; // sub-tick time so the falling pillar is smooth at any refresh rate
+    const k = Math.min(1, mt / m.warn);
     ctx.globalAlpha = 0.25 + 0.35 * Math.abs(Math.sin(time * 18));
     ctx.fillStyle = '#ff3030';
     ctx.beginPath();
     ctx.ellipse(m.x, WORLD.groundY + 2, BOSS.meteorRadius * (0.4 + 0.6 * k), BOSS.meteorRadius * 0.22 * (0.4 + 0.6 * k), 0, 0, TAU);
     ctx.fill();
     ctx.globalAlpha = 1;
-    if (m.t > m.warn - 14 && m.t < m.warn + 8) {
-      const fall = Math.min(1, (m.t - (m.warn - 14)) / 14);
+    if (mt > m.warn - 14 && mt < m.warn + 8) {
+      const fall = Math.min(1, (mt - (m.warn - 14)) / 14);
       const y = WORLD.groundY - 700 + 700 * fall;
       ctx.globalCompositeOperation = 'lighter';
       ctx.strokeStyle = '#ff8a3a';

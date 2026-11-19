@@ -72,8 +72,8 @@ export class FxDirector {
       audio.whoosh(e.weight);
     });
     ev.on('afterimage', (e) => {
-      const f = e.fighter;
-      effects.afterimage(f.anim.joints, f.team === 'player' ? '#7fe8ff' : f.color, f.thickness, f.scale);
+      // Afterimages are emitted at render rate from interpolated poses (see drawFighter).
+      e.fighter.anim.ghostTime = Math.max(e.fighter.anim.ghostTime, 0.09);
     });
     ev.on('groundImpact', (e) => {
       if (e.fighter.team === 'player') { if (e.power > 0.2) effects.dust(e.x, e.y, 0.2); return; }

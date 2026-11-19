@@ -1,10 +1,11 @@
 import type { World } from './world';
 import type { Fighter } from './fighter';
 import { MOVES, MOVE_MAP, dirClass, dirSignX, type MoveDef, type MoveTag } from '../data/moves';
-import { INPUT, PHYS, PLAYER, SUPER, WORLD } from '../data/tuning';
+import { INPUT, MOVE, PHYS, PLAYER, SUPER, WORLD } from '../data/tuning';
 import type { SwipeEvent } from '../ui/pad';
 import { clamp, ease } from '../core/math';
 import { overlaps, playerHit, sideHit } from './combat';
+import { airGravity } from './physics';
 
 interface Buffered { ev: SwipeEvent; age: number; heavy: boolean; used: boolean }
 
@@ -96,6 +97,7 @@ export class PlayerController {
         if (p.vy > 0) p.setState('fall');
         break;
     }
+    this.locomotion(w);
     this.physics(w);
   }
 
@@ -219,6 +221,7 @@ export class PlayerController {
     const p = w.player;
     const prev = p.move;
     p.move = m;
+    p.moveSerial++;
     p.setState('move');
     p.moveFrame = 0;
     p.hitCount = 0;
@@ -285,7 +288,7 @@ export class PlayerController {
         if (fin) target.vx = 0;
       }
     }
-    if (isAir || !p.grounded) { p.vy = 0; p.vx = 0; p.stall = Math.max(p.stall, p.effStartup + m.active); }
+    if (isAir || !p.grounded) { p.stall = Math.max(p.stall, p.effStartup + m.active); }
     else p.vx = 0;
   }
 
@@ -347,7 +350,8 @@ export class PlayerController {
     // Dash / magnetism movement with homing.
     if (p.dashFrames > 0 && fr < p.dashFrames) {
       if (p.target && p.target.alive && m.dash) this.computeDashTarget(p, m, p.target, m.tags.includes('air'));
-      const t = ease.outCubic((fr + 1) / p.dashFrames);
+      // Ease-out velocity curve: fast launch, soft arrival (outQuad peaks at 2x average speed).
+      const t = ease.outQuad((fr + 1) / p.dashFrames);
       p.x = p.dashFromX + (p.dashToX - p.dashFromX) * t;
       p.y = p.dashFromY + (p.dashToY - p.dashFromY) * t;
       if (p.y < WORLD.groundY - 1) p.grounded = false;
@@ -462,6 +466,36 @@ export class PlayerController {
     if (--p.timer <= 0) { p.hitCount = 0; p.setState(p.grounded ? 'idle' : 'fall'); }
   }
 
+  /**
+   * Drag-to-move locomotion. Only while free (idle/run/landing); during attacks,
+   * dodges and hit-stun the held stick is ignored and resumes as soon as the
+   * player is free. Smooth acceleration/deceleration feeds the run animation.
+   */
+  private locomotion(w: World): void {
+    const p = w.player;
+    const axis = w.moveAxis;
+    const free = p.state === 'idle' || p.state === 'walk' || p.state === 'land';
+    if (p.grounded && free) {
+      let target = axis * MOVE.runSpeed;
+      if (target !== 0) {
+        // Soft clamp: slow down near the walls instead of hitting them.
+        const dist = target > 0 ? WORLD.arenaW - WORLD.wallMargin - p.x : p.x - WORLD.wallMargin;
+        const k = clamp(dist / MOVE.wallSoft, 0, 1);
+        target *= k * k * (3 - 2 * k);
+      }
+      const speeding = target !== 0 && (p.vx === 0 || Math.sign(target) === Math.sign(p.vx)) && Math.abs(target) > Math.abs(p.vx);
+      const rate = (speeding ? MOVE.accel : MOVE.decel) / 60;
+      if (p.vx < target) p.vx = Math.min(target, p.vx + rate);
+      else if (p.vx > target) p.vx = Math.max(target, p.vx - rate);
+      if (axis !== 0) p.facing = axis > 0 ? 1 : -1;
+      if (Math.abs(p.vx) > MOVE.runThreshold || axis !== 0) { if (p.state !== 'walk') p.setState('walk'); }
+      else if (p.state === 'walk') p.setState('idle');
+    } else if (!p.grounded && axis !== 0 && (p.state === 'fall' || p.state === 'jumpFollow')) {
+      const nv = p.vx + (axis * MOVE.airAccel) / 60;
+      if (Math.abs(nv) <= MOVE.airMax || Math.abs(nv) < Math.abs(p.vx)) p.vx = nv;
+    }
+  }
+
   // ---------------------------------------------------------------------
   private physics(w: World): void {
     const p = w.player;
@@ -469,14 +503,15 @@ export class PlayerController {
     const hanging = p.state === 'move' && p.move !== null && !p.grounded && p.moveFrame < p.effStartup;
     if (!p.grounded) {
       if (!dashing && !hanging) {
-        let g = PHYS.gravity;
-        if (p.stall > 0) { p.stall--; g *= PHYS.stallGravity; if (p.vy > 60) p.vy *= 0.8; }
+        const g = PHYS.gravity * airGravity(p);
         p.vy = Math.min(PHYS.maxFall, p.vy + g / 60);
         p.y += p.vy / 60;
         p.x += p.vx / 60;
         p.vx *= 0.96;
       } else if (hanging && !dashing) {
-        p.vy = 0;
+        // Ease into the air hang instead of stopping dead.
+        p.vy *= 0.55; p.vx *= 0.7;
+        p.y += p.vy / 60; p.x += p.vx / 60;
       }
       if (p.y >= WORLD.groundY) {
         p.y = WORLD.groundY;
@@ -496,8 +531,11 @@ export class PlayerController {
     } else {
       if (!dashing && p.state !== 'dodge') {
         p.x += p.vx / 60;
-        p.vx *= p.state === 'hurt' ? 0.88 : 0.75;
-        if (Math.abs(p.vx) < 5) p.vx = 0;
+        const free = p.state === 'idle' || p.state === 'walk' || p.state === 'land';
+        if (!free) {
+          p.vx *= p.state === 'hurt' ? 0.88 : 0.75;
+          if (Math.abs(p.vx) < 5) p.vx = 0;
+        }
       }
       p.y = WORLD.groundY;
     }

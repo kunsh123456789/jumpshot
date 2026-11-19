@@ -36,6 +36,7 @@ export const ease = {
   linear: (t: number) => t,
   inQuad: (t: number) => t * t,
   outQuad: (t: number) => t * (2 - t),
+  inOutSine: (t: number) => 0.5 - 0.5 * Math.cos(Math.PI * t),
   inOutQuad: (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
   outCubic: (t: number) => { const u = t - 1; return u * u * u + 1; },
   inCubic: (t: number) => t * t * t,

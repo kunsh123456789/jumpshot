@@ -14,6 +14,8 @@ export class Renderer {
   /** Extra world-space draw hook (projectiles, pickups, hazards). */
   drawExtras: ((ctx: CanvasRenderingContext2D, alpha: number, time: number) => void) | null = null;
   private order: Fighter[] = [];
+  /** Interpolated player hip position from the last rendered frame (smoothness tests). */
+  lastPlayerX = 0; lastPlayerY = 0;
 
   constructor(readonly canvas: HTMLCanvasElement) {
     const ctx = canvas.getContext('2d', { alpha: false });
@@ -75,9 +77,12 @@ export class Renderer {
     for (const f of order) drawShadow(ctx, f, alpha, time);
     effects.drawParticles(ctx, false);
     effects.drawGhosts(ctx);
-    for (const f of order) drawFighter(ctx, f, alpha, time);
+    for (const f of order) drawFighter(ctx, f, alpha, time, dt);
+    const pl = world.player;
+    this.lastPlayerX = pl.px + (pl.x - pl.px) * alpha;
+    this.lastPlayerY = pl.py + (pl.y - pl.py) * alpha;
     if (this.drawExtras) this.drawExtras(ctx, alpha, time);
-    for (const f of order) drawTrail(ctx, f, alpha);
+    for (const f of order) drawTrail(ctx, f, time);
     effects.drawParticles(ctx, true);
     effects.drawTexts(ctx);
     ctx.restore();

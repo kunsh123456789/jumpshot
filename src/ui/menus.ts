@@ -65,7 +65,7 @@ export class Menus {
     el.appendChild(spacer);
     const pr = document.createElement('div');
     pr.className = 'prompt';
-    pr.textContent = 'SWIPE ON THE PAD TO START';
+    pr.textContent = 'TAP OR FLICK THE LOWER HALF TO START';
     pr.style.marginBottom = '2vh';
     el.appendChild(pr);
     const row = document.createElement('div');
@@ -99,7 +99,7 @@ export class Menus {
     this.btn(p, 'QUIT TO TITLE', onQuit);
     const h = document.createElement('div');
     h.className = 'hint';
-    h.innerHTML = 'Swipe = attack in that direction · Long fast swipe = HEAVY<br>Swipe ↑ = JUMPSHOT launcher · Swipe ↓ in air = SPIKE · Tap = dodge / parry<br>Keyboard: WASD/arrows (+Shift heavy), Space = tap, ` = debug';
+    h.innerHTML = 'Lower half of the screen: drag slowly = move · flick = attack in that direction · long fast flick = HEAVY<br>Flick ↑ = JUMPSHOT launcher · flick ↓ in air = SPIKE · tap = dodge / parry<br>Keyboard: A/D or ←/→ move · I/J/K/L attack (+Shift heavy) · Space = tap · ` = debug';
     p.appendChild(h);
     el.appendChild(p);
   }
@@ -110,7 +110,7 @@ export class Menus {
     const p = document.createElement('div');
     p.className = 'panel';
     p.innerHTML = '<h2>SETTINGS</h2>';
-    const slider = (label: string, key: 'masterVolume' | 'musicVolume' | 'shake' | 'hitstop' | 'sensitivity', min: number, max: number, step: number) => {
+    const slider = (label: string, key: 'masterVolume' | 'musicVolume' | 'shake' | 'hitstop' | 'sensitivity' | 'padRegion', min: number, max: number, step: number, after?: () => void) => {
       const row = document.createElement('label');
       row.className = 'row';
       const span = document.createElement('span');
@@ -119,7 +119,8 @@ export class Menus {
       const inp = document.createElement('input');
       inp.type = 'range'; inp.min = String(min); inp.max = String(max); inp.step = String(step);
       inp.value = String(settings[key]);
-      inp.addEventListener('input', () => { settings[key] = parseFloat(inp.value); span.textContent = fmt(); audio.applyVolume(); saveSettings(); });
+      inp.id = 'set-' + key;
+      inp.addEventListener('input', () => { settings[key] = parseFloat(inp.value); span.textContent = fmt(); audio.applyVolume(); saveSettings(); after?.(); });
       row.appendChild(span); row.appendChild(inp);
       p.appendChild(row);
     };
@@ -139,7 +140,8 @@ export class Menus {
     slider('Music volume', 'musicVolume', 0, 1, 0.05);
     slider('Screen shake', 'shake', 0, 1.5, 0.05);
     slider('Hit-stop strength', 'hitstop', 0, 1.5, 0.05);
-    slider('Swipe sensitivity', 'sensitivity', 0.5, 1.6, 0.05);
+    slider('Flick sensitivity', 'sensitivity', 0.5, 1.6, 0.05);
+    slider('Touch area (screen height)', 'padRegion', 0.35, 0.6, 0.01, () => window.dispatchEvent(new Event('resize')));
     check('Left-handed pad', 'leftHanded', () => { window.dispatchEvent(new Event('resize')); this.placePause(); });
     check('Reduce flashes', 'reduceFlashes');
     check('Show debug overlay', 'debug', () => window.dispatchEvent(new Event('jumpshot-debug')));

@@ -90,6 +90,7 @@ export class WaveDirector {
       e.knockdownOnLand = false;
       e.ai.cooldown = 120;
     }
+    e.snapAnim();
     w.enemies.push(e);
     w.events.emit('spawn', { enemy: e });
     return e;

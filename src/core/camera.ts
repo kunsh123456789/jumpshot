@@ -1,5 +1,5 @@
 import { CAMERA, JUICE, WORLD } from '../data/tuning';
-import { clamp, damp } from './math';
+import { clamp } from './math';
 import { settings } from './settings';
 import { layout } from './layout';
 
@@ -20,6 +20,9 @@ export class Camera {
   private rotTrauma = 0;
   private kickX = 0; private kickY = 0; private kickVX = 0; private kickVY = 0;
   private punch = 0;
+  private punchTarget = 0;
+  private vPunch = 0;
+  private vx = 0; private vy = 0; private vz = 0; private vFocus = 0;
   private t = 0;
 
   // Outputs (logical px / radians).
@@ -37,7 +40,7 @@ export class Camera {
   }
 
   punchZoom(a: number): void {
-    this.punch = Math.min(JUICE.punchZoomMax, this.punch + a * JUICE.punchZoomMax);
+    this.punchTarget = Math.min(JUICE.punchZoomMax, this.punchTarget + a * JUICE.punchZoomMax);
   }
 
   focus(amount: number, seconds: number): void {
@@ -47,21 +50,25 @@ export class Camera {
 
   snap(): void {
     this.x = this.targetX; this.y = this.targetY; this.zoom = this.targetZoom;
+    this.vx = this.vy = this.vz = 0;
   }
 
   update(dt: number): void {
     this.t += dt;
     if (this.focusRemain > 0) { this.focusRemain -= dt; if (this.focusRemain <= 0) this.focusTarget = 0; }
-    this.focusZoom += (this.focusTarget - this.focusZoom) * damp(this.focusTarget > this.focusZoom ? 12 : 4, dt);
-
-    this.x += (this.targetX - this.x) * damp(CAMERA.followRate, dt);
-    this.y += (this.targetY - this.y) * damp(CAMERA.followRate * 0.8, dt);
-    this.zoom += (this.targetZoom - this.zoom) * damp(this.targetZoom < this.zoom ? CAMERA.zoomOutRate : CAMERA.zoomRate, dt);
-    this.punch += (0 - this.punch) * damp(7, dt);
+    // Critically damped springs: inertia on start, no overshoot, never a snap-cut.
+    [this.focusZoom, this.vFocus] = spring(this.focusZoom, this.vFocus, this.focusTarget, this.focusTarget > this.focusZoom ? 14 : 6, dt);
+    [this.x, this.vx] = spring(this.x, this.vx, this.targetX, CAMERA.followOmega, dt);
+    [this.y, this.vy] = spring(this.y, this.vy, this.targetY, CAMERA.followOmega * 0.85, dt);
+    [this.zoom, this.vz] = spring(this.zoom, this.vz, this.targetZoom, this.targetZoom < this.zoom ? CAMERA.zoomOutOmega : CAMERA.zoomOmega, dt);
+    // Punch-in: the target spikes and decays; the zoom springs toward it (eased in AND out).
+    this.punchTarget *= Math.exp(-CAMERA.punchDecay * dt);
+    [this.punch, this.vPunch] = spring(this.punch, this.vPunch, this.punchTarget, CAMERA.punchOmega, dt);
 
     const z = this.effectiveZoom();
     const half = layout.viewW / 2 / z;
-    this.x = clamp(this.x, half - 10, WORLD.arenaW - half + 10);
+    const cx = clamp(this.x, half - 10, WORLD.arenaW - half + 10);
+    if (cx !== this.x) { this.x = cx; this.vx = 0; }
 
     // Trauma shake (squared for nicer falloff) using layered sines (no allocation).
     this.trauma = Math.max(0, this.trauma - JUICE.shakeDecay * dt * 0.5);
@@ -96,4 +103,15 @@ export class Camera {
   /** Visible world-space x range. */
   viewLeft(): number { return this.x - layout.viewW / 2 / this.effectiveZoom(); }
   viewRight(): number { return this.x + layout.viewW / 2 / this.effectiveZoom(); }
+}
+
+/** Exact critically damped spring step (stable for any dt). Returns [x, v]. */
+const out2: [number, number] = [0, 0];
+function spring(x: number, v: number, target: number, omega: number, dt: number): [number, number] {
+  const y = x - target;
+  const e = Math.exp(-omega * dt);
+  const tmp = (v + omega * y) * dt;
+  out2[0] = target + (y + tmp) * e;
+  out2[1] = (v - omega * tmp) * e;
+  return out2;
 }

@@ -1,7 +1,7 @@
 import type { World } from './world';
 import type { Fighter } from './fighter';
 import type { MoveDef } from '../data/moves';
-import { COMBO, JUICE, PHYS, PLAYER, SCORE, SUPER } from '../data/tuning';
+import { ANIM, COMBO, JUICE, PHYS, PLAYER, SCORE, SUPER } from '../data/tuning';
 import { settings } from '../core/settings';
 import { simRng } from '../core/rng';
 import type { EnemyAttack } from '../data/enemies';
@@ -86,6 +86,7 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
 
   v.hp -= dmg;
   v.flash = JUICE.flashFrames;
+  v.impact = ANIM.impactSnapFrames;
   v.lastHitBy = p.id;
   v.comboHits++;
   v.invuln = 0;
@@ -259,6 +260,7 @@ export function chainLightning(w: World, from: Fighter, arcs: number, dmg: numbe
 export function sideHit(w: World, v: Fighter, dmg: number, dirX: number, vy: number, kind: 'bowl' | 'shock' | 'reflect', kbX = 260): void {
   if (!v.canBeHit) return;
   v.hp -= dmg;
+  v.impact = ANIM.impactSnapFrames;
   v.flash = JUICE.flashFrames;
   v.comboHits++;
   if (v.hasToken) w.ai.releaseToken(v);
@@ -317,11 +319,13 @@ export function ko(w: World, v: Fighter, dirX: number): void {
   v.alive = false;
   v.hp = 0;
   if (v.hasToken) w.ai.releaseToken(v);
+  if (v.grounded) v.spinAngle = 0;
   v.setState('ko');
   v.grounded = false;
   v.vy = v.kind === 'boss' ? -900 : -1050;
   v.vx = dirX * (v.kind === 'boss' ? 300 : 760);
-  v.spinVel = 0.35 * dirX;
+  // keep an existing tumble's direction so the KO spin never reverses abruptly
+  v.spinVel = 0.35 * (v.spinVel !== 0 && !v.grounded ? Math.sign(v.spinVel) : dirX);
   v.stall = 0;
   v.gravityScale = 1;
   v.koLaunched = true;
@@ -371,6 +375,7 @@ export function parry(w: World, e: Fighter | null, projectile: boolean): void {
     if (e.hasToken) w.ai.releaseToken(e);
     e.attack = null; e.telegraph = 0;
     e.setState('stunned', e.kind === 'boss' ? 60 : 80);
+    e.impact = ANIM.impactSnapFrames;
     e.vx = e.facing * -160;
     e.flash = 4;
     // Parrying armored enemies breaks a chunk of poise.
@@ -385,6 +390,7 @@ export function hurtPlayer(w: World, dmg: number, dirX: number, kbX: number, kbY
   const p = w.player;
   if (p.invuln > 0 || !p.alive) return;
   p.hp -= dmg;
+  p.impact = ANIM.impactSnapFrames;
   p.move = null;
   p.followTarget = null;
   p.invuln = PLAYER.hurtInvulnFrames;

@@ -216,7 +216,7 @@ export class Background {
       a.floorGrad = g;
     }
     ctx.fillStyle = a.floorGrad;
-    ctx.fillRect(left, WORLD.groundY, right - left, 500);
+    ctx.fillRect(left, WORLD.groundY, right - left, 1600);
     // floor perspective lines
     ctx.strokeStyle = a.line;
     ctx.globalAlpha = 0.14;
@@ -233,7 +233,7 @@ export class Background {
     if (this.current === 'volcano') {
       const p = 0.15 + 0.08 * Math.sin(this.lavaT * 2);
       ctx.fillStyle = `rgba(255,90,20,${p})`;
-      ctx.fillRect(left, WORLD.groundY + 40, right - left, 400);
+      ctx.fillRect(left, WORLD.groundY + 40, right - left, 1500);
     }
     // walls
     ctx.fillStyle = 'rgba(0,0,0,0.5)';

@@ -33,6 +33,8 @@ export class World {
   camLeft = 0;
   camRight: number = WORLD.viewW;
   wave = 0;
+  /** Horizontal movement input this tick (-1..1), from the pad stick or keyboard. */
+  moveAxis = 0;
 
   constructor() {
     this.player = this.makePlayer();
@@ -77,12 +79,14 @@ export class World {
     e.x = e.px = x;
     e.facing = -1;
     e.ai.cooldown = 120;
+    e.snapAnim();
     this.enemies.push(e);
     return e;
   }
 
-  step(inputs: SwipeEvent[]): void {
+  step(inputs: SwipeEvent[], moveAxis = 0): void {
     this.frame++;
+    this.moveAxis = moveAxis;
     const p = this.player;
     p.px = p.x; p.py = p.y;
     for (const e of this.enemies) { e.px = e.x; e.py = e.y; }
@@ -95,17 +99,14 @@ export class World {
     if (p.alive && this.combo.rank >= 4 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + PLAYER.hpRegenSRank / 60);
 
     this.ai.distribute(this);
+    if (p.impact > 0 && p.hitstop === 0) p.impact--;
     for (const e of this.enemies) {
       if (e.flash > 0) e.flash--;
+      if (e.impact > 0 && e.hitstop === 0) e.impact--;
       if (e.hitstop > 0) {
         e.hitstop--;
-        // victim jitter along the hit direction
-        const j = (this.frame & 1) === 0 ? 1 : -1;
-        e.anim.shakeX = j * 3.5 * (e.hitDirX || 1) * (e.state === 'dead' ? 0 : 1);
-        e.anim.shakeY = j * 1.5 * e.hitDirY;
-        continue;
+        continue; // frozen; the renderer adds a smooth vibration
       }
-      e.anim.shakeX = 0; e.anim.shakeY = 0;
       e.stateFrame++;
       if (e.alive || e.state === 'ko' || e.state === 'dead') {
         if (e.alive) this.ai.update(this, e);
@@ -147,12 +148,21 @@ export class World {
   updateVisuals(): void {
     const t = this.frame / 60;
     const p = this.player;
-    p.anim.shakeX = 0; p.anim.shakeY = 0;
+    // Look targets: the player looks at its target (or nearest enemy), enemies look at the player.
+    let look = p.target && p.target.alive ? p.target : null;
+    if (!look) {
+      let bd = 700;
+      for (const e of this.enemies) { if (!e.alive) continue; const d = Math.abs(e.x - p.x); if (d < bd) { bd = d; look = e; } }
+    }
+    p.hasLook = !!look;
+    if (look) { p.lookX = look.cx; p.lookY = look.cy - 30 * look.scale; }
     poseFighter(p, t);
-    p.anim.step(p.x, p.y, p.facing, p.scale, p.vx, p.vy, p.hitstop > 0);
+    p.anim.step(p.x, p.y, p.facing, p.scale, p.vx, p.vy, p.hitstop > 0, p.state === 'move');
     for (const e of this.enemies) {
+      e.hasLook = p.alive && e.alive;
+      e.lookX = p.cx; e.lookY = p.cy - 30;
       poseFighter(e, t);
-      e.anim.step(e.x, e.y, e.facing, e.scale, e.vx, e.vy, e.hitstop > 0);
+      e.anim.step(e.x, e.y, e.facing, e.scale, e.vx, e.vy, e.hitstop > 0, e.state === 'attack' || e.state === 'windup');
     }
   }
 

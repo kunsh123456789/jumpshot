@@ -360,7 +360,7 @@ add({
   spike: true, selfVY: -380, cancelInto: ['dodge', 'special'], sound: 'spike', weight: 0.85, afterimage: true,
   trail: { limb: 'footA', color: C_SPIKE, width: 16 },
   poses: {
-    antic: { spin: -0.65, laU: 2.7, laL: -0.3, lbU: 0.2, lbL: -1.2, aU: 2.5, aL: 0.5, bU: 2.2, lean: -0.2 },
+    antic: { spin: -0.55, laU: 2.35, laL: -0.3, lbU: 0.2, lbL: -1.2, aU: 2.2, aL: 0.5, bU: 2.0, lean: -0.2 },
     strike: { spin: 0.5, laU: 0.85, laL: 0.0, lbU: -0.4, lbL: -1.0, lean: 0.48, aU: -0.6, aL: 0.9, bU: -0.85, bL: 0.8 },
     follow: { spin: 0.35, laU: 0.9, laL: -0.3, lean: 0.4, aU: -0.4, bU: -0.6 },
   },

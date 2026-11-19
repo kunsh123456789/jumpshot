@@ -9,11 +9,12 @@ loadSave();
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const game = new Game(canvas);
-(window as unknown as { __jumpshot: Game }).__jumpshot = game;
-(window as unknown as { __layout: typeof layout }).__layout = layout;
+const W = window as unknown as Record<string, unknown>;
+W.__jumpshot = game;
+W.__layout = layout;
 
-// Dev/testing: ?wave=N starts a run at wave N (skips the tutorial).
 const qs = new URLSearchParams(location.search);
+// Dev/testing: ?wave=N starts a run at wave N (skips the tutorial).
 const startWave = parseInt(qs.get('wave') ?? '', 10);
 if (startWave > 0) game.devStart(startWave);
 
@@ -28,28 +29,47 @@ document.addEventListener('gesturestart', stop);
 document.addEventListener('contextmenu', stop);
 document.addEventListener('dblclick', stop);
 
-// Fixed-timestep simulation with interpolated rendering.
+/**
+ * Fixed 60 Hz simulation with an accumulator; rendering interpolates with
+ * alpha = acc / SIM_DT. Delta time comes only from the rAF timestamp and is
+ * clamped (tab switches). Slow-mo scales how fast the accumulator fills.
+ */
 const MAX_STEPS = 6;
 let acc = 0;
-let last = performance.now();
+let last = -1;
 
 function frame(now: number): void {
+  if (last < 0) last = now;
   let real = (now - last) / 1000;
   last = now;
   if (real > 0.1) real = 0.1;
   if (real < 0) real = 0;
-  game.time.update(real);
+  const dbg = game.debugScale;
+  game.time.update(real * dbg);
+  let steps = 0;
   if (!game.paused) {
-    acc += real * game.time.scale;
-    let steps = 0;
-    while (acc >= SIM_DT && steps < MAX_STEPS) {
-      game.step();
-      acc -= SIM_DT;
-      steps++;
+    if (game.debugFrozen) {
+      while (game.stepRequests > 0) { game.step(); game.stepRequests--; steps++; }
+      acc = 0;
+    } else {
+      acc += real * dbg * game.time.scale;
+      while (acc >= SIM_DT && steps < MAX_STEPS) {
+        game.step();
+        acc -= SIM_DT;
+        steps++;
+      }
+      if (steps >= MAX_STEPS) acc = 0;
     }
-    if (steps >= MAX_STEPS) acc = 0;
   }
-  game.render(acc / SIM_DT, game.paused ? 0 : real);
-  requestAnimationFrame(frame);
+  const frozen = game.paused || game.debugFrozen;
+  game.render(frozen && game.debugFrozen ? 1 : acc / SIM_DT, frozen ? 0 : real * dbg, steps, real);
 }
-requestAnimationFrame(frame);
+
+if (qs.has('manual')) {
+  // Test harness: drive frames with synthetic timestamps (e.g. emulate 144 Hz).
+  let t = 0;
+  W.__advance = (ms: number) => { t += ms; frame(t); };
+} else {
+  const loop = (now: number) => { frame(now); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}

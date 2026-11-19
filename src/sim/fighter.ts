@@ -2,6 +2,9 @@ import { Animator } from '../render/animator';
 import type { MoveDef } from '../data/moves';
 import type { EnemyAttack, EnemyDef, EnemyKind } from '../data/enemies';
 import { WORLD } from '../data/tuning';
+import { STANCE, makePose } from '../render/rig';
+
+const STANCE_POSE = makePose(STANCE);
 
 export type FState =
   | 'idle' | 'walk' | 'move' | 'dodge' | 'hitstun' | 'air' | 'knockdown' | 'getup'
@@ -26,6 +29,8 @@ export class Fighter {
   grounded = true;
   gravityScale = 1;
   stall = 0;
+  /** Eased 0..1 blend of air-stall gravity (no on/off switching). */
+  stallMix = 0;
 
   hp = 100; maxHp = 100;
   poise = 0; maxPoise = 0; poiseTimer = 0;
@@ -46,6 +51,8 @@ export class Fighter {
 
   // ---- Player move execution ----
   move: MoveDef | null = null;
+  /** Increments on every move start (animation restarts its crossfade per instance). */
+  moveSerial = 0;
   moveFrame = 0;
   effStartup = 0;
   target: Fighter | null = null;
@@ -85,6 +92,10 @@ export class Fighter {
   dizzy = 0;
   /** One off-the-ground hit per knockdown; cleared on get-up. */
   otgUsed = false;
+  /** Ticks of hit-impact reaction (an intentional animation snap for the pop detector). */
+  impact = 0;
+  /** World point the head looks toward (set each tick). */
+  lookX = 0; lookY = 0; hasLook = false;
   /** Frames to show the wall-splat pose after a wall bounce. */
   splat = 0;
 
@@ -133,7 +144,12 @@ export class Fighter {
       this.thickness = 6.5;
     }
     this.anim = new Animator(team === 'player' || !!def?.scarf);
+    this.anim.target.set(STANCE_POSE);
+    this.anim.snap(1);
   }
+
+  /** Spawn/teleport: snap the animation to the current facing (intentional discontinuity). */
+  snapAnim(): void { this.anim.snap(this.facing); this.px = this.x; this.py = this.y; }
 
   setState(s: FState, timer = 0): void {
     this.state = s;

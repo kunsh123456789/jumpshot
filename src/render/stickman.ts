@@ -1,11 +1,13 @@
-import { J, JOINT_N, RIG } from './rig';
-import { SCARF_N, TRAIL_N } from './animator';
+import { J, JOINT_N, POSE_N, RIG, computeJoints, lerpPose, squashJoints } from './rig';
+import { SCARF_N, TRAIL_CAP } from './animator';
 import type { Fighter } from '../sim/fighter';
 import { TAU } from '../core/math';
-import { WORLD } from '../data/tuning';
+import { ANIM, WORLD } from '../data/tuning';
 import { settings } from '../core/settings';
+import { effects } from './effects';
 
 const jt = new Float32Array(JOINT_N * 2);
+const pp = new Float32Array(POSE_N);
 const sc = new Float32Array(SCARF_N * 2);
 const shadeCache = new Map<string, string>();
 
@@ -20,13 +22,28 @@ export function shade(hex: string, k: number): string {
   return v;
 }
 
-/** Interpolate the fighter's joints for this render frame into `jt`. */
-export function interpJoints(f: Fighter, alpha: number): Float32Array {
-  const a = f.anim.prevJoints, b = f.anim.joints;
-  const sx = f.anim.shakeX, sy = f.anim.shakeY;
-  for (let i = 0; i < JOINT_N; i++) {
-    jt[i * 2] = a[i * 2] + (b[i * 2] - a[i * 2]) * alpha + sx;
-    jt[i * 2 + 1] = a[i * 2 + 1] + (b[i * 2 + 1] - a[i * 2 + 1]) * alpha + sy;
+/**
+ * Render-time skeleton: interpolate the pose CHANNELS (angles along the
+ * shortest arc), the feet position, the facing turn and the squash between
+ * the last two sim ticks, then run FK. Limbs therefore sweep along true arcs
+ * at any refresh rate. Hit-stop victims get a smooth high-frequency vibration.
+ */
+export function interpJoints(f: Fighter, alpha: number, time: number): Float32Array {
+  const a = f.anim;
+  lerpPose(a.prevPose, a.pose, alpha, pp);
+  const bx = f.px + (f.x - f.px) * alpha;
+  const by = f.py + (f.y - f.py) * alpha;
+  const face = a.prevFace + (a.face - a.prevFace) * alpha;
+  computeJoints(pp, bx, by, face, f.scale, WORLD.groundY, jt);
+  const sqx = a.prevSqX + (a.sqX - a.prevSqX) * alpha;
+  const sqy = a.prevSqY + (a.sqY - a.prevSqY) * alpha;
+  const airborne = by < WORLD.groundY - 2;
+  squashJoints(jt, airborne ? jt[J.hip * 2] : bx, airborne ? jt[J.hip * 2 + 1] : by, sqx, sqy);
+  const victim = f.hitstop > 0 && (f.team === 'enemy' || f.state === 'hurt') && f.state !== 'dead';
+  if (victim) {
+    const v = Math.sin(time * TAU * ANIM.hitstopShakeHz) * ANIM.hitstopShakeAmp;
+    const ox = v * (f.hitDirX || 1), oy = v * 0.4 * f.hitDirY;
+    for (let i = 0; i < JOINT_N; i++) { jt[i * 2] += ox; jt[i * 2 + 1] += oy; }
   }
   return jt;
 }
@@ -43,7 +60,6 @@ export function drawShadow(ctx: CanvasRenderingContext2D, f: Fighter, alpha: num
   ctx.ellipse(x, WORLD.groundY + 2, w, w * 0.24, 0, 0, TAU);
   ctx.fill();
   ctx.globalAlpha = 1;
-  // Attacker ring: token holder / telegraphing enemy gets a pulsing red ring.
   if (f.team === 'enemy' && f.alive && (f.hasToken || f.state === 'windup')) {
     const pulse = f.state === 'windup' ? 0.6 + 0.4 * Math.sin(time * 30) : 0.45;
     ctx.strokeStyle = f.state === 'windup' ? '#ff2a2a' : '#ff6a5a';
@@ -74,26 +90,37 @@ function torso(ctx: CanvasRenderingContext2D): void {
   ctx.lineTo(jt[J.neck * 2], jt[J.neck * 2 + 1]);
 }
 function rearLimbs(ctx: CanvasRenderingContext2D): void {
-  seg(ctx, J.chest, J.elbB); seg(ctx, J.elbB, J.handB);
-  seg(ctx, J.hip, J.kneeB); seg(ctx, J.kneeB, J.footB);
+  seg(ctx, J.chest, J.shB); seg(ctx, J.shB, J.elbB); seg(ctx, J.elbB, J.handB);
+  seg(ctx, J.hip, J.hipB); seg(ctx, J.hipB, J.kneeB); seg(ctx, J.kneeB, J.footB);
 }
 function frontLimbs(ctx: CanvasRenderingContext2D): void {
-  seg(ctx, J.hip, J.kneeA); seg(ctx, J.kneeA, J.footA);
-  seg(ctx, J.chest, J.elbA); seg(ctx, J.elbA, J.handA);
+  seg(ctx, J.hip, J.hipA); seg(ctx, J.hipA, J.kneeA); seg(ctx, J.kneeA, J.footA);
+  seg(ctx, J.chest, J.shA); seg(ctx, J.shA, J.elbA); seg(ctx, J.elbA, J.handA);
 }
 
-export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: number, time: number): void {
-  interpJoints(f, alpha);
+/** Draw a fighter; also samples its render-rate motion trail and afterimages. */
+export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: number, time: number, dt: number): void {
+  interpJoints(f, alpha, time);
   const a = f.anim;
+  if (a.trailActive) a.pushTrail(jt[a.trailJoint * 2], jt[a.trailJoint * 2 + 1], time);
+  if (a.ghostTime > 0) {
+    a.ghostTime -= dt;
+    a.ghostAcc += dt;
+    if (a.ghostAcc >= ANIM.ghostInterval) {
+      a.ghostAcc = 0;
+      effects.afterimage(jt, f.team === 'player' ? '#7fe8ff' : f.color, f.thickness, f.scale);
+    }
+  }
   const s = f.scale;
   const w = f.thickness * s;
   const headR = RIG.headR * s * (f.kind === 'brute' ? 1.1 : 1);
   const hx = jt[J.head * 2] + (a.prevHeadOX + (a.headOX - a.prevHeadOX) * alpha) * s;
   const hy = jt[J.head * 2 + 1] + (a.prevHeadOY + (a.headOY - a.prevHeadOY) * alpha) * s;
+  const face = a.prevFace + (a.face - a.prevFace) * alpha;
   const flashing = f.flash > 0 && !(settings.reduceFlashes && f.team === 'player');
   let fade = 1;
-  if (f.state === 'dead') fade = Math.max(0, 1 - f.deadTimer / 36);
-  if (f.team === 'player' && f.invuln > 0 && f.state !== 'dodge' && f.state !== 'move' && ((time * 20) | 0) % 2 === 0) fade = 0.45;
+  if (f.state === 'dead') fade = Math.max(0, 1 - (f.deadTimer + alpha) / 36);
+  if (f.team === 'player' && f.invuln > 0 && f.state !== 'dodge' && f.state !== 'move') fade = 0.6 + 0.35 * Math.cos(time * 40);
   ctx.globalAlpha = fade;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -101,7 +128,7 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
   // Scarf (behind body).
   if (a.hasScarf && a.scarfInit) {
     for (let i = 0; i < SCARF_N * 2; i++) sc[i] = a.scarfPrev[i] + (a.scarf[i] - a.scarfPrev[i]) * alpha;
-    sc[0] = hx - f.facing * 7 * s; sc[1] = hy - 2 * s;
+    sc[0] = hx - face * 7 * s; sc[1] = hy - 2 * s;
     ctx.strokeStyle = '#05060c';
     ctx.lineWidth = 9 * s;
     strokeScarf(ctx);
@@ -110,7 +137,6 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
     strokeScarf(ctx);
   }
 
-  // Telegraph glow.
   if (f.state === 'windup' || f.telegraph > 0) {
     const p = 0.45 + 0.35 * Math.sin(time * 40);
     ctx.globalCompositeOperation = 'lighter';
@@ -123,7 +149,6 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = fade;
   }
-  // Player aura while crit-buffed.
   if (f.team === 'player' && f.telegraph < 0) {
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = 0.5 * fade;
@@ -134,7 +159,6 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
     ctx.globalAlpha = fade;
   }
 
-  // Outline pass for readability on any background.
   ctx.strokeStyle = '#05060c';
   ctx.lineWidth = w + 5;
   ctx.beginPath(); torso(ctx); rearLimbs(ctx); frontLimbs(ctx); ctx.stroke();
@@ -151,23 +175,19 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
   ctx.beginPath(); torso(ctx); frontLimbs(ctx); ctx.stroke();
   ctx.fillStyle = main;
   ctx.beginPath(); ctx.arc(hx, hy, headR, 0, TAU); ctx.fill();
-  // hand / foot nubs
   ctx.beginPath();
   ctx.arc(jt[J.handA * 2], jt[J.handA * 2 + 1], w * 0.75, 0, TAU);
   ctx.arc(jt[J.footA * 2], jt[J.footA * 2 + 1], w * 0.7, 0, TAU);
   ctx.fill();
 
-  // Details.
-  const fx = f.facing;
+  const fx = face;
   if (f.team === 'player') {
-    // headband
     ctx.strokeStyle = flashing ? '#fff' : f.accent;
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.arc(hx, hy, headR - 1, -Math.PI * 0.95, -Math.PI * 0.05);
     ctx.stroke();
   } else {
-    // eyes
     ctx.fillStyle = flashing ? '#fff' : '#05060c';
     ctx.beginPath();
     ctx.arc(hx + fx * headR * 0.45, hy - headR * 0.1, Math.max(1.6, headR * 0.16), 0, TAU);
@@ -194,11 +214,8 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
     ctx.strokeStyle = '#05060c';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.ellipse(sx, sy - 6, 9, 34, 0, 0, TAU);
+    ctx.ellipse(sx, sy - 6, 9 * Math.max(0.3, Math.abs(fx)), 34, 0, 0, TAU);
     ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = '#3a5ab8';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(sx, sy - 34); ctx.lineTo(sx, sy + 22); ctx.stroke();
   }
   if (f.state === 'stunned' || f.dizzy > 0) {
     ctx.fillStyle = '#ffe14a';
@@ -222,34 +239,74 @@ function strokeScarf(ctx: CanvasRenderingContext2D): void {
   ctx.stroke();
 }
 
-/** Motion-trail ribbon for the striking limb (additive glow). */
-export function drawTrail(ctx: CanvasRenderingContext2D, f: Fighter, alpha: number): void {
+// Scratch buffers for the smoothed ribbon.
+const RB = TRAIL_CAP * 3;
+const rx = new Float32Array(RB), ry = new Float32Array(RB), rk = new Float32Array(RB);
+const lx = new Float32Array(RB), ly = new Float32Array(RB), qx = new Float32Array(RB), qy = new Float32Array(RB);
+
+/**
+ * Motion-trail ribbon. Samples are taken every render frame from the
+ * interpolated skeleton, Catmull-Rom smoothed, and drawn as a tapered quad
+ * strip with eased alpha falloff (additive glow + white core).
+ */
+export function drawTrail(ctx: CanvasRenderingContext2D, f: Fighter, time: number): void {
   const a = f.anim;
-  if (a.trailCount < 2) return;
-  const maxAge = 7;
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.lineCap = 'round';
-  let prevX = 0, prevY = 0, has = false;
-  const n = a.trailCount;
-  // iterate oldest -> newest
-  for (let i = n - 1; i >= 0; i--) {
-    const idx = (a.trailHead - 1 - i + TRAIL_N * 2) % TRAIL_N;
-    const age = a.trailAge[idx] + (1 - alpha);
-    if (age > maxAge) { has = false; continue; }
-    const x = a.trail[idx * 2], y = a.trail[idx * 2 + 1];
-    if (has) {
-      const k = 1 - age / maxAge;
-      ctx.strokeStyle = a.trailColor;
-      ctx.globalAlpha = k * 0.35;
-      ctx.lineWidth = a.trailWidth * (0.6 + k * 1.6);
-      ctx.beginPath(); ctx.moveTo(prevX, prevY); ctx.lineTo(x, y); ctx.stroke();
-      ctx.globalAlpha = k * 0.9;
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = a.trailWidth * 0.35 * k + 1;
-      ctx.beginPath(); ctx.moveTo(prevX, prevY); ctx.lineTo(x, y); ctx.stroke();
+  const life = ANIM.trailLife;
+  // Gather live samples oldest -> newest.
+  let n = 0;
+  const px: number[] = gatherX, py: number[] = gatherY, pk: number[] = gatherK;
+  for (let i = a.trailCount - 1; i >= 0; i--) {
+    const idx = (a.trailHead - 1 - i + TRAIL_CAP * 2) % TRAIL_CAP;
+    const age = time - a.trailT[idx];
+    if (age < 0 || age > life) continue;
+    px[n] = a.trailX[idx]; py[n] = a.trailY[idx]; pk[n] = 1 - age / life; n++;
+  }
+  if (n < 2) return;
+  // Catmull-Rom subdivision (3 points per span).
+  let m = 0;
+  for (let i = 0; i < n - 1; i++) {
+    const i0 = Math.max(0, i - 1), i3 = Math.min(n - 1, i + 2);
+    for (let s = 0; s < 3; s++) {
+      const t = s / 3, t2 = t * t, t3 = t2 * t;
+      const c0 = -0.5 * t3 + t2 - 0.5 * t, c1 = 1.5 * t3 - 2.5 * t2 + 1, c2 = -1.5 * t3 + 2 * t2 + 0.5 * t, c3 = 0.5 * t3 - 0.5 * t2;
+      rx[m] = px[i0] * c0 + px[i] * c1 + px[i + 1] * c2 + px[i3] * c3;
+      ry[m] = py[i0] * c0 + py[i] * c1 + py[i + 1] * c2 + py[i3] * c3;
+      rk[m] = pk[i] + (pk[i + 1] - pk[i]) * t;
+      m++;
     }
-    prevX = x; prevY = y; has = true;
+  }
+  rx[m] = px[n - 1]; ry[m] = py[n - 1]; rk[m] = pk[n - 1]; m++;
+  // Edges.
+  for (let i = 0; i < m; i++) {
+    const j0 = Math.max(0, i - 1), j1 = Math.min(m - 1, i + 1);
+    let dx = rx[j1] - rx[j0], dy = ry[j1] - ry[j0];
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+    dx /= d; dy /= d;
+    const k = rk[i];
+    const hw = a.trailWidth * (0.15 + 0.95 * k * k) * 0.5;
+    lx[i] = rx[i] - dy * hw; ly[i] = ry[i] + dx * hw;
+    qx[i] = rx[i] + dy * hw; qy[i] = ry[i] - dx * hw;
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  for (let pass = 0; pass < 2; pass++) {
+    ctx.fillStyle = pass === 0 ? a.trailColor : '#ffffff';
+    const widen = pass === 0 ? 1.7 : 0.45;
+    for (let i = 0; i < m - 1; i++) {
+      const k = (rk[i] + rk[i + 1]) * 0.5;
+      ctx.globalAlpha = pass === 0 ? k * k * 0.5 : k * k * 0.95;
+      const cx0 = rx[i], cy0 = ry[i], cx1 = rx[i + 1], cy1 = ry[i + 1];
+      ctx.beginPath();
+      ctx.moveTo(cx0 + (lx[i] - cx0) * widen, cy0 + (ly[i] - cy0) * widen);
+      ctx.lineTo(cx1 + (lx[i + 1] - cx1) * widen, cy1 + (ly[i + 1] - cy1) * widen);
+      ctx.lineTo(cx1 + (qx[i + 1] - cx1) * widen, cy1 + (qy[i + 1] - cy1) * widen);
+      ctx.lineTo(cx0 + (qx[i] - cx0) * widen, cy0 + (qy[i] - cy0) * widen);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
 }
+const gatherX: number[] = new Array(TRAIL_CAP).fill(0);
+const gatherY: number[] = new Array(TRAIL_CAP).fill(0);
+const gatherK: number[] = new Array(TRAIL_CAP).fill(0);

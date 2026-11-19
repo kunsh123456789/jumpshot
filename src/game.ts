@@ -15,6 +15,7 @@ import { Keyboard } from './core/keyboard';
 import { DebugOverlay } from './ui/debug';
 import { Menus } from './ui/menus';
 import { Tutorial } from './ui/tutorial';
+import { PopDetector } from './ui/popDetector';
 import { CAMERA, WAVES_T, WORLD, SCORE } from './data/tuning';
 import { UPGRADES, type UpgradeDef } from './data/upgrades';
 import { fxRng } from './core/rng';
@@ -35,8 +36,15 @@ export class Game {
   readonly world = new World();
   readonly fx: FxDirector;
   readonly tutorial: Tutorial;
+  readonly pops = new PopDetector();
   state: GState = 'title';
   paused = false;
+  /** Debug time controls: [ toggles 0.1x, ] freezes and steps one frame, \ resumes. */
+  debugScale = 1;
+  debugFrozen = false;
+  stepRequests = 0;
+  private labelTime = 0;
+  private lastAlpha = 0;
   private inputs: SwipeEvent[] = [];
   private renderTime = 0;
   private stateTime = 0;
@@ -52,6 +60,9 @@ export class Game {
     this.keyboard = new Keyboard(this.pad);
     this.keyboard.onToggleDebug = () => { this.debug.visible = !this.debug.visible; settings.debug = this.debug.visible; };
     this.keyboard.onPause = () => this.togglePause();
+    this.keyboard.onDebugSlow = () => { this.debugScale = this.debugScale < 1 ? 1 : 0.1; this.debugFrozen = false; };
+    this.keyboard.onDebugStep = () => { this.debugFrozen = true; this.stepRequests++; };
+    this.keyboard.onDebugResume = () => { this.debugFrozen = false; this.debugScale = 1; };
     this.menus.onPause = () => this.togglePause();
     window.addEventListener('jumpshot-debug', () => { this.debug.visible = settings.debug; });
     this.debug.visible = settings.debug;
@@ -137,6 +148,8 @@ export class Game {
     this.menus.pauseBtn.style.display = '';
     this.effectsReset();
     audio.startMusic();
+    this.pops.reset();
+    if (!save.padHintSeen) { this.pad.labelAlpha = 1; this.labelTime = 7; }
     this.beginCountdown();
   }
 
@@ -252,6 +265,7 @@ export class Game {
   /** One fixed simulation step (1/60 s). */
   step(): void {
     this.inputs.length = 0;
+    this.keyboard.poll(performance.now());
     const ev = this.pad.events;
     if (this.state === 'title') {
       for (const e of ev) {
@@ -263,15 +277,24 @@ export class Game {
     ev.length = 0;
     this.world.camLeft = this.cam.viewLeft();
     this.world.camRight = this.cam.viewRight();
-    this.world.step(this.inputs);
+    const axis = acceptInput ? clamp(this.pad.moveX + this.keyboard.moveAxis, -1, 1) : 0;
+    this.world.step(this.inputs, axis);
+    this.pops.log = this.debug.visible;
+    this.pops.check(this.world);
     if ((this.state === 'playing' || this.state === 'countdown' || this.state === 'clear') && this.world.gameOver) this.toGameOver();
   }
 
-  render(alpha: number, realDt: number): void {
+  render(alpha: number, realDt: number, simSteps = 0, frameDt = realDt): void {
     const dt = realDt * this.time.scale;
+    this.lastAlpha = alpha;
     this.renderTime += dt;
     this.stateTime += realDt;
-    this.debug.tick(realDt);
+    this.debug.tick(frameDt, simSteps);
+    if (this.labelTime > 0) {
+      this.labelTime -= realDt;
+      if (this.labelTime < 1.5) this.pad.labelAlpha = Math.max(0, this.labelTime / 1.5);
+      if (this.labelTime <= 0) { this.pad.labelAlpha = 0; save.padHintSeen = true; writeSave(); }
+    }
     this.updateState(realDt);
     effects.update(dt);
     this.fx.update(realDt);
@@ -287,14 +310,14 @@ export class Game {
       const p = this.world.player;
       const c = this.world.ctrl;
       const cb = this.world.combo;
-      this.debug.draw(ctx, this.pad, [
-        `buffer [${c.bufDesc}]  latency ${c.latency}f`,
+      this.debug.draw(ctx, this.pad, this.pops, [
+        `buffer [${c.bufDesc}]  latency ${c.latency}f  ${this.debugFrozen ? 'FROZEN ( ] step, \\ resume)' : this.debugScale < 1 ? 'SLOW-MO 0.1x' : ''}`,
         `state ${p.state} f${p.stateFrame} move ${p.move?.id ?? '-'}:${p.moveFrame}/${p.effStartup}`,
         `pos ${p.x.toFixed(0)},${p.y.toFixed(0)} v ${p.vx.toFixed(0)},${p.vy.toFixed(0)} stall ${p.stall}`,
         `combo ${cb.hits} air ${cb.airJuggle} style ${cb.style.toFixed(0)} super ${cb.superMeter.toFixed(0)}`,
         `enemies ${this.world.enemies.length} tokens ${this.world.ai.tokens} particles ${effects.parts.count}`,
         `timescale ${this.time.scale.toFixed(2)} zoom ${this.cam.effectiveZoom().toFixed(2)} ${layout.portrait ? 'portrait' : 'landscape'}`,
-      ], 8, layout.portrait ? layout.world.y + 40 : layout.world.y + 120);
+      ], 8, layout.portrait ? layout.world.y + 40 : layout.world.y + 100, this.lastAlpha);
     }
   }
 
@@ -335,13 +358,14 @@ export class Game {
     let sx = px * 3, sw = 3, minX = px, maxX = px, minY = py;
     for (const e of w.enemies) {
       if (!e.alive && e.state !== 'ko') continue;
-      const d = Math.abs(e.x - px);
+      const ex = e.px + (e.x - e.px) * alpha, ey = e.py + (e.y - e.py) * alpha;
+      const d = Math.abs(ex - px);
       if (d > 750) continue;
       const wt = e.inHitState ? 1.2 : 0.5;
-      sx += e.x * wt; sw += wt;
-      if (e.x < minX) minX = e.x;
-      if (e.x > maxX) maxX = e.x;
-      if (e.y < minY && d < 400 && e.state !== 'ko') minY = e.y;
+      sx += ex * wt; sw += wt;
+      if (ex < minX) minX = ex;
+      if (ex > maxX) maxX = ex;
+      if (ey < minY && d < 400 && e.state !== 'ko') minY = ey;
     }
     this.cam.targetX = sx / sw + p.facing * CAMERA.lookAheadX;
     const spread = maxX - minX;

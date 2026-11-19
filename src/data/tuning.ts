@@ -14,7 +14,7 @@ export const WORLD = {
   /** Ground line (y grows downward). */
   groundY: 445,
   /** Where the ground sits on screen at zoom 1 (logical px from top). */
-  groundScreenY: 445,
+  groundScreenY: 410,
   wallMargin: 30,
 } as const;
 
@@ -40,35 +40,127 @@ export const PHYS = {
   separationPush: 0.35,
 } as const;
 
+/** Animation feel: springs, blends, turns, run cycle, pop detector. See SMOOTHNESS.md. */
+export const ANIM = {
+  /** Critically damped spring angular frequency (rad/s) per phase. Higher = snappier. */
+  springStrike: 95,
+  springAnticipation: 55,
+  springHitReact: 60,
+  springLocomotion: 38,
+  springRecovery: 30,
+  springIdle: 22,
+  /** Per-part stiffness multipliers (overlapping action: these parts trail the torso). */
+  headLag: 0.6,
+  rearArmLag: 0.78,
+  leanLag: 0.85,
+  /** Crossfade lengths (frames). */
+  blendDefault: 5,
+  blendMoveMin: 3,
+  blendMoveMax: 5,
+  blendHitReact: 4,
+  blendLand: 3,
+  blendGetup: 6,
+  /** Adaptive crossfade: extend blends so joints move at most blendMaxRate rad/frame (up to +blendExtraMax frames). */
+  blendMaxRate: 0.42,
+  blendExtraMax: 6,
+  /** Outgoing pose keeps its momentum during a crossfade, decaying by this per frame. */
+  outgoingMomentum: 0.55,
+  outgoingMaxVel: 6,
+  /** Eased facing turn (frames) instead of an instant mirror. */
+  turnFrames: 5,
+  turnFramesAttack: 4,
+  /** After a magnetism dash, the wind-up gets at least this many frames (overlaps the dash). */
+  minAnticFrames: 6,
+  /** The dash pose is pre-blended this far toward the move's wind-up (limbs don't detour). */
+  dashTowardAntic: 0.45,
+  /** Follow-through: limbs carry past the contact pose by this fraction of the swing. */
+  carryPast: 0.14,
+  carryFrac: 0.3,
+  /** Max head tilt toward the target (rad). */
+  headLook: 0.35,
+  /** Run cycle: stride grows with speed so cadence matches ground speed (feet stay planted). */
+  strideBase: 40,
+  stridePerSpeed: 0.1,
+  strideMax: 90,
+  footLift: 15,
+  runBounce: 5,
+  runLeanPerSpeed: 0.0006,
+  accelLean: 0.00012,
+  maxAccelLean: 0.28,
+  /** Apex hang: gravity multiplier when |vy| is below apexBand (eases the top of arcs). */
+  apexBand: 220,
+  apexGravity: 0.6,
+  /** Air-stall gravity blends in/out over these frames instead of switching. */
+  stallEaseIn: 2,
+  stallEaseOut: 7,
+  /** Pop detector thresholds per sim tick. */
+  popAngle: 0.5,
+  popSpin: 0.9,
+  popRoot: 120,
+  /** Ticks after a hit during which the reaction counts as an intentional snap. */
+  impactSnapFrames: 5,
+  /** Hit-stop victim vibration (render-time, px amplitude and Hz). */
+  hitstopShakeAmp: 3,
+  hitstopShakeHz: 38,
+  /** Motion trail lifetime (seconds of scaled time). */
+  trailLife: 0.11,
+  /** Afterimage spawn interval during dashes (seconds of render time). */
+  ghostInterval: 0.022,
+} as const;
+
 export const PAD = {
-  /** Fraction of screen height used by the pad in landscape. */
-  landscapeHeight: 0.36,
-  landscapeWidth: 0.56,
-  /** Minimum fraction of screen height for the pad in portrait. */
-  portraitMinHeight: 0.42,
-  /** Portrait crop of the 1280x720 view: visible logical width and vertical band. */
-  portraitViewW: 760,
-  portraitViewTop: 30,
-  portraitViewBottom: 560,
-  /** Swipe commits after this distance (fraction of pad's short side * sensitivity). */
-  minDistFrac: 0.075,
-  minDistPx: 16,
-  /** Minimum speed (px/ms) at commit time. Slow drags still commit past 2x min distance. */
-  minSpeed: 0.18,
-  /** Stroke length (fraction of pad short side) for a HEAVY upgrade. */
-  heavyDistFrac: 0.30,
-  heavyMinSpeed: 0.75,       // px/ms average speed required for HEAVY
-  /** Frames after commit during which a light swipe can upgrade to heavy. */
+  /** Default fraction of the screen height (from the bottom) that is the pad. Settings: 0.35..0.6. */
+  regionDefault: 0.5,
+  regionMin: 0.35,
+  regionMax: 0.6,
+  /** Portrait crop of the 1280x720 view: visible logical width and top edge. */
+  portraitViewW: 640,
+  portraitViewTop: -40,
+  /** Flick (attack) detection: over the last flickWindowMs of samples the stroke must
+   *  exceed flickSpeed (px/s) and flickMinDist (px). Both are divided by the sensitivity setting. */
+  flickWindowMs: 75,
+  flickSpeed: 1000,
+  flickMinDist: 40,
+  /** After a flick, the stroke re-arms when it slows below this fraction of flickSpeed. */
+  rearmFrac: 0.45,
+  /** ...and only after this long (ms), so one flick can never fire twice. */
+  rearmMinMs: 60,
+  /** Stroke length (px) and average speed (px/s) that upgrade a flick to HEAVY. */
+  heavyDist: 120,
+  heavySpeed: 1500,
+  /** Frames after the flick during which it can still upgrade to heavy. */
   heavyUpgradeFrames: 9,
   /** Directional sector half-width in degrees (22.5 = exact 8-way). */
   sectorHalfDeg: 22.5,
   /** Bias toward cardinal directions (deg added to cardinal sectors). */
   cardinalBiasDeg: 4,
-  /** Turn angle that splits a continuous stroke into a new swipe. */
+  /** Turn angle that splits a fast continuous stroke into a new attack (zig-zag chains). */
   chainTurnDeg: 60,
-  tapMaxDistFrac: 0.05,
+  tapMaxDist: 14,
   tapMaxMs: 260,
   trailFadeMs: 250,
+} as const;
+
+/** Drag-to-move: floating stick on the pad, and player locomotion. */
+export const MOVE = {
+  /** Stick dead zone and the radius that reaches full speed (px). */
+  deadZone: 10,
+  maxRadius: 90,
+  /** Stick output is held (not updated) while the finger moves faster than this (px/s),
+   *  so the start of a flick never shoves the player. */
+  freezeSpeed: 800,
+  /** Movement is suppressed for this many frames after a flick (post-flick finger drift). */
+  suppressFrames: 4,
+  /** Locomotion (world units/s and /s^2). */
+  runSpeed: 340,
+  accel: 2600,
+  decel: 3400,
+  airAccel: 900,
+  airMax: 260,
+  /** Speed falls off within this distance of a wall (soft clamp). */
+  wallSoft: 90,
+  /** Below this speed the run animation hands back to idle. */
+  runThreshold: 25,
 } as const;
 
 export const INPUT = {
@@ -97,8 +189,8 @@ export const PLAYER = {
   targetRange: 560,
   targetConeDeg: 70,
   /** Attack magnetism dash. */
-  dashSpeed: 2700,       // units/s
-  dashMaxFrames: 11,
+  dashSpeed: 2400,       // average units/s (the ease-out peaks at 2x for one tick)
+  dashMaxFrames: 12,
   dashMinDistance: 26,
   whiffStep: 28,
   airDashMaxFrames: 10,
@@ -204,10 +296,13 @@ export const JUICE = {
 } as const;
 
 export const CAMERA = {
-  followRate: 6.5,
-  zoomRate: 3.5,
-  /** Faster rate used when zooming OUT so launches stay framed. */
-  zoomOutRate: 9,
+  /** Critically damped spring frequencies (rad/s). Zooming out is faster so launches stay framed. */
+  followOmega: 7,
+  zoomOmega: 4.5,
+  zoomOutOmega: 9,
+  /** Punch-in: target decay rate (1/s) and spring frequency for the eased in/out. */
+  punchDecay: 7,
+  punchOmega: 32,
   baseZoom: 1,
   minZoom: 0.8,
   crowdSpreadStart: 420,
