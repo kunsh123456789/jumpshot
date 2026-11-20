@@ -202,8 +202,18 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
       for (let q = 0; q < JOINT_N; q++) { tmpJ[q * 2] = j[q * 2] - dx * k; tmpJ[q * 2 + 1] = j[q * 2 + 1] - dy * k; }
       inkFigure(ctx, f, tmpJ, col, wpp);
     }
+    // Speed bars (reference 82-84): a few thick horizontal streaks behind fast horizontal travel.
+    if (Math.abs(dx) > Math.abs(dy) * 1.5) {
+      const s0 = f.scale;
+      ctx.fillStyle = col;
+      for (const [jj, len] of [[J.chest, 0.9], [J.hip, 0.7], [J.kneeA, 0.5]] as [number, number][]) {
+        const y = j[jj * 2 + 1] + (jj === J.hip ? 4 * s0 : 0);
+        const x1 = j[jj * 2 + 0] - Math.sign(dx) * 22 * s0, x0 = x1 - dx * len;
+        ctx.fillRect(Math.min(x0, x1), y - 1.5 * wpp, Math.abs(x1 - x0), 3 * wpp);
+      }
+    }
   }
-  if (a.dSmear && inkHooks.smear) inkHooks.smear(ctx, f, j, col, wpp);
+  if ((a.dSmear || a.dSpin) && inkHooks.smear) inkHooks.smear(ctx, f, j, col, wpp);
 
   const flashing = f.flash > 0;
   if (flashing) {

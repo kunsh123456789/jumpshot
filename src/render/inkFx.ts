@@ -244,65 +244,130 @@ export class InkFx {
 }
 export const inkFx = new InkFx();
 
-// ------------------------------------------------------------ scribble-hatch smear
-const SMP = 7;
+// ------------------------------------------------------------ scribble-hatch smear chains
+const SMP = 8;
 const smPose = new Float32Array(POSE_N);
 const smJ = new Float32Array(JOINT_N * 2);
 const eX = new Float32Array(SMP), eY = new Float32Array(SMP), mX = new Float32Array(SMP), mY = new Float32Array(SMP);
-const LIMBS: [number, number, number][] = [[1, J.handA, J.elbA], [2, J.handB, J.elbB], [4, J.footA, J.kneeA], [8, J.footB, J.kneeB]];
+const LIMBS: [number, number, number, number][] = [[1, J.handA, J.elbA, J.shA], [2, J.handB, J.elbB, J.shB], [4, J.footA, J.kneeA, J.hipA], [8, J.footB, J.kneeB, J.hipB]];
 
 /**
- * The arc swept by the striking limb between the previous drawing and this
- * one, filled with 14-30 short hatch strokes at jittered angles (denser and
- * thicker at the leading edge, thinning toward the tail) plus a few stray
- * specks. Body-local (the limb's own swing, not the body's travel). Seeded by
- * animation + drawing, so every repeat of a move draws the same smear.
+ * Smear chain drawing. The arc swept by the striking limb (between the pose
+ * before the strike and the latest strike pose, body-local at the current
+ * root) is filled with jittered hatch strokes. Chain step 0 (the fastest
+ * drawing) is the densest and adds a limb-stretch wedge and a swoosh line;
+ * later steps (contact, follow-through) thin out along the same arc so the
+ * swing visibly sweeps through and dissipates. Seeded per animation +
+ * drawing + step: repeats are identical. Flips/tumbles add a rotating hatch
+ * arc around the hips.
  */
 inkHooks.smear = (ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, col: string, wpp: number): void => {
   const a = f.anim;
-  for (const [bit, endJ, midJ] of LIMBS) {
-    if (!(a.dSmear & bit)) continue;
-    for (let i = 0; i < SMP; i++) {
-      const k = i / (SMP - 1);
-      lerpPose(a.dPrevPose, a.dPose, k, smPose);
-      computeJoints(smPose, a.dX, a.dY, a.dFace, f.scale, WORLD.groundY, smJ, a.rig);
-      eX[i] = smJ[endJ * 2]; eY[i] = smJ[endJ * 2 + 1]; mX[i] = smJ[midJ * 2]; mY[i] = smJ[midJ * 2 + 1];
-    }
-    eX[SMP - 1] = j[endJ * 2]; eY[SMP - 1] = j[endJ * 2 + 1]; mX[SMP - 1] = j[midJ * 2]; mY[SMP - 1] = j[midJ * 2 + 1];
-    // skip tiny sweeps
-    const sweep = Math.hypot(eX[SMP - 1] - eX[0], eY[SMP - 1] - eY[0]);
-    if (sweep < 18 * f.scale) continue;
-    seed = a.dSeed ^ (bit * 2654435761);
-    const n = Math.round(INKFX.smearMin + (INKFX.smearMax - INKFX.smearMin) * Math.min(1, sweep / (120 * f.scale)));
-    ctx.strokeStyle = col;
-    ctx.lineCap = 'round';
-    for (let pass = 0; pass < 2; pass++) {
-      ctx.lineWidth = (pass === 0 ? 1.2 : 2.1) * wpp;
-      ctx.beginPath();
-      for (let s = 0; s < n; s++) {
-        // leading-edge bias: k near 1 is the newest part of the arc
-        const k = 1 - Math.pow(rnd(), pass === 0 ? 1.0 : 2.4);
-        if ((pass === 1) !== (k > 0.6)) continue;
-        const fi = k * (SMP - 1), i0 = Math.min(SMP - 2, Math.floor(fi)), t = fi - i0;
-        const ex = eX[i0] + (eX[i0 + 1] - eX[i0]) * t, ey = eY[i0] + (eY[i0 + 1] - eY[i0]) * t;
-        const mx = mX[i0] + (mX[i0 + 1] - mX[i0]) * t, my = mY[i0] + (mY[i0 + 1] - mY[i0]) * t;
-        const u = 0.2 + rnd() * 0.95;
-        const px = mx + (ex - mx) * u, py = my + (ey - my) * u;
-        let tx = eX[i0 + 1] - eX[i0], ty = eY[i0 + 1] - eY[i0];
-        const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
-        const ang = Math.atan2(ty, tx) + (rnd() - 0.5) * 0.9;
-        const l = (6 + rnd() * 14) * f.scale * (0.5 + k);
-        ctx.moveTo(px - Math.cos(ang) * l * 0.5, py - Math.sin(ang) * l * 0.5);
-        ctx.lineTo(px + Math.cos(ang) * l * 0.5, py + Math.sin(ang) * l * 0.5);
+  const cfg = a.smearCfg;
+  const sc = f.scale;
+  const step = a.chainStep;
+  const dens = cfg.density[Math.min(step, cfg.density.length - 1)];
+  const c = cfg.color ?? col;
+  if (a.dSmear) {
+    for (const [bit, endJ, midJ, rootJ] of LIMBS) {
+      if (!(a.dSmear & bit)) continue;
+      for (let i = 0; i < SMP; i++) {
+        lerpPose(a.arcFrom, a.arcTo, i / (SMP - 1), smPose);
+        computeJoints(smPose, a.dX, a.dY, a.dFace, sc, WORLD.groundY, smJ, a.rig);
+        eX[i] = smJ[endJ * 2]; eY[i] = smJ[endJ * 2 + 1]; mX[i] = smJ[midJ * 2]; mY[i] = smJ[midJ * 2 + 1];
       }
-      ctx.stroke();
+      if (step === 0 || a.chainLen === 1) { eX[SMP - 1] = j[endJ * 2]; eY[SMP - 1] = j[endJ * 2 + 1]; mX[SMP - 1] = j[midJ * 2]; mY[SMP - 1] = j[midJ * 2 + 1]; }
+      const sweep = Math.hypot(eX[SMP - 1] - eX[0], eY[SMP - 1] - eY[0]);
+      if (sweep < cfg.minSweep * sc) continue;
+      seed = a.dSeed ^ (bit * 2654435761) ^ (step * 40503);
+      const n = Math.round((INKFX.smearMin + (INKFX.smearMax - INKFX.smearMin) * Math.min(1, sweep / (120 * sc))) * dens);
+      // Later chain steps keep only the older part of the arc (the trail behind the limb).
+      const kMin = 1 - cfg.sweep, kMax = step === 0 ? 1 : 1 - step * 0.12;
+      ctx.strokeStyle = c;
+      ctx.lineCap = 'round';
+      for (let pass = 0; pass < 2; pass++) {
+        ctx.lineWidth = (pass === 0 ? 1.2 : 2.1) * wpp * (step === 0 ? 1 : 0.85);
+        ctx.beginPath();
+        for (let s = 0; s < n; s++) {
+          const k = kMin + (kMax - kMin) * (1 - Math.pow(rnd(), pass === 0 ? 1.0 : 2.4));
+          if ((pass === 1) !== (k > 0.6)) continue;
+          const fi = k * (SMP - 1), i0 = Math.min(SMP - 2, Math.floor(fi)), t = fi - i0;
+          const ex = eX[i0] + (eX[i0 + 1] - eX[i0]) * t, ey = eY[i0] + (eY[i0 + 1] - eY[i0]) * t;
+          const mx = mX[i0] + (mX[i0 + 1] - mX[i0]) * t, my = mY[i0] + (mY[i0 + 1] - mY[i0]) * t;
+          const u = 0.2 + rnd() * 0.95 * cfg.radius;
+          const px = mx + (ex - mx) * u, py = my + (ey - my) * u;
+          let tx = eX[i0 + 1] - eX[i0], ty = eY[i0 + 1] - eY[i0];
+          const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
+          const ang = Math.atan2(ty, tx) + (rnd() - 0.5) * cfg.jitter;
+          const l = (6 + rnd() * 14 * cfg.lenJitter) * sc * (0.5 + k);
+          ctx.moveTo(px - Math.cos(ang) * l * 0.5, py - Math.sin(ang) * l * 0.5);
+          ctx.lineTo(px + Math.cos(ang) * l * 0.5, py + Math.sin(ang) * l * 0.5);
+        }
+        ctx.stroke();
+      }
+      // Swoosh: one thin line along the path of the limb end (fastest two drawings).
+      if (cfg.swoosh && step <= 1) {
+        ctx.lineWidth = 1 * wpp;
+        ctx.beginPath();
+        ctx.moveTo(eX[0], eY[0]);
+        for (let i = 1; i < SMP; i++) ctx.lineTo(eX[i] + (eX[i] - mX[i]) * 0.12, eY[i] + (eY[i] - mY[i]) * 0.12);
+        ctx.stroke();
+      }
+      // Limb stretch: a tapered wedge of hatch fanning from the joint past the end, along the motion.
+      if (cfg.stretch && step === 0) {
+        const ex = eX[SMP - 1], ey = eY[SMP - 1], mx = mX[SMP - 1], my = mY[SMP - 1];
+        const dx = ex - eX[SMP - 3], dy = ey - eY[SMP - 3];
+        const dl = Math.hypot(dx, dy) || 1;
+        const lx = ex - mx, ly = ey - my, ll = Math.hypot(lx, ly) || 1;
+        ctx.lineWidth = 1.2 * wpp;
+        ctx.beginPath();
+        for (let w = 0; w < 6; w++) {
+          const v = w / 5;
+          const ox = mx + lx * (0.4 + 0.6 * v), oy = my + ly * (0.4 + 0.6 * v);
+          const ext = (8 + 18 * v) * sc;
+          ctx.moveTo(ox, oy);
+          ctx.lineTo(ox + (lx / ll) * ext * 0.6 + (dx / dl) * ext * 0.5, oy + (ly / ll) * ext * 0.6 + (dy / dl) * ext * 0.5);
+        }
+        ctx.stroke();
+      }
+      // Flurry: ghost arms fanned around the punch ("a hundred fists").
+      if (cfg.multiArm > 0 && bit <= 2) {
+        const rx = j[rootJ * 2], ry = j[rootJ * 2 + 1];
+        const hx = j[endJ * 2], hy = j[endJ * 2 + 1];
+        const base = Math.atan2(hy - ry, hx - rx), L = Math.hypot(hx - rx, hy - ry);
+        ctx.lineWidth = 2 * wpp;
+        ctx.beginPath();
+        for (let g = 0; g < cfg.multiArm; g++) {
+          const da = (g - (cfg.multiArm - 1) / 2) * 0.32 + (rnd() - 0.5) * 0.12;
+          if (Math.abs(da) < 0.05) continue;
+          const L2 = L * (0.85 + rnd() * 0.25);
+          const gx = rx + Math.cos(base + da) * L2, gy = ry + Math.sin(base + da) * L2;
+          ctx.moveTo(rx, ry); ctx.lineTo(gx, gy);
+          ctx.moveTo(gx + 3 * sc, gy); ctx.arc(gx, gy, 3 * sc, 0, TAU);
+        }
+        ctx.stroke();
+      }
     }
-    // stray specks beyond the outer edge
-    ctx.fillStyle = col;
-    for (let s = 0; s < 4; s++) {
-      const i = Math.floor(rnd() * SMP);
-      ctx.fillRect(eX[i] + (rnd() - 0.5) * 24 * f.scale, eY[i] + (rnd() - 0.5) * 24 * f.scale, 1.5 * wpp, 1.5 * wpp);
+  }
+  // Flips and spins: a rotating hatch arc around the body.
+  if (a.dSpin) {
+    const hx = j[J.hip * 2], hy = j[J.hip * 2 + 1];
+    const R = (a.rig.torso + a.rig.thigh + a.rig.shin * 0.6) * sc * 0.75;
+    seed = a.dSeed ^ 0x2f6b;
+    const dir = a.dFace < 0 ? -1 : 1;
+    const a0 = a.dSpinFrom * dir - Math.PI / 2, a1 = (a.dSpinFrom + a.dSpin) * dir - Math.PI / 2;
+    ctx.strokeStyle = c; ctx.lineWidth = 1.3 * wpp; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let s = 0; s < 16; s++) {
+      const k = Math.pow(rnd(), 0.6);
+      const an = a0 + (a1 - a0) * k;
+      const r = R * (0.75 + rnd() * 0.4);
+      const tang = an + (a1 > a0 ? Math.PI / 2 : -Math.PI / 2) + (rnd() - 0.5) * 0.6;
+      const l = (6 + rnd() * 10) * sc;
+      const px = hx + Math.cos(an) * r, py = hy + Math.sin(an) * r;
+      ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(tang) * l, py + Math.sin(tang) * l);
     }
+    ctx.stroke();
   }
 };
 

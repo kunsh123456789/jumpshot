@@ -35,8 +35,10 @@ export interface KeySpec {
   sfx?: 'step' | 'whoosh' | 'land';
   /** Hand-Drawn style: show the segment after this key interpolated at full rate (super-fast moments). */
   ones?: boolean;
-  /** Hand-Drawn style: generate this many in-between drawings (0-2) on the segment after this key. */
+  /** Hand-Drawn style: generate this many in-between drawings (0-3) on the segment after this key (added to the Attack Smoothness bonus). */
   inbetween?: number;
+  /** An authored in-between ("breakdown"): no generated in-betweens are added next to it. */
+  breakdown?: boolean;
 }
 
 /** One drawing of a Hand-Drawn animation: a full pose shown for `hold` sim ticks. */
@@ -63,6 +65,8 @@ export interface AnimSpec {
   strike?: 'arm' | 'leg' | 'body';
   /** IK-reach this limb to the target around the contact key. */
   reach?: LimbId;
+  /** Hand-Drawn: extra in-betweens on every moving segment (added to the Attack Smoothness bonus). */
+  inbetweens?: number;
   keys: KeySpec[];
 }
 
@@ -77,6 +81,7 @@ export interface Key {
   sfx: KeySpec['sfx'] | null;
   ones: boolean;
   inb: number;
+  breakdown: boolean;
 }
 
 export interface AnimDef {
@@ -91,6 +96,8 @@ export interface AnimDef {
   keys: Key[];
   /** Source spec (kept for the lab's editor/export). */
   spec: AnimSpec;
+  /** Hand-Drawn drawing schedules per Attack Smoothness level (built lazily, cleared on rebuild). */
+  sched?: (unknown[] | undefined)[];
 }
 
 export const LIMB_BIT: Record<LimbId, number> = { handA: 1, handB: 2, footA: 4, footB: 8 };
@@ -132,7 +139,8 @@ export function anim(spec: AnimSpec): AnimDef {
     trail: limbMask(k.trail),
     sfx: k.sfx ?? null,
     ones: !!k.ones,
-    inb: Math.max(0, Math.min(2, k.inbetween ?? 0)),
+    inb: Math.max(0, Math.min(3, k.inbetween ?? 0)),
+    breakdown: !!k.breakdown,
   }));
   const ik = keys.find((k) => k.impact);
   return {
@@ -197,6 +205,7 @@ export function dramatize(def: AnimDef, k = 1.25): AnimDef {
 export function rebuild(def: AnimDef): void {
   const fresh = anim(def.spec);
   Object.assign(def, fresh);
+  def.sched = undefined;
 }
 
 /** Pose channels with their names (for the lab editor/export). */

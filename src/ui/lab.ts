@@ -1,7 +1,8 @@
 import { layout } from '../core/layout';
 import { ANIMS, ANIM_FILE, getAnim } from '../data/anims';
 import { CHANNELS, rebuild, type AnimDef, type EaseId } from '../data/anims/types';
-import { evalAnim, evalAnimStepped, animFlags, type AnimFlags } from '../render/animPlayer';
+import { evalAnim, evalAnimStepped, animFlags, scheduleFor, type AnimFlags } from '../render/animPlayer';
+import { settings, saveSettings } from '../core/settings';
 import { DRAW, syncDrawStyle } from '../render/drawStyle';
 import { Ch, J, JOINT_N, POSE_N, computeJoints, type ChName, type PoseSpec } from '../render/rig';
 import { Fighter } from '../sim/fighter';
@@ -116,6 +117,12 @@ export class AnimLab {
     spd.addEventListener('input', () => { this.speed = parseFloat(spd.value); spdL.textContent = this.speed.toFixed(2) + 'x'; });
     spdL.textContent = this.speed.toFixed(2) + 'x';
     top.append('speed', spd, spdL);
+    const sm = document.createElement('select');
+    for (const v of ['low', 'normal', 'high']) { const o = document.createElement('option'); o.value = v; o.textContent = 'attack smoothness: ' + v; sm.appendChild(o); }
+    sm.value = settings.attackSmooth;
+    sm.style.cssText = 'background:#111829;color:#fff';
+    sm.addEventListener('change', () => { settings.attackSmooth = sm.value as 'low' | 'normal' | 'high'; saveSettings(); syncDrawStyle(); this.buildKeys(); });
+    top.appendChild(sm);
     btn('export ⧉', () => this.exportAnim());
     btn('exit ✕', () => this.exit());
     // timeline
@@ -168,6 +175,17 @@ export class AnimLab {
       b.addEventListener('click', (e) => { e.stopPropagation(); this.keyIdx = i; this.playing = false; this.t = k.f; this.buildEditor(); this.syncUi(); });
       row.appendChild(b);
     });
+    if (DRAW.stepped) {
+      // Generated in-betweens (grey ticks) and ones segments (green), under the key drawings.
+      for (const d of scheduleFor(this.def)) {
+        if (d.kind === 0) continue;
+        const m = document.createElement('div');
+        m.title = d.kind === 2 ? 'on ones (full rate)' : `in-between · ${['', 'anticipation', 'strike', 'follow-through'][d.seg] || 'segment'}${d.fast ? ' · fastest (smear chain starts)' : ''}`;
+        m.style.cssText = `position:absolute;left:${(d.t / len) * 100}%;top:21px;width:3px;height:9px;background:${d.kind === 2 ? '#3c3' : d.fast ? '#285aa0' : '#999'}`;
+        row.appendChild(m);
+      }
+      row.style.height = '32px';
+    }
   }
 
   private buildEditor(): void {
@@ -201,6 +219,21 @@ export class AnimLab {
       });
       row.appendChild(inp);
       ed.appendChild(row);
+      // In-betweens for the segment after this drawing, an authored breakdown, and baking the generated ones.
+      const row2 = document.createElement('div');
+      row2.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap';
+      row2.innerHTML = '<span style="color:#ffe96a">in-betweens</span>';
+      const ib = document.createElement('input'); ib.type = 'number'; ib.min = '0'; ib.max = '3'; ib.value = String(spec.inbetween ?? 0); ib.style.width = '44px';
+      ib.addEventListener('change', () => { spec.inbetween = Math.max(0, Math.min(3, Math.round(parseFloat(ib.value) || 0))); rebuild(this.def); this.buildKeys(); });
+      const onesC = document.createElement('label'); onesC.style.cssText = 'display:flex;gap:3px;align-items:center';
+      const oc = document.createElement('input'); oc.type = 'checkbox'; oc.checked = !!spec.ones;
+      oc.addEventListener('change', () => { spec.ones = oc.checked; rebuild(this.def); this.buildKeys(); });
+      onesC.append(oc, 'ones');
+      const mk = (label: string, fn: () => void) => { const b = document.createElement('button'); b.textContent = label; b.style.cssText = 'background:#2a3350;color:#fff;border:1px solid #567;border-radius:4px;padding:2px 6px;cursor:pointer'; b.addEventListener('click', (e) => { e.stopPropagation(); fn(); }); return b; };
+      row2.append(ib, onesC,
+        mk('+ add in-between', () => this.addBreakdown(i, 0.5)),
+        mk('bake generated', () => this.bakeInbetweens(i)));
+      ed.appendChild(row2);
     }
     for (const ch of CHANNELS) {
       const [lo, hi, st] = RANGES[ch] ?? [-3.5, 3.5, 0.01];
@@ -225,6 +258,35 @@ export class AnimLab {
     note.style.cssText = 'margin-top:8px;opacity:.7;line-height:1.4';
     note.textContent = 'Yellow = set on this key, grey = inherited from the base pose. Edits apply live; "export" copies the animation in data-file format (and logs it to the console).';
     ed.appendChild(note);
+  }
+
+  /** Insert an authored breakdown drawing at fraction u of the segment after key i (pose = the arc-aware in-between). */
+  private addBreakdown(i: number, u: number): void {
+    const sorted = this.def.spec.keys.slice().sort((a, b) => a.f - b.f);
+    const a = sorted[i], b = sorted[i + 1];
+    if (!a || !b || b.f - a.f < 2) return;
+    const f = Math.round(a.f + (b.f - a.f) * u);
+    const p: PoseSpec = {};
+    const A = this.def.keys[i].pose, B = this.def.keys[i + 1].pose;
+    CHANNELS.forEach((ch) => { const c = Ch[ch]; const va = A[c], vb = B[c]; (p as Record<string, number>)[ch] = Math.round((va + (vb - va) * (u * u * (3 - 2 * u))) * 100) / 100; });
+    this.def.spec.keys.push({ f, p, breakdown: true });
+    rebuild(this.def);
+    this.keyIdx = i + 1;
+    this.buildKeys(); this.buildEditor(); this.syncUi();
+  }
+
+  /** Turn the generated in-betweens of the segment after key i into authored breakdowns (to edit them). */
+  private bakeInbetweens(i: number): void {
+    const gen = scheduleFor(this.def).filter((d) => d.kind === 1 && d.a === i);
+    if (!gen.length) return;
+    const A = this.def.keys[i].pose, B = this.def.keys[i + 1].pose;
+    for (const d of gen) {
+      const p: PoseSpec = {};
+      CHANNELS.forEach((ch) => { const c = Ch[ch]; (p as Record<string, number>)[ch] = Math.round((A[c] + (B[c] - A[c]) * d.s) * 100) / 100; });
+      this.def.spec.keys.push({ f: d.t, p, breakdown: true });
+    }
+    rebuild(this.def);
+    this.buildKeys(); this.buildEditor(); this.syncUi();
   }
 
   private syncUi(): void {
@@ -275,6 +337,7 @@ export class AnimLab {
         if (k.sfx) parts.push(`sfx: '${k.sfx}'`);
         if (k.ones) parts.push('ones: true');
         if (k.inbetween) parts.push(`inbetween: ${k.inbetween}`);
+        if (k.breakdown) parts.push('breakdown: true');
         return `    { ${parts.join(', ')} },`;
       }).join('\n');
       const h2 = head.filter((x) => !x.startsWith('len:'));
@@ -413,14 +476,8 @@ export class AnimLab {
     a.cur = def;
     computeJoints(a.pose, x, y, facing, f.scale, WORLD.groundY, a.joints, a.rig);
     if (DRAW.stepped) {
-      // Hand-Drawn preview: the drawing on screen at t, smear sweeping from the previous drawing.
-      const id = evalAnimStepped(def, t, a.dPose);
-      const ki = id >> 6;
-      const prevKey = def.keys[Math.max(0, ki - 1)];
-      evalAnimStepped(def, prevKey.f, a.dPrevPose);
-      a.dX = a.dPrevX = x; a.dY = a.dPrevY = y; a.dFace = facing;
-      a.dSmear = ki > 0 ? def.keys[ki].smear : 0;
-      a.dSeed = ki * 977 + def.id.length * 131;
+      // Hand-Drawn preview: replay the drawing latches up to t (same smear chains/arcs as in a fight).
+      a.scrubTo(def, Math.floor(t), x, y, facing, f.scale);
       a.dReachW = this.flags.reachW;
       a.dEcho = 0;
     }

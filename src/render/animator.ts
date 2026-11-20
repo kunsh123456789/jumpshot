@@ -1,7 +1,8 @@
 import { Ch, IS_ANGLE, JOINT_N, J, POSE_N, RIG, angDelta, computeJoints, type RigDims } from './rig';
 import { ANIM, WORLD } from '../data/tuning';
 import type { AnimDef } from '../data/anims/types';
-import { animFlags, crossedKey, evalAnim, evalAnimStepped, type AnimFlags } from './animPlayer';
+import { animFlags, crossedKey, evalAnim, evalAnimStepped, lastDrawing, scheduleFor, SMOOTH, type AnimFlags } from './animPlayer';
+import { smearCfg, type SmearCfg } from '../data/smears';
 import { DRAW } from './drawStyle';
 import { ease } from '../core/math';
 
@@ -113,11 +114,28 @@ export class Animator {
   dEcho = 0;
   /** Number of latches so far (tests / lab). */
   dCount = 0;
+  // ---- Smear chain (revision pass 6): one arc, several drawings, thinning hatch. ----
+  /** The arc a smear chain sweeps: from the pose before the strike to the latest strike pose. */
+  readonly arcFrom = new Float32Array(POSE_N);
+  readonly arcTo = new Float32Array(POSE_N);
+  /** Which step of the chain the drawing on screen is (0 = densest leading edge), and the chain's length. */
+  chainStep = 0;
+  chainLen = 0;
+  smearCfg: SmearCfg = smearCfg('');
+  /** Whole-body spin swept since the previous drawing (rotating hatch arc for flips / tumbles). */
+  dSpin = 0;
+  dSpinFrom = 0;
   private switched = true;
   private impactShown = false;
   private stepId = 0;
 
   constructor(hasScarf = false) { this.hasScarf = hasScarf; }
+
+  /** Smear limbs implied by the animation's striking part (when the contact key names none). */
+  private strikeBits(def: AnimDef): number {
+    if (def.reach) return def.reach;
+    return def.strike === 'leg' ? 4 : def.strike === 'arm' ? 1 : 0;
+  }
 
   /**
    * Show the current pose as a new drawing. Called on step ticks and on sacred
@@ -133,7 +151,35 @@ export class Animator {
     const def = this.cur;
     const ki = this.stepId >> 6;
     const changed = this.stepId !== this.dId;
-    this.dSmear = def && changed && !this.switched ? (def.keys[ki]?.smear ?? 0) : 0;
+    // Smear chains: the fastest strike in-between starts the chain (densest), the contact drawing
+    // continues it, and 1-2 follow-through drawings trail it along the same arc, thinning out.
+    const meta = lastDrawing;
+    let bits = 0;
+    if (def && changed && !this.switched) {
+      if (meta.fast) bits = def.keys[meta.key + 1]?.smear || this.strikeBits(def);
+      else if (meta.kind === 0 && def.keys[meta.key]?.smear) bits = def.keys[meta.key].smear;
+    }
+    if (bits) {
+      if (this.chainLen > 0 && this.dSmear === bits && this.chainStep + 1 < this.chainLen) {
+        this.chainStep++;
+        this.arcTo.set(this.pose);
+      } else {
+        this.smearCfg = smearCfg(def!.id);
+        this.chainLen = Math.max(1, Math.min(this.smearCfg.chain, SMOOTH_CHAIN.max));
+        this.chainStep = 0;
+        this.arcFrom.set(this.dPrevPose);
+        this.arcTo.set(this.pose);
+      }
+      this.dSmear = bits;
+    } else if (changed && this.dSmear && !this.switched && this.chainStep + 1 < this.chainLen) {
+      this.chainStep++;
+    } else if (changed || this.switched) {
+      this.dSmear = 0; this.chainLen = 0;
+    }
+    // Flips and tumbles: remember the spin swept between the two drawings.
+    const sp = this.dPose[Ch.spin] - this.dPrevPose[Ch.spin];
+    this.dSpin = changed && Math.abs(sp) > 0.55 && Math.abs(sp) < 5 ? sp : 0;
+    this.dSpinFrom = this.dPrevPose[Ch.spin];
     this.dSeed = (hashStr(def ? def.id : '') + ki * 977) | 0;
     this.dReachW = this.reachW;
     this.dId = this.stepId;
@@ -308,6 +354,29 @@ export class Animator {
     this.dFace = facing; this.dAge = 0; this.dEcho = 0; this.dSmear = 0; this.dCount = 0;
   }
 
+  /**
+   * Lab preview: put the Hand-Drawn display state exactly where the game would
+   * have it at time t, by replaying the drawing latches from the start
+   * (so smear chains, arcs and spin arcs match gameplay).
+   */
+  scrubTo(def: AnimDef, t: number, x: number, y: number, facing: number, scale: number): void {
+    const sc = scheduleFor(def);
+    this.cur = def; this.switched = true; this.dCount = 0; this.dSmear = 0; this.chainLen = 0;
+    this.dX = this.dPrevX = x; this.dY = this.dPrevY = y;
+    const times: number[] = [];
+    for (const d of sc) {
+      if (d.t > t) break;
+      if (d.kind === 2) { const end = Math.min(t, (sc[sc.indexOf(d) + 1]?.t ?? def.len) - 1); for (let q = d.t; q <= end; q++) times.push(q); }
+      else times.push(d.t);
+    }
+    if (times.length === 0) times.push(0);
+    for (const tt of times) {
+      this.stepId = evalAnimStepped(def, tt, this.pose);
+      this.latch(x, y, facing, scale);
+    }
+    this.t = t;
+  }
+
   /** Root position the snap happened at (spawn): seeds the drawn root. */
   snapRoot(x: number, y: number): void { this.dX = this.dPrevX = x; this.dY = this.dPrevY = y; }
 
@@ -324,3 +393,7 @@ function hashStr(s: string): number {
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
   return h >>> 0;
 }
+
+/** Chain cap from the Attack Smoothness level (set by drawStyle). */
+export const SMOOTH_CHAIN = { max: 3 };
+void SMOOTH;

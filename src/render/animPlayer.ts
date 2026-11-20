@@ -86,34 +86,122 @@ export function evalAnim(def: AnimDef, t: number, out: Float32Array, stagger = t
   }
 }
 
+// ======================================================================= Hand-Drawn drawing schedule
 /**
- * Hand-Drawn playback: the drawing on screen at time t. Each key is a drawing
- * held until the next key (no in-betweens), except segments flagged `ones`
- * (full-rate interpolation) or `inb` (that many generated in-betweens).
- * Returns an id for the drawing shown (changes exactly when the drawing does).
+ * One drawing in a Hand-Drawn schedule: an authored key, a generated
+ * in-between (pose = key a -> key a+1 at param s), or a full-rate ("ones")
+ * segment. seg: 0 other, 1 anticipation, 2 strike (into contact), 3 follow-through.
+ */
+export interface Drawing { t: number; kind: 0 | 1 | 2; a: number; s: number; stretch: number; seg: number; fast: boolean }
+
+/** Current Hand-Drawn smoothness (set from settings by drawStyle). */
+export const SMOOTH = { level: 1, bonus: 1, strikeOnes: false };
+
+/** What the last evalAnimStepped call drew (for the animator's smear logic). */
+export const lastDrawing = { kind: 0, key: 0, seg: 0, fast: false, idx: 0 };
+
+function samePose(a: Float32Array, b: Float32Array): boolean {
+  for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 1e-3) return false;
+  return true;
+}
+
+/** Ease biased toward the extremes: in-betweens bunch up near the keys, fast through the middle. */
+const nearKeys = (u: number) => u * u * (3 - 2 * u);
+/** Strike: accelerate out of the anticipation into the hit. */
+const accel = (u: number) => Math.pow(u, 1.7);
+/** Follow-through: overshoot past the follow pose, then settle onto it. */
+const overshoot = (u: number) => { const c1 = 1.4, c3 = c1 + 1, v = u - 1; return 1 + c3 * v * v * v + c1 * v * v; };
+
+/**
+ * Build the drawing schedule: every authored key is a drawing; moving
+ * segments of attack-like animations get generated in-betweens (authored
+ * `inbetween` + per-animation `inbetweens` + the Attack Smoothness bonus),
+ * never more than one per tick and never touching a contact key's start, so
+ * the contact drawing lands on its exact frame. Segments next to authored
+ * breakdowns get none.
+ */
+export function buildSchedule(def: AnimDef, bonusIn: number, strikeOnes: boolean, attackish: boolean): Drawing[] {
+  const ks = def.keys, n = ks.length, out: Drawing[] = [];
+  const C = def.contact;
+  const bonus = attackish ? bonusIn + (def.spec.inbetweens ?? 0) : 0;
+  let followDone = false;
+  for (let i = 0; i < n; i++) {
+    const k = ks[i];
+    const last = i === n - 1;
+    out.push({ t: k.f, kind: 0, a: i, s: 0, stretch: 1, seg: 0, fast: false });
+    if (last && !def.loop) break;
+    const nk = last ? ks[0] : ks[i + 1];
+    const nf = last ? def.len + ks[0].f : nk.f;
+    const span = nf - k.f;
+    if (span < 2 || samePose(k.pose, nk.pose)) continue;
+    let seg = 0;
+    if (C >= 0) {
+      if (nk.impact) seg = 2;
+      else if (k.f < C) seg = 1;
+      else if (!followDone) { seg = 3; followDone = true; }
+    }
+    if (k.ones) { out.push({ t: k.f + 1, kind: 2, a: i, s: 0, stretch: 1, seg, fast: seg === 2 }); continue; }
+    if (k.breakdown || nk.breakdown) continue;
+    let m = k.inb + (seg === 0 && C >= 0 ? 0 : bonus);
+    if (seg === 2 && strikeOnes && bonus > 0) { out.push({ t: k.f + 1, kind: 2, a: i, s: 0, stretch: 1, seg, fast: true }); continue; }
+    m = Math.min(m, span - 1);
+    for (let j = 1; j <= m; j++) {
+      const u = j / (m + 1);
+      const s = seg === 2 ? accel(u) : seg === 3 ? overshoot(u) : nearKeys(u);
+      const fast = seg === 2 && j === m;
+      out.push({ t: k.f + Math.round(span * u), kind: 1, a: i, s, stretch: fast ? 1.08 : 1, seg, fast });
+    }
+  }
+  // de-dup equal times (short spans), keep the later (more advanced) drawing
+  const ded: Drawing[] = [];
+  for (const d of out) { if (ded.length && ded[ded.length - 1].t === d.t && d.kind !== 0) continue; if (ded.length && ded[ded.length - 1].t === d.t) ded.pop(); ded.push(d); }
+  return ded;
+}
+
+let schedAttackish: (def: AnimDef) => boolean = (def) => def.contact >= 0;
+/** Set by drawStyle: which animations get attack in-betweens. */
+export function setAttackish(fn: (def: AnimDef) => boolean): void { schedAttackish = fn; }
+
+export function scheduleFor(def: AnimDef): Drawing[] {
+  const lv = SMOOTH.level;
+  if (!def.sched) def.sched = [];
+  let sc = def.sched[lv] as Drawing[] | undefined;
+  if (!sc) { sc = buildSchedule(def, SMOOTH.bonus, SMOOTH.strikeOnes, schedAttackish(def)); def.sched[lv] = sc; }
+  return sc;
+}
+
+const ibA = new Float32Array(32);
+/**
+ * Hand-Drawn playback: the drawing on screen at time t (no interpolation
+ * between drawings; generated in-betweens are drawings too). Returns an id
+ * that changes exactly when the drawing does.
  */
 export function evalAnimStepped(def: AnimDef, t: number, out: Float32Array): number {
   const ks = def.keys;
-  if (ks.length === 1) { out.set(ks[0].pose); return 0; }
+  if (ks.length === 1) { out.set(ks[0].pose); lastDrawing.kind = 0; lastDrawing.key = 0; lastDrawing.seg = 0; lastDrawing.fast = false; lastDrawing.idx = 0; return 0; }
+  const sc = scheduleFor(def);
   let tt = t;
   if (def.loop) tt = ((t % def.len) + def.len) % def.len;
-  let i = 0;
-  if (tt < ks[0].f) i = def.loop ? ks.length - 1 : 0;
-  else while (i < ks.length - 1 && ks[i + 1].f <= tt) i++;
-  const k = ks[i];
-  const last = i === ks.length - 1;
-  if ((k.ones || k.inb > 0) && (!last || def.loop)) {
-    const nf = last ? def.len + ks[0].f : ks[i + 1].f;
-    const local = tt >= k.f ? tt - k.f : tt + def.len - k.f;
-    const span = Math.max(1, nf - k.f);
-    if (k.ones) { evalAnim(def, t, out, false); return i * 64 + 1 + Math.min(62, Math.floor(local)); }
-    const steps = k.inb + 1;
-    const q = Math.floor((local / span) * steps) / steps;
-    evalAnim(def, (k.f + q * span) % (def.loop ? def.len : Infinity), out, false);
-    return i * 64 + Math.round(q * steps);
+  let lo = 0, hi = sc.length - 1;
+  if (tt < sc[0].t) lo = def.loop ? sc.length - 1 : 0;
+  else {
+    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (sc[m].t <= tt) lo = m; else hi = m - 1; }
   }
-  out.set(k.pose);
-  return i * 64;
+  const d = sc[lo];
+  lastDrawing.kind = d.kind; lastDrawing.key = d.a; lastDrawing.seg = d.seg; lastDrawing.fast = d.fast; lastDrawing.idx = lo;
+  if (d.kind === 0) { out.set(ks[d.a].pose); return lo * 64; }
+  if (d.kind === 2) {
+    evalAnim(def, t, out, false);
+    return lo * 64 + 1 + Math.min(62, Math.max(0, Math.floor(tt - d.t)));
+  }
+  const A = ks[d.a].pose, B = ks[(d.a + 1) % ks.length].pose;
+  for (let c = 0; c < POSE_N; c++) {
+    const va = A[c], vb = B[c];
+    ibA[c] = IS_ANGLE[c] ? va + angDelta(va, vb) * d.s : va + (vb - va) * d.s;
+  }
+  ibA[Ch.stretch] *= d.stretch;
+  for (let c = 0; c < POSE_N; c++) out[c] = ibA[c];
+  return lo * 64;
 }
 
 export interface AnimFlags { smear: number; trail: number; impact: boolean; reachW: number; snapping: boolean }

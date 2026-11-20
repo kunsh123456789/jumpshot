@@ -325,5 +325,36 @@ export const getup: AnimDef = drawn({
   ],
 });
 
+// ======================================================================= FLURRY (super): the "hundred fists"
+/**
+ * Nine alternating straights, one every 3 ticks (the move's multi-hit
+ * interval), out of a two-drawing coil. Each punch is a committed lunge with
+ * the other fist chambered back; the smear config (data/smears.ts) fans ghost
+ * arms around every punch and hatches the arc, so the volley reads as a blur
+ * of fists in ink. Ends in flurryEnd's laid-back power kick.
+ */
+const FL_A: PoseSpec = { rootX: 16, rootY: -30, lean: 0.85, aU: 1.62, aL: 0.0, bU: -0.3, bL: 2.3, footA: 50, footB: -50, head: -0.35, flex: -8, stretch: 1.1 };
+const FL_B: PoseSpec = { rootX: 18, rootY: -32, lean: 0.9, bU: 1.62, bL: 0.0, aU: -0.3, aL: 2.3, footA: 50, footB: -50, head: -0.35, flex: -8, stretch: 1.1, spin: 0.05 };
+export const flurry: AnimDef = drawn({
+  id: 'flurry', strike: 'arm',
+  drawings: [
+    { hold: 2, p: { rootX: -10, rootY: -40, lean: 0.2, aU: 0.2, aL: 2.7, bU: 0.0, bL: 2.8, footA: 40, footB: -46, head: 0.1, flex: 6 } },
+    { hold: 2, p: { rootX: -14, rootY: -44, lean: 0.1, aU: -0.1, aL: 2.9, bU: -0.2, bL: 2.9, footA: 40, footB: -48, head: 0.15, flex: 8 } },
+    ...Array.from({ length: 9 }, (_, i) => ({ hold: 3, p: i % 2 === 0 ? FL_A : FL_B, smear: [i % 2 === 0 ? 'handA' : 'handB'] as ('handA' | 'handB')[], impact: i === 0 })),
+    { hold: 3, p: { rootX: 10, rootY: -32, lean: 0.55, aU: 1.2, aL: 1.3, bU: 0.4, bL: 2.0, footA: 44, footB: -44 } },
+  ],
+});
+export const flurryEnd: AnimDef = drawn({
+  id: 'flurryEnd', strike: 'leg', reach: 'footA',
+  drawings: [
+    { hold: 3, p: { plant: 0.3, spin: -0.6, laU: 1.2, laL: -2.6, lbU: 0.2, aU: 2.5, aL: 0.6, bU: 1.2, lean: 0.2, rootY: -20, flex: -6 } },
+    { hold: 4, p: { plant: 0, spin: 0.25, laU: 1.95, laL: 0.0, lbU: -0.6, lbL: -0.5, lean: -0.85, aU: -1.2, aL: 0.8, bU: 2.5, bL: 0.4, stretch: 1.18, head: -0.15 }, smear: ['footA'], impact: true },
+    { hold: 5, p: { plant: 0, spin: 0.3, laU: 2.02, laL: 0.04, lbU: -0.6, lbL: -0.5, lean: -0.9, aU: -1.2, aL: 0.8, bU: 2.5, bL: 0.4, stretch: 1.14, head: -0.15 } },
+    { hold: 6, p: { plant: 0.3, spin: 0.15, laU: 1.4, laL: -0.6, lean: -0.5, aU: -0.6, bU: 1.6 } },
+    { hold: 6, p: { rootY: -40, lean: 0.55, aU: 0.9, aL: 1.4, bU: 0.3, bL: 1.8, footA: 40, footB: -40 } },
+    { hold: 5, p: CROUCH },
+  ],
+});
+
 /** Which file the lab exports these to. */
 export const HAND_FILE = 'handDrawn';

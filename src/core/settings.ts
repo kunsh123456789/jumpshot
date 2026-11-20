@@ -25,6 +25,8 @@ export interface Settings {
   look: 'pixel' | 'crisp' | 'smooth';
   /** Pixel Look resolution as a fraction of the 1280x720 logical view. */
   pixelRes: number;
+  /** Hand-Drawn attacks: generated in-betweens and smear chains. */
+  attackSmooth: 'low' | 'normal' | 'high';
 }
 
 const KEY = 'jumpshot.settings.v1';
@@ -44,9 +46,10 @@ export const settings: Settings = {
   songId: 'neon',
   beatHud: true,
   animStyle: 'drawn',
-  stepRate: 12,
+  stepRate: 20,
   look: 'pixel',
   pixelRes: 0.4,
+  attackSmooth: 'normal',
 };
 
 export function loadSettings(): void {
