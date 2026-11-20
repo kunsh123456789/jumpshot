@@ -26,6 +26,7 @@ import { RhythmHud, drawRhythmWorld } from './rhythm/hud';
 import { RhythmUI, type CalibView } from './rhythm/ui';
 import { DRAW, syncDrawStyle } from './render/drawStyle';
 import { INKLOOK } from './data/inkLook';
+import { inkFx, drawEntitiesInk } from './render/inkFx';
 import { RHYTHM } from './data/rhythm';
 import { SONGS } from './data/songs';
 
@@ -71,7 +72,8 @@ export class Game {
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas);
     this.renderer.drawExtras = (ctx, alpha, time) => {
-      drawEntities(ctx, this.world, alpha, time);
+      if (DRAW.ink) drawEntitiesInk(ctx, this.world, alpha, time, 1 / ((settings.look === 'pixel' ? settings.pixelRes : INKLOOK.refRes) * this.cam.effectiveZoom()));
+      else drawEntities(ctx, this.world, alpha, time);
       if (this.world.rhythm) drawRhythmWorld(ctx, this.rhythm, this.world, alpha, this.rhythm.heardAt(performance.now()), this.rhud.pulse);
     };
     this.pad.attach(canvas);
@@ -99,6 +101,7 @@ export class Game {
     window.addEventListener('blur', () => { if ((this.state === 'playing' || this.state === 'tutorial') && !this.paused) this.togglePause(); });
     document.addEventListener('visibilitychange', () => { if (document.hidden && (this.state === 'playing' || this.state === 'tutorial') && !this.paused) this.togglePause(); });
     this.world.events.on('waveClear', () => this.onWaveClear());
+    inkFx.bind(this.world);
     this.rhythm.onJudge = (j, broke) => this.rhud.judged(j, broke, this.rhythm.now);
     window.addEventListener('jumpshot-mode', () => { this.rhythm.clock.inputOffsetMs = settings.rhythmOffset; });
     this.publishPadTop();
@@ -331,6 +334,7 @@ export class Game {
 
   private effectsReset(): void {
     effects.clear();
+    inkFx.clearFloor();
     this.time.reset();
     this.fx.popups.length = 0;
     this.fx.lastComboEnd = null;
@@ -492,6 +496,7 @@ export class Game {
     }
     this.updateState(realDt);
     effects.update(dt);
+    inkFx.update(dt);
     this.fx.update(realDt);
     this.updateCamera(alpha);
     this.cam.update(realDt);

@@ -1,3 +1,4 @@
+import { inkFx } from './render/inkFx';
 import { Game } from './game';
 import { layout } from './core/layout';
 import { audio } from './core/audio';
@@ -12,6 +13,7 @@ const game = new Game(canvas);
 const W = window as unknown as Record<string, unknown>;
 W.__jumpshot = game;
 W.__layout = layout;
+W.__inkFx = inkFx;
 
 const qs = new URLSearchParams(location.search);
 // Dev/testing: ?wave=N starts a run at wave N (skips the tutorial).

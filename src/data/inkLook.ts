@@ -34,3 +34,14 @@ export const INKLOOK = {
   /** Punch-ins are allowed but scaled down to this fraction. */
   punchScale: 0.4,
 } as const;
+
+/** Hand-drawn FX tunables (ink look). */
+export const INKFX = {
+  /** Hatch strokes per smear: fewer on small sweeps, more on big ones. */
+  smearMin: 14,
+  smearMax: 30,
+  /** Scribble-energy burst lifetime (s) before it breaks into fragments, loop count and fragment count. */
+  scribbleSec: 0.45,
+  scribbleLoops: 22,
+  fragments: 14,
+} as const;
