@@ -176,6 +176,34 @@ export class RhythmHud {
   }
 }
 
+/**
+ * World-space telegraph: pips above each winding-up enemy count the beats to
+ * its strike ("ta · ta · HIT"); the last pip is red and the ring pulses on
+ * every beat, so the enemy's rhythm can be read and answered.
+ */
+export function drawRhythmWorld(ctx: CanvasRenderingContext2D, r: RhythmDirector, w: World, alpha: number, now: number, pulse: number): void {
+  if (!r.live) return;
+  for (const e of w.enemies) {
+    if (e.state !== 'windup' || !e.alive) continue;
+    const left = r.enemyBeatsLeft(e, now);
+    if (left < 0) continue;
+    const x = e.px + (e.x - e.px) * alpha;
+    const y = e.py + (e.y - e.py) * alpha - 175 * e.scale;
+    const n = Math.max(1, left);
+    ctx.save();
+    for (let i = 0; i < n; i++) {
+      const last = i === n - 1 && left <= 1;
+      const px = x + (i - (n - 1) / 2) * 16;
+      const rad = (last ? 6 : 4.5) * (1 + pulse * 0.35);
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = last ? '#ff4040' : '#ffd0d0';
+      ctx.beginPath(); ctx.arc(px, y, rad, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
 function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   ctx.beginPath();
   ctx.moveTo(x + r, y);

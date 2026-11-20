@@ -30,7 +30,8 @@ export class EnemyAI {
     for (const e of w.enemies) if (e.hasToken) count++;
     this.holders = count;
     let guard = 0;
-    while (this.holders < this.tokens && guard++ < 4) {
+    const tokens = this.tokens + (w.rhythm ? w.rhythm.tokenBonus() : 0);
+    while (this.holders < tokens && guard++ < 4) {
       let best: Fighter | null = null, bs = Infinity;
       const p = w.player;
       for (const e of w.enemies) {
@@ -88,6 +89,8 @@ export class EnemyAI {
     if (canAttack) {
       const atk = this.pickAttack(e, dist);
       if (dist <= atk.range * e.scale) {
+        // Rhythm Mode: wind-ups start on a beat (the enemy squares up and waits for it).
+        if (w.rhythm && !w.rhythm.enemyCanStart(w, e)) { e.vx = 0; if (e.state !== 'idle') e.setState('idle'); return; }
         this.startWindup(w, e, atk);
         return;
       }
@@ -143,6 +146,7 @@ export class EnemyAI {
     let wind = atk.windup;
     if (e.kind === 'boss' && e.ai.phase >= 3) wind = Math.round(wind * BOSS.p3Speed);
     if (w.wave >= 8 && e.kind !== 'boss') wind = Math.max(14, wind - Math.min(6, w.wave - 7));
+    if (w.rhythm) wind = w.rhythm.enemyWindup(w, e, wind);
     e.setState('windup', wind);
     e.telegraph = wind;
     e.vx = 0;
@@ -154,7 +158,8 @@ export class EnemyAI {
     const atk = e.attack;
     if (!atk) { e.setState('idle'); return; }
     e.x += (e.facing * atk.stepIn) / 60;
-    if (e.telegraph > 0) e.telegraph--;
+    if (_w.rhythm) _w.rhythm.enemyWindupTick(_w, e);
+    else if (e.telegraph > 0) e.telegraph--;
     if (--e.timer <= 0) {
       e.setState('attack', atk.active);
       e.vx = e.facing * atk.lunge;
@@ -179,6 +184,7 @@ export class EnemyAI {
     if (--e.timer <= 0) {
       e.setState('recover', atk.recovery);
       e.ai.cooldown = (e.def?.cooldown ?? 70) + simRng.int(0, 40);
+      if (w.rhythm) e.ai.cooldown = Math.round(e.ai.cooldown * w.rhythm.cooldownMult());
     }
   }
 

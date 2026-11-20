@@ -196,9 +196,46 @@ export class RhythmDirector implements RhythmSim {
     w.events.emit('text', { text: 'ON-BEAT PARRY', x: p.x, y: p.y - 195 * p.scale, color: '#ffe14a', size: 24 });
   }
 
-  enemyCanStart(_w: World, _e: Fighter): boolean { void this.enemyWait; return true; }
-  enemyWindup(_w: World, _e: Fighter, wind: number): number { void this.enemyTarget; return wind; }
-  enemyWindupTick(_w: World, _e: Fighter): void {}
-  tokenBonus(): number { return 0; }
-  cooldownMult(): number { return 1; }
+  /** Attack-ready enemies start their wind-up on the tick a beat begins (or after waiting too long). */
+  enemyCanStart(_w: World, e: Fighter): boolean {
+    if (!this.live) return true;
+    const c = this.clock;
+    const onBeat = c.beat(this.now) !== c.beat(this.now - FRAME);
+    const waited = (this.enemyWait.get(e) ?? 0) + 1;
+    if (onBeat || waited > RHYTHM.enemyMaxWaitFrames) { this.enemyWait.set(e, 0); return true; }
+    this.enemyWait.set(e, waited);
+    return false;
+  }
+
+  /** Wind-up = a whole number of beats, so the strike's first active frame lands on a beat. */
+  enemyWindup(_w: World, e: Fighter, wind: number): number {
+    if (!this.live) { this.enemyTarget.delete(e); return wind; }
+    const c = this.clock;
+    const beats = Math.max(RHYTHM.enemyMinBeats, Math.min(RHYTHM.enemyMaxBeats, Math.round((wind * FRAME) / c.beatLen(this.now))));
+    // Land `beats` beats out, but never sooner than 75% of that (a wind-up started mid-beat after a long wait stays readable).
+    let k = c.beat(this.now + 0.02) + beats;
+    while (c.timeOfBeat(k) - this.now < 0.75 * beats * c.beatLen(this.now)) k++;
+    const target = c.timeOfBeat(k);
+    this.enemyTarget.set(e, target);
+    return Math.max(1, Math.round((target - this.now) / FRAME));
+  }
+
+  /** Re-derive the remaining wind-up from the clock every tick (hit-stop can't push the strike off the beat). */
+  enemyWindupTick(_w: World, e: Fighter): void {
+    const target = this.enemyTarget.get(e);
+    if (target === undefined || !this.live) { if (e.telegraph > 0) e.telegraph--; return; }
+    e.timer = Math.max(1, Math.round((target - this.now) / FRAME) + 1);
+    e.telegraph = e.timer;
+  }
+
+  /** Beats left before an enemy's strike (for the on-beat telegraph count), or -1. */
+  enemyBeatsLeft(e: Fighter, now: number): number {
+    const target = this.enemyTarget.get(e);
+    if (target === undefined || e.state !== 'windup') return -1;
+    return Math.max(0, Math.ceil(this.clock.beatAt(target) - this.clock.beatAt(now) - 1e-3));
+  }
+
+  private intensity(): number { return this.live ? this.clock.section(this.now).intensity : 0.5; }
+  tokenBonus(): number { return Math.round(this.intensity() * RHYTHM.intensityTokenBonus - 0.2); }
+  cooldownMult(): number { const i = this.intensity(); return RHYTHM.cooldownAtLow + (RHYTHM.cooldownAtHigh - RHYTHM.cooldownAtLow) * i; }
 }

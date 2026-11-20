@@ -22,7 +22,7 @@ import { UPGRADES, type UpgradeDef } from './data/upgrades';
 import { fxRng } from './core/rng';
 import { clamp } from './core/math';
 import { RhythmDirector } from './rhythm/director';
-import { RhythmHud } from './rhythm/hud';
+import { RhythmHud, drawRhythmWorld } from './rhythm/hud';
 import { RhythmUI, type CalibView } from './rhythm/ui';
 import { RHYTHM } from './data/rhythm';
 
@@ -67,7 +67,10 @@ export class Game {
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas);
-    this.renderer.drawExtras = (ctx, alpha, time) => drawEntities(ctx, this.world, alpha, time);
+    this.renderer.drawExtras = (ctx, alpha, time) => {
+      drawEntities(ctx, this.world, alpha, time);
+      if (this.world.rhythm) drawRhythmWorld(ctx, this.rhythm, this.world, alpha, this.rhythm.heardAt(performance.now()), this.rhud.pulse);
+    };
     this.pad.attach(canvas);
     this.keyboard = new Keyboard(this.pad);
     this.keyboard.onToggleDebug = () => { this.debug.visible = !this.debug.visible; settings.debug = this.debug.visible; };
@@ -434,7 +437,10 @@ export class Game {
     this.hud.draw(ctx, this.world, this.fx, realDt, this.renderTime);
     if (this.world.rhythm && this.hud.visible && this.state !== 'gameover') {
       const now = this.rhythm.heardAt(performance.now());
-      this.rhud.update(this.rhythm, now, realDt);
+      // On each heard beat: a soft count tick while any enemy is winding up.
+      if (this.rhud.update(this.rhythm, now, realDt)) {
+        for (const e of this.world.enemies) if (e.state === 'windup' && this.rhythm.enemyBeatsLeft(e, now) > 0) { audio.telegraph(); break; }
+      }
       this.rhud.draw(ctx, this.rhythm, this.world, now);
     }
     if (this.state !== 'gameover') this.pad.draw(ctx, performance.now(), realDt);
