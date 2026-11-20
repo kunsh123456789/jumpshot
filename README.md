@@ -44,6 +44,8 @@ The **bottom half of the screen** is the touch area. It is transparent, so you c
 | **Fast zig-zag** | Each sharp turn fires the next attack |
 | **Tap** | Dodge. Tap just before a red-flashing attack lands for a **PERFECT PARRY** |
 
+These are the **Fists** moves (the default weapon). Other weapons replace the moveset: see **Weapons** below.
+
 | Flick | On the ground | In the air |
 |---|---|---|
 | **→ / ←** | Jab, jab, cross string. Heavy: **Spinning Backfist** | Air-kick chain. Heavy: **Air Cannon** |
@@ -57,7 +59,8 @@ The **bottom half of the screen** is the touch area. It is transparent, so you c
 - **Super Meter** finishers each cost half the meter:
   - **JUMPSHOT FINISHER**: after a launcher and 5+ air hits, flick ↓ in the air.
   - **FLURRY**: in a 15+ hit combo, do a long heavy flick in any direction.
-- The style rank (D → SSS) multiplies your score and fills the Super Meter. Between waves you pick 1 of 3 upgrades. An elite arrives every 5th wave and a boss every 10th.
+- The style rank (D → SSS) multiplies your score and fills the Super Meter. An elite arrives every 5th wave and a boss every 10th.
+- **Between waves** there is a 3-second breather: the arena is clear, you heal 35%, the floor cracks reset and the next wave's title comes up. It continues on its own (in Rhythm Mode the next wave starts on a bar line). A small **Swap weapon** strip is available during the breather.
 - **Settings** include volume, screen shake, hit-stop strength, **Flick sensitivity**, the **Touch area** height (35–60% of the screen), left-handed mode, reduced flashes and the debug overlay.
 
 **Keyboard**
@@ -68,6 +71,8 @@ The **bottom half of the screen** is the touch area. It is transparent, so you c
 | **I / J / K / L** | Attack up / left / down / right. Press two at once for a diagonal, for example I+L = ↗ |
 | **Shift** + attack | Heavy |
 | **Space** | Tap (dodge/parry) |
+| **1–5** | Pick a weapon (loadout screen), or swap weapons during the between-wave breather |
+| **Enter / Esc** | Close the loadout screen |
 | **Esc / P** | Pause |
 | **`** | Debug panel: FPS, sim tick rate, interpolation alpha, frame-time graph, pop detector, input state, buffer |
 | **[** | 0.1× slow motion (toggle) |
@@ -76,9 +81,27 @@ The **bottom half of the screen** is the touch area. It is transparent, so you c
 
 **Dev URL flags**
 - `?wave=N` starts a run at wave N.
+- `?weapon=fists|hook|throw|staff|laser` equips that weapon.
 - `?song=dojo|neon|volcano` forces Rhythm Mode with that song (no picker); `?classic` forces Classic Mode.
 - Look and animation style come from Settings (stored in `localStorage` as `jumpshot.settings.v1`: `look`, `animStyle`, `stepRate`, `pixelRes`).
 - `?manual` drives the loop from `window.__advance(ms)`, for deterministic refresh-rate tests.
+
+## Weapons
+
+You carry **one weapon** at a time. All five are unlocked from the start. Pick one on the **loadout** screen (the ⚔ WEAPON button on the title screen, or keys 1–5). It shows a looping preview of the moves and a swipe cheat-sheet, and remembers your choice. Between waves you can swap instantly from the small strip (tap an icon or press 1–5). The first time you equip a weapon, a tooltip lists its moves. Every weapon works with the pad and the keyboard, combos, juggles, parry/dodge, the Super Meter finishers (JUMPSHOT and FLURRY), the style rank and both game modes.
+
+| Weapon | Strength | → ← | ↑ (starter) | ↗ ↖ / ↘ ↙ | ↓ | Tap |
+|---|---|---|---|---|---|---|
+| **Fists** | Balanced, fast | Jab string · heavy: spinning backfist | JUMPSHOT launcher | Rising hook / leg sweep | Quake stomp · air: spike | Dodge |
+| **Grappling Hook** | Mobility and control | **Yank** the enemy in (+ an automatic punch) · heavy: **Zip** to them with a flying kick | **Air Hook**: launch and zip up after them | **Swing** around the target, kicking everything on the way | **Slam Yank** into the floor (ground bounce, crack) | Hook-zip dodge (longer) |
+| **Throw** | Crowd damage through bowling | Dash, **grab**, quick toss · heavy: overhead heave (wall bounce) | **Toss Up** | **Bowling throws** (high lob / flat into the crowd) | **Pile-driver** with a shockwave | Dodge |
+| **Staff** | Reach and crowd control | 3-hit twirl · heavy: spinning sweep that trips everyone around | **Pole Vault** launcher | **Helicopter** spin (hits all around, deflects darts) | Plant slam shockwave | Dodge |
+| **Laser Blast** | Safe ranged damage | Bolt · heavy: **charged piercing beam** | **Sky Blast** (heavy: a barrage that keeps them aloft) | Rising bolt / leg shot (trips) | Ground blast · air: **down beam** spike | Dodge |
+
+- **Throw:** the swipe direction is the throw direction. Thrown enemies are live projectiles that bowl through everyone they hit, and you can swipe at a flying body to re-grab it and throw it again. Shields can be grabbed through their guard; a Brute keeps its footing until its poise is broken.
+- **Hook and Laser** are ranged: they don't dash you up close; they fire at the best target in the swipe direction (generous auto-aim).
+- **Laser heat:** every shot adds heat, and full heat overheats the blaster for about a second (swipes become a melee bash while it cools). Heat drains fast; in Rhythm Mode a Perfect-timed shot vents heat.
+- Each weapon has a slow-motion moment: the hook yank, the big throws, the charged beam, the staff vault apex.
 
 ## Look and animation (Hand-Drawn ink page)
 
@@ -121,7 +144,7 @@ Attacks stay stepped, but each swing now has proper animation in-betweens:
 - Wave start flips the page, a cleared wave gets a big pen check and "cleared!", and game over crumples the page.
 - The HUD is drawn in pen: a heart and a scribble-filled HP box, hatched super segments, a scoreboard with K.O. tally marks, a pen-circled rank letter, sticky-note combo summaries and handwritten damage numbers.
 - The Rhythm HUD is a pencil tick track with a doodled metronome. Judgments are marker-lettered, each with its own shape (star, circle, dot, cross), so they don't rely on color.
-- The pad is a dashed pencil line with a doodled stick ring and an ink trail. Every menu is a notebook page with wobbly pen borders; upgrades are sticky notes; results are a stamped report card.
+- The pad is a dashed pencil line with a doodled stick ring and an ink trail. Every menu is a notebook page with wobbly pen borders; loadout cards are sticky notes; results are a stamped report card.
 - Fonts: Patrick Hand and Permanent Marker (SIL OFL, bundled via @fontsource, inlined into the build). Paper sounds: pencil taps, page rustles, a page flip, a pen scratch and a crumple.
 
 In Rhythm Mode, Hand-Drawn steps fall on the musical subdivision nearest the step rate, so drawings change on the grid the hits already land on.
@@ -181,11 +204,12 @@ All animation data lives in `src/data/anims/`. The Hand-Drawn set is `handDrawn.
 ```
 src/
   main.ts          bootstrap + fixed 60 Hz timestep loop with interpolated rendering
-  game.ts          game state machine (title, tutorial, waves, upgrades, game over), camera framing
+  game.ts          game state machine (title, loadout, tutorial, waves, between-wave breather, game over), camera framing
   core/            math, seeded RNG, object pools, event bus, camera, slow-mo, audio synth, layout, settings, keyboard
   sim/             fighter entity, player controller (buffer/targeting/magnetism/cancels), combat resolver,
                    enemy physics + bowling, token AI, combo/style/super tracker, waves, projectiles/hazards/pickups
-  data/            tuning.ts, moves.ts, enemies.ts, waves.ts, upgrades.ts, rhythm.ts, songs.ts, inkLook.ts, smears.ts, paper.ts: every tunable lives here
+  data/            tuning.ts, moves.ts, enemies.ts, waves.ts, rhythm.ts, songs.ts, inkLook.ts, smears.ts, paper.ts: every tunable lives here
+  data/weapons/    one file per weapon (moveset, frame data, drawings, smears, held object, icon), types, shared tuning, enemy reactions
   data/anims/      authored key-pose animations (locomotion, player ground/air, reactions, enemies)
   render/          rig (FK + 2-bone IK, per-kind proportions), animPlayer (key evaluation, easing, staggered leads),
                    animator (pose-to-pose playback, interruption crossfades, smears), poser (gameplay -> animation time),

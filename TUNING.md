@@ -9,8 +9,9 @@ The player can also change these in-game settings: **Flick sensitivity** (divide
 | `data/tuning.ts` | Global feel constants (tables below) |
 | `data/moves.ts` | Every player move: frame data, damage, knockback, hit-stop, shake, cancels, poses, trails |
 | `data/enemies.ts` | Enemy stats, attacks (telegraph/active/recovery), boss phases, projectiles |
-| `data/waves.ts` | Authored waves 1–10, the budget generator, and HP scaling |
-| `data/upgrades.ts` | The 22 roguelite upgrades and the `Stats` they modify |
+| `data/waves.ts` | Authored waves 1–10, the budget generator, and the per-wave enemy HP and damage ramps |
+| `data/weapons/*.ts` | One file per weapon: moveset, frame data, drawings, smear configs, held object, icon (see **Weapons** below) |
+| `data/weapons/tuning.ts` | Shared weapon-system tunables (`WEAPON_T`) |
 | `data/rhythm.ts` | Rhythm Mode: judgement windows, rewards, streaks, attack snapping, enemy beat sync, section intensity, groove, scheduler, calibration |
 | `data/inkLook.ts` | Ink page look: line weights, floor, reflection, locked camera (INKLOOK) and hand-drawn FX (INKFX) |
 | `data/anims/handDrawn.ts` | The Hand-Drawn animation set: drawings + holds |
@@ -47,7 +48,7 @@ The player can also change these in-game settings: **Flick sensitivity** (divide
 | flickWindowMs | Window of recent pointer samples used to detect a flick |
 | flickSpeed, flickMinDist | Over that window, a stroke faster than this (px/s) and longer than this (px) is an ATTACK. Anything slower is movement. Both are divided by the **Flick sensitivity** setting |
 | rearmFrac, rearmMinMs | After a flick, the stroke re-arms once the finger slows below this fraction of flickSpeed, and no sooner than this many ms. One flick can never fire twice |
-| heavyDist, heavySpeed, heavyUpgradeFrames | A flick that keeps going this far (px) at this average speed (px/s) within this many frames upgrades to HEAVY |
+| heavyDist, heavySpeed, heavyPromoteFrames | A flick that keeps going this far (px) at this average speed (px/s) within this many frames is promoted to HEAVY |
 | sectorHalfDeg, cardinalBiasDeg | 8-way direction sectors, plus extra tolerance toward N, S, E and W |
 | chainTurnDeg | While still fast, a turn sharper than this fires the next attack (zig-zag chains) |
 | tapMaxDist, tapMaxMs | Maximum travel (px) and duration for a tap (dodge/parry) |
@@ -132,7 +133,7 @@ The proportions of each fighter kind are in `RIGS` in `render/rig.ts`. The easie
 | juggleGravityPerHit, juggleStallDecay | Gravity increase and stall decrease per juggle hit (juggles end naturally) |
 | juggleCeiling, juggleCeilingFade | Upward knockback fades above this height (keeps the action on screen) |
 | burstChance, burstPush, airBurstFactor | Enemy escape bursts: chance per hit after the enemy's `burstThreshold` (×airBurstFactor in the air), and the push-back |
-| groundBounces, wallBounces | Bounces allowed per combo (upgrades add more) |
+| groundBounces, wallBounces | Bounces allowed per combo |
 | summaryMinHits | Minimum hits before a combo shows its end-of-combo summary |
 
 ## STYLE
@@ -202,7 +203,7 @@ The proportions of each fighter kind are in `RIGS` in `render/rig.ts`. The easie
 ## moves.ts fields (per move)
 `startup / active / recovery` (frames), `damage`, `hitstun`, `kbX / kbY` (knockback; kbY < 0 is up), `hitstop`, `shake`, `zoom` (punch-in), `poise` (armor-break multiplier), `hitbox {x, y, r}` (forward, up and radius from the feet), `maxTargets`, `reach` (stand-off distance for the magnetism dash), `dash`, `travel` (forward movement during active frames), `launch` (victim launch velocity), `follow` (player leaps after), `knockdown`, `spike`, `aoe` (radius instead of a hitbox), `selfVY` (player hop on hit), `cancelFrom` (frames after active start), `cancelInto` (allowed tags), `next` (string continuation), `multiHit {interval, count, then}`, `sound`, `weight` (juice scale), `trail`, `afterimage`, `impactShock` (finisher shockwave), and `poses {antic, strike, follow}`.
 
-`MOVE_MAP` maps a direction class (side / upDiag / up / downDiag / down) × light/heavy to a move, for the ground and the air.
+The move lookup lives in each weapon: `ground` and `air` map a direction class (side / upDiag / up / downDiag / down) × light/heavy to a move id.
 
 ## enemies.ts fields
 - **Per enemy:** `hp`, `poise` and `poiseRegenFrames` (armor), `scale`, `thickness`, `color`, `walkSpeed`, `holdDist` (waiting distance without a token), `weight` (knockback taken), `launchMult`, `burstThreshold`, `blocksFront`, `cooldown`, `score`, `hpBar`, `scarf`, `cost` (wave budget).
@@ -210,9 +211,11 @@ The proportions of each fighter kind are in `RIGS` in `render/rig.ts`. The easie
 - **`BOSS`:** phase HP thresholds, meteor timing, damage and radius, summon interval, stagger length, and the phase 3 speed-up.
 - **`PROJECTILE`:** radius, reflect speed and damage, and lifetime.
 
-## waves.ts / upgrades.ts
-- **`WAVE_GEN`:** budget growth, enemy cap, and HP scaling after wave 10.
-- **Upgrades:** each has `maxStacks`, a pick `weight`, and an `apply(stats)` function. The `Stats` fields are documented inline in `upgrades.ts`.
+## waves.ts
+The player never gets stronger during a run, so the difficulty curve comes only from the waves.
+- **`AUTHORED`:** waves 1–10 (1–5 introduce the enemies; 5 = elite, 10 = boss).
+- **`WAVE_GEN`:** `baseBudget`, `budgetPerWave` and `maxEnemies` for generated waves; `hpScaleFrom`/`hpScalePerWave` (enemy HP +3.5% per wave after wave 5); `dmgScalePerWave`/`dmgScaleMax` (enemy damage +2.5% per wave, capped at ×1.6, applied in `hurtPlayer`).
+- **`WAVES_T`** (`tuning.ts`): `breatherSec` (3 s between waves), `countdownSec` (the next wave's title), `healFraction` (0.35), attack tokens by wave, on-screen cap, spawn interval.
 
 ## RHYTHM (`data/rhythm.ts`)
 Times are in ms on the heard audio timeline, after the player's latency offset. "Beat" means a quarter note.
@@ -326,3 +329,40 @@ In-betweens are generated per segment by type: anticipation (eased, clustered ne
 **Sketch helpers** (`render/sketch.ts`): `penLine(wob, over)`, `penRect`, `penCircle`, `penArrow`, `penCheck`, `penScribble(step, slant)`, `penHatch(gap)`. All are seeded with `seedSketch(n)`; the HUD uses seed + boil index so strokes boil with the page. DOM borders (`ui/sketchDom.ts`) use the same idea in SVG, seeded from the element's text and size.
 
 **Fonts:** `HAND` (Patrick Hand) for labels and numbers, `MARKER` (Permanent Marker) for titles, ranks and judgments. Both are imported in `main.ts` and inlined by `vite.config.ts` `assetsInlineLimit`.
+
+## Weapons (`data/weapons/`)
+
+A weapon is a `WeaponDef` (`types.ts`): `id`, `name`, `desc`, `ground` and `air` movesets (direction class × light/heavy → move id), `dodge` (`distance`, `frames`, `rope`), `range` (auto-targeting range), optional `heat`, `anims`, `smears` (merged into `SMEAR_BY_ANIM`), `tips` (first-time tooltip), `icon` and `held` (draw routines). **Add a weapon** by adding a file and listing it in `index.ts` (`WEAPON_ORDER` sets the loadout order and the 1–5 keys).
+
+Weapon moves are ordinary `MoveDef`s (`addMove`) with these generic hooks, all resolved on the move's **contact frame** (so Rhythm Mode lands them on the grid):
+
+| Field | Purpose |
+|---|---|
+| ranged | No magnetism dash; the target is picked within this range |
+| aimCone | Aim along the swipe direction, snapped onto the target when it is inside this cone (degrees) |
+| beam | `{ len, width, pierce, color }`: hitscan line from the hand. Not piercing = first enemy only |
+| grab | `{ bowl, hold, respectPoise }`: catch the target when the dash arrives, hold/wind up for `hold` frames, throw at contact. `bowl` multiplies bowling damage while the body flies |
+| tether | `{ mode: pull / zip / swing / slam / air, frames }`: grappling hook |
+| plant | `{ radius, damage, x }`: floor shockwave + crack at contact |
+| deflect | Enemy darts bounce off while the move is active |
+| heat | Laser heat added per shot (0..1) |
+| slowmo | `{ scale, sec, at? }`: the weapon's slow-mo moment, at contact or at the apex of the follow leap |
+| grid | Rhythm Mode: coarsest grid the contact snaps to (1 = beat, 2 = 8th, 4 = 16th) |
+| then | Move started automatically when this one ends (the hook's reel-in punch) |
+
+**`HeatSpec`** (laser): `decayPerSec` (0.55), `overheatSec` (1.1), `resumeAt` (heat left after overheating), `perfectVent` (heat vented by a Perfect shot in Rhythm Mode), `bash` (the melee move used while overheated).
+
+**`WEAPON_T`** (`tuning.ts`)
+
+| Key | Purpose |
+|---|---|
+| heroMaxHeight | Highest the hero can get above the floor (chained air grabs and zips stop here) |
+| ropePoints, hookMissFrames | Verlet rope points; how long a missed hook stays out |
+| pullStop, pullStun | Where a yanked enemy stops in front of you, and its hit-stun on arrival |
+| grabReach | Grab reach once the dash has arrived (+ the victim's hurt radius) |
+| thrownFalloff | Bowling damage multiplier per extra collision of a thrown body |
+| beamWallReflect | Stretch goal: piercing beams reflect once off the arena walls (off) |
+| beamFrames, beamHeavyFrames | Beam flash length |
+| tipMs | First-time weapon tooltip duration |
+
+**Authoring drawings:** `author.ts` `strikeAnim(id, move, { antic, hit, hit2?, follow, smear, inbetweens, ones })` spreads the drawings over the move's frame data so the contact drawing starts exactly on the first active frame. Weapon animations are listed per weapon in the Animation Lab (`weapon: <name>`), with the held weapon drawn.

@@ -8,7 +8,7 @@ Screenshots of every screen at three sizes, taken with headless Chromium (`t_aud
 | phoneL | 844×390, touch |
 | phoneP | 390×844, touch |
 
-The audit covers title, settings, calibration, song picker, tutorial, a gameplay crowd, the pad mid-swipe, the combo and rank, the upgrade picker, pause, results and the Rhythm HUD.
+The audit covers title, settings, calibration, song picker, tutorial, a gameplay crowd, the pad mid-swipe, the combo and rank, the between-wave screen (an upgrade picker until pass 7; now the breather with a weapon-swap strip), pause, results and the Rhythm HUD.
 
 - **Before:** `docs/screenshots/before/<size>_<nn>_<screen>.png`
 - **After:** `docs/screenshots/after/`
@@ -19,7 +19,7 @@ Some screens the brief asks for don't exist in this build: loadout/weapon select
 
 | # | Where | Problem | Severity |
 |---|---|---|---|
-| 1 | All menus (settings, calibration, song picker, pause, upgrades, results, tutorial banner, combo summary) | Dark navy glassy panels and buttons from the old neon theme, pasted on the white ink page. The whole UI clashes with the world | high |
+| 1 | All menus (settings, calibration, song picker, pause, between-wave cards, results, tutorial banner, combo summary) | Dark navy glassy panels and buttons from the old neon theme, pasted on the white ink page. The whole UI clashes with the world | high |
 | 2 | Title | Gradient neon "JUMPSHOT" logo with a glow. The yellow "TAP OR FLICK…" prompt on white is nearly invisible | high |
 | 3 | Title (phones) | The Rhythm/Classic toggle and Settings button overlap the logo, in both landscape and portrait | high |
 | 4 | Calibration from the title | The panel covers the mode toggle row; both sit at the top | medium |
@@ -30,7 +30,7 @@ Some screens the brief asks for don't exist in this build: loadout/weapon select
 | 9 | Hurt vignette | A red radial gradient becomes a pink wash over the whole white page (phone screenshots 06) | high |
 | 10 | Pad | Light-blue gradient band and hairline at the pad's top edge. The light-blue glow stick ring and the "DRAG = MOVE · FLICK = ATTACK" label are faint blue on white | medium |
 | 11 | Floor in the letterbox | On phone landscape the floor line and paper stop at the world rect, leaving empty side bands | medium |
-| 12 | Upgrade picker | Dark cards; "WAVE N CLEARED" in yellow-on-dim | medium |
+| 12 | Between-wave cards (removed in pass 7) | Dark cards; "WAVE N CLEARED" in yellow-on-dim | medium |
 | 13 | Results / pause | Dark panels; tiny keyboard-hint text in pause on phones | medium |
 | 14 | Rhythm HUD | Grey pill track; the BPM / section label is tiny (≈8 px) on phones | low |
 | 15 | Damage numbers / floating text | Bold sans with a black outline. Fine, but not hand-lettered | low |
@@ -53,7 +53,7 @@ Screenshots: `docs/screenshots/after/` (same names as before).
 | 9 | Hurt feedback is red pen hatching at the screen edges, not a pink wash |
 | 10 | Pad: a dashed pencil top line with a "swipe here!" label and arrow (two lines on narrow screens), a doodled stick ring, an ink trail |
 | 11 | The paper and floor cover the whole screen, including letterbox bands |
-| 12 | Upgrades are pastel sticky notes with tape; "WAVE N CLEARED" in marker; a red pen circle on hover |
+| 12 | The between-wave cards were pastel sticky notes with tape (the cards were removed in pass 7); "WAVE N CLEARED" in marker; a red pen circle on hover |
 | 13 | Pause is a notebook page. Results is a report card with a rank stamp and a highlighted best combo, two-column on short landscape screens so the buttons stay visible |
 | 14 | Rhythm HUD: pencil ticks, pen ring, metronome doodle, marker judgments with shapes; BPM in the hand font at a readable size |
 | 15 | Damage numbers are handwritten with a stepped pop |

@@ -4,7 +4,7 @@ These are the judgment calls made where the brief was silent or where two requir
 
 ## Input and the draw pad
 
-- **Heavy detection without waiting.** The brief asks for both "commit as soon as the stroke passes the minimum distance" and "a long, fast stroke is HEAVY". Those conflict, so every swipe commits immediately as a **light** move. If the same stroke keeps going straight and fast past the heavy length within `PAD.heavyUpgradeFrames`, the pad emits an `upgrade` event. The in-flight move is then swapped for its heavy variant before its strike frame: elapsed frames are kept, the anticipation stretches, and the pose does not pop. If the light attack has already struck, the upgrade is ignored, so one stroke never produces two attacks.
+- **Heavy detection without waiting.** The brief asks for both "commit as soon as the stroke passes the minimum distance" and "a long, fast stroke is HEAVY". Those conflict, so every swipe commits immediately as a **light** move. If the same stroke keeps going straight and fast past the heavy length within `PAD.heavyPromoteFrames`, the pad emits a `promote` event. The in-flight move is then swapped for its heavy variant before its strike frame: elapsed frames are kept, the anticipation stretches, and the pose does not pop. If the light attack has already struck, the promotion is ignored, so one stroke never produces two attacks.
 - **Chaining.** A stroke tracks a sliding anchor. When the local direction differs from the committed direction by more than `chainTurnDeg` (60°), a new swipe starts at the turn point. Zig-zag scribbles fire E, W, E, W and so on.
 - **Cardinal bias.** Directions use exact 22.5° sectors, plus a small bias (`cardinalBiasDeg`) that snaps toward N, S, E and W. N is the launcher and S the spike, so misreading them costs the most.
 - **Slow drags are movement.** In revision 1, slow drags became drag-to-move, so the earlier rule that a slow drag commits as an attack on release was removed.
@@ -34,7 +34,7 @@ These are the judgment calls made where the brief was silent or where two requir
   - Enemies can **burst** out of grounded strings after `burstThreshold` hits, and out of very long juggles after `burstThreshold × airBurstFactor` hits.
 
   The brief limits only enemies this way, and the player is never limited.
-- **Bounces per combo.** Ground and wall bounces are counted per combo, not per enemy. Upgrades add more.
+- **Bounces per combo.** Ground and wall bounces are counted per combo, not per enemy.
 - **KO bodies.** KO'd bodies keep flying and bowl into other enemies. That collision counts toward the combo, which makes crowd hits satisfying.
 - **Dropped combos.** A combo dropped by taking damage still shows its summary, labelled COMBO BROKEN, but earns no style bonus.
 
@@ -45,12 +45,11 @@ These are the judgment calls made where the brief was silent or where two requir
 - **Boss "combo stage".** The Colossus has heavy poise. Breaking it opens a long stagger window: it can be launched and juggled, and poise only refills when the window ends. Phase 2 (62% HP) adds telegraphed meteor strikes and summoned grunts. Phase 3 (30% HP) speeds up its windups and adds more meteors.
 - **Waves.** Waves 1–10 are hand-authored to introduce each enemy type. Later waves are generated from a growing budget, with enemy HP scaling +6% per wave after wave 10. Arenas rotate every 3 waves: dojo, rooftop, neon and volcano.
 - **Super Meter costs.** The meter maxes at 100, and each finisher costs 50, so two finishers can be banked.
-- **Upgrade picker.** The between-wave flow is: wave clear → partial heal → upgrade pick (the game waits for your choice) → 3-second breather → next wave.
+- **Between waves.** Wave clear → partial heal → a 3-second breather → next wave (revision pass 7 removed the old blocking pick; see below).
 
 ## Presentation
 
 - **Menus.** They are DOM overlays, which are crisper and more accessible than canvas widgets, especially sliders on mobile. The title stickman, HUD, pad and all gameplay visuals are canvas.
-- **Upgrade icons.** They are emoji text glyphs, not image assets.
 - **Portrait mode.** It crops the 1280×720 logical view to a 760-unit-wide band so fighters stay readable, and keeps the pad at 42% or more of the screen height. In left-handed mode the landscape pad shifts to the left side of the screen. The pause button stays top-right, because the HP bar owns the top-left corner.
 - **Music.** It is a procedural 124 BPM groove, and an arpeggio layer intensifies with style rank.
 
@@ -247,3 +246,33 @@ Particles advance on the drawing step in Hand-Drawn mode, so FX move in the same
 - The paper sounds are synthesized noise bursts; real recorded pencil and paper samples would sell the theme better.
 - The page-flip transition is a stepped wipe, not a 3D curl.
 - The smear configs are tuned by eye on the most-used attacks; enemy attacks use the defaults.
+
+## Revision pass 7: no perks, the weapon system
+
+**What already existed.** As in passes 5 and 6, there was no TimeDirector, no Jackpot Core and no weapon code. Everything was built on what exists: slow-mo moments use the existing `TimeControl` (Rhythm Mode still locks it off), and the weapons plug into the existing combat resolver (`playerHit`), cancels, input buffer, combo/style/super, juggle rules and enemy bowling. **Not done: the Jackpot Core Frenzy flavor per weapon**, because there is no Jackpot Core to hook into. Tag `pre-weapons` is local only (the proxy refuses tag pushes).
+
+**Perks removed completely.** The picker, the upgrade data, the `Stats` object and every hook that read it are gone; each stat is its un-upgraded base value. Features that only existed as perks (crits by chance, chain lightning, KO blasts, dodge damage, heals on parry/finisher, the spike shockwave) were deleted with them. The pad's light→heavy "upgrade" event was unrelated but shared the word, so it is now `promote`. With base stats the Classic fingerprint was identical up to the first wave clear, which proves the removal changed nothing during play.
+
+**The breather.** Between waves: 3 s total. The floor cracks reset, 35% HP heals, the WAVE CLEAR banner shows, then the next wave's title for the last 1.2 s. In Rhythm Mode the wave start waits for the next bar line after that. The weapon-swap strip is non-blocking: ignoring it simply continues.
+
+**Rebalance without perks.** The player no longer grows during a run, so the ramp now comes only from the waves: a gentle enemy HP ramp from wave 6 (+3.5%/wave) and damage ramp from wave 2 (+2.5%/wave, capped ×1.6), slightly bigger authored waves 6–9, a softer elite (340 HP) and boss (1000 HP, slower meteors, fewer summons), and a 35% heal between waves. A rule bot played 12 waves with every weapon (fast-forwarded): damage taken climbs smoothly from ~0–10 per wave early to ~50–100 by waves 8–9; the wave 10 boss is the wall (~270–460 damage for the bot, which never dodges meteors or shockwaves); waves 11–12 settle at ~100–160. The first run found the boss far harsher than the rest (470 damage, 6 near-deaths), which led to the boss nerf.
+
+**Weapon framework.** A weapon is data (`data/weapons/<id>.ts`): moveset by direction class, drawings, smear configs, frame data per move, Rhythm grid per move, a held-object draw routine and an icon. Weapon behavior comes from a small set of generic `MoveDef` hooks (`beam`, `grab`, `tether`, `plant`, `deflect`, `heat`, `aimCone`, `ranged`, `slowmo`, `then`, `grid`), resolved by one `WeaponSim`. **Every hook acts on the move's contact frame**, so the existing Rhythm snapping (which re-times the startup so contact lands on the grid) works for beams firing, grab releases, hook hits and plants with no extra code. Fists moved into the format unchanged; the Classic fingerprint (re-recorded after the rebalance) stays identical with the framework in place.
+- **8 directions as 5 classes.** Movesets map direction *classes* (side, up-diagonal, up, down-diagonal, down). Mirrored directions share a move, and the swipe's horizontal sign picks the facing, so all 8 directions are covered without duplicating every move. Aimed moves (beams, throws, hook) still use the exact swipe vector.
+- **Air moves.** Each weapon also has an air moveset (air variants share drawings with `base: 'air'`).
+- **Finishers are shared.** JUMPSHOT and FLURRY are the same for every weapon (they are body moves and the brief's "Super Meter finishers" exist once). Weapon-specific finishers are a future idea.
+
+**Weapon decisions.**
+- **Throw.** A throw is one move: dash → catch at dash end → `hold` frames lifted/wound up → release on the contact frame. If nothing is caught (or the target is a Brute/elite with poise, or the boss outside a stagger), the move strikes instead and still damages poise: stagger, then throw. Thrown bodies keep the existing bowling with a damage multiplier that falls off per collision (×0.75). Re-grabs mid-air work because flying bodies are valid targets and the air moveset is all throws. The bot found a soft-lock: chained whiffed air throws kept the hero hanging off the top of the page. Fixed: a grab that caught nothing no longer hangs or stalls, and the hero is capped at 520 units above the floor.
+- **Grappling Hook.** Pull reels the victim in over 14 frames (position-driven, with velocity set so dragging a body through others bowls them), then an automatic reel-in punch. Zip is a long rope-drawn magnetism dash into a flying kick (the existing dash with echoes). The N Air Hook is a ranged launcher with the existing follow leap, so it chains into the air game like the fists launcher. Swing takes over the hero's position along an arc around the anchor (over the top for up-diagonals, a low skim for down-diagonals) and hits everything on the way. The rope is a 10-point verlet rope drawn as stepped chain strokes.
+- **Staff.** Plain moves (no hooks besides deflect/plant): long hitboxes, multi-target arcs, AOE sweeps that trip. The vault launcher's slow-mo fires at the apex of the follow leap, not at contact.
+- **Laser.** Beams are hitscan lines from the hand, auto-aimed within a per-move cone. Light bolts stop at the first enemy, heavy beams pierce everything on the line. Heat: +12% per bolt, +45% per charged beam, drains at 55%/s; at full heat a 1.1 s overheat swaps every swipe for a melee bash (never fully helpless). Wall reflection is implemented behind `WEAPON_T.beamWallReflect` (off).
+- **Rhythm grids.** Light bolts, quick throws and swings snap to 8ths/16ths; heavies, starters and slams snap to the beat. Measured on the Neon Rush song: contacts within ~8 ms of the grid for every weapon (Hook p95 16.6 ms, because its auto-chained punch sometimes can't move far enough to reach a grid point).
+
+**Balance (bot, 12 waves each, deliberately mediocre play).** All five weapons clear 12 waves. Staff was clearly strongest at first (twice the score, 143-hit combos, mostly the helicopter), so the helicopter lost a hit, damage and targets, and twirls hit 2 targets. Hook was weakest, so its damage went up ~15%. Throw is slowest against the boss, because the boss can only be thrown while staggered; that is intended, since its strength is crowds.
+
+**Performance.** With 9–16 enemies plus ropes, beams and thrown bodies, every weapon holds ~60 fps in the Pixel look in headless Chrome (render 4–5.5 ms, sim 0.2 ms). Ropes, beams and hit lists are preallocated; the beam hit buffer is a fixed array.
+
+**UI is functional only.** The loadout screen, swap strip, weapon tooltip and heat bar reuse the existing panel/card/button styles with a plain layout and carry `TODO(ui-pass)` comments.
+
+**Future ideas.** Mid-wave weapon swapping (deliberately not added); weapon-specific Super finishers; a Jackpot Core Frenzy flavor per weapon once a Jackpot Core exists; hand-tuned throw arcs for each enemy weight; a proper Hook vs. boss interaction (pull the hero to the boss instead of the boss to the hero).
