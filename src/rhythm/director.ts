@@ -3,7 +3,9 @@ import { settings } from '../core/settings';
 import { SONGS, METRONOME_SONG, type SongDef } from '../data/songs';
 import { GOOD, GREAT, RHYTHM, type Grade } from '../data/rhythm';
 import { SUPER } from '../data/tuning';
-import { Conductor } from './conductor';
+import { Conductor, type LoadedSong } from './conductor';
+import { analyzeSong } from './analyze';
+import { LiveTracker } from './live';
 import { judgeAt, type Judgement } from './judge';
 import type { RhythmSim } from './simHooks';
 import type { World } from '../sim/world';
@@ -26,6 +28,11 @@ export class RhythmDirector implements RhythmSim {
   readonly metro = new Conductor();
   get clock() { return this.conductor.clock; }
   song: SongDef = SONGS[1];
+  /** What the run plays: a built-in song, a loaded file, or the microphone. */
+  source: 'song' | 'file' | 'mic' = 'song';
+  file: LoadedSong | null = null;
+  readonly tracker = new LiveTracker();
+  private fileCache = new Map<string, LoadedSong>();
   /** A Rhythm Mode run is in progress (music + rules). */
   running = false;
   stats: RhythmStats = { counts: [0, 0, 0, 0], streak: 0, bestStreak: 0, judged: 0 };
@@ -51,16 +58,61 @@ export class RhythmDirector implements RhythmSim {
   }
 
   /** Clock is usable (music started, output mapping known, not paused). */
-  get live(): boolean { return this.running && this.conductor.playing && !this.conductor.paused && this.clock.ready; }
+  get live(): boolean { return this.running && this.conductor.playing && !this.conductor.paused && this.clock.ready && this.conductor.locked; }
 
-  selectSong(s: SongDef): void { this.song = s; settings.songId = s.id; }
+  selectSong(s: SongDef): void { this.song = s; settings.songId = s.id; this.source = 'song'; }
+  selectFile(f: LoadedSong): void { this.file = f; this.source = 'file'; }
+
+  /** Ask for the microphone (Listen mode). Resolves false with `live.error` set on failure. */
+  async selectMic(): Promise<boolean> {
+    audio.unlock();
+    if (!audio.ctx) { this.tracker.error = 'Audio is not available'; return false; }
+    const ok = this.tracker.running || (await this.tracker.start(audio.ctx));
+    if (ok) this.source = 'mic';
+    return ok;
+  }
+  stopMic(): void { if (this.tracker.running) this.tracker.stop(); }
+
+  /** Decode + analyse a song file (cached per name/size). */
+  async loadFile(file: File, progress: (f: number, label: string) => void): Promise<LoadedSong> {
+    audio.unlock();
+    const ctx = audio.ctx;
+    if (!ctx) throw new Error('Audio is not available');
+    const key = `${file.name}:${file.size}`;
+    const hit = this.fileCache.get(key);
+    if (hit) return hit;
+    progress(0, 'decoding');
+    let buffer: AudioBuffer;
+    try { buffer = await ctx.decodeAudioData(await file.arrayBuffer()); }
+    catch { throw new Error("Couldn't decode that file — try an MP3, M4A, WAV or OGG"); }
+    if (buffer.duration < 8) throw new Error('That clip is too short (needs 8+ seconds)');
+    const map = await analyzeSong(buffer, progress);
+    if (map.beats.length < 8) throw new Error("Couldn't find a steady beat in that song");
+    // Mastered songs are much louder than the synth band: match them roughly.
+    const d = buffer.getChannelData(0);
+    let e = 0, n = 0;
+    for (let i = 0; i < d.length; i += 97) { e += d[i] * d[i]; n++; }
+    const trim = Math.max(0.3, Math.min(1.5, 0.11 / (Math.sqrt(e / Math.max(1, n)) || 0.1)));
+    const song: LoadedSong = { name: file.name.replace(/\.[^.]+$/, '').slice(0, 40), key, buffer, map, trim };
+    this.fileCache.set(key, song);
+    return song;
+  }
+
+  /** Label for HUD/results. */
+  label(): string {
+    if (this.source === 'file' && this.file) return `${this.file.name} · ${Math.round(this.file.map.bpm)} BPM`;
+    if (this.source === 'mic') return 'LISTEN MODE';
+    return this.song.name;
+  }
 
   // ------------------------------------------------------------ transport
   startRun(): void {
     this.stats = { counts: [0, 0, 0, 0], streak: 0, bestStreak: 0, judged: 0 };
     this.moveGrade = -1; this.tapGrade = -1; this.bonusPaid = true;
     this.clock.inputOffsetMs = settings.rhythmOffset;
-    this.conductor.startSong(this.song);
+    if (this.source === 'file' && this.file) this.conductor.startFile(this.file);
+    else if (this.source === 'mic' && this.tracker.running) this.conductor.startMic(this.tracker);
+    else { this.source = 'song'; this.conductor.startSong(this.song); }
     this.running = true;
   }
   stop(): void { this.conductor.stop(); this.running = false; }
@@ -73,12 +125,17 @@ export class RhythmDirector implements RhythmSim {
   /** Per animation frame: keep the perf ↔ audio mapping fresh. */
   frame(perfNow: number): void {
     this.clock.sync(perfNow);
+    if (this.conductor.kind === 'mic' && this.conductor.playing) this.conductor.updateMic(perfNow);
     if (this.metro.playing) this.metro.clock.sync(perfNow);
     this.conductor.hype = audio.intensity;
   }
 
   /** Short status for the HUD while the clock is not live. */
-  statusText(): string { return this.conductor.paused ? 'PAUSED' : 'COUNT-IN…'; }
+  statusText(): string {
+    if (this.conductor.paused) return 'PAUSED';
+    if (this.conductor.kind === 'mic') return this.tracker.level < 0.02 ? 'PLAY MUSIC' : 'LISTENING…';
+    return 'COUNT-IN…';
+  }
 
   /** Heard context time at a perf timestamp. */
   heardAt(perfMs: number): number { return this.clock.heardAt(perfMs); }
@@ -156,7 +213,7 @@ export class RhythmDirector implements RhythmSim {
     p.snapBase = S0;
     p.effStartup = S;
     this.snapTarget = best;
-    if (p.target && p.target.alive) this.scheduleNote(best, p.moveSerial, this.comboIndex + 1);
+    if (p.target && p.target.alive && this.conductor.kind === 'song') this.scheduleNote(best, p.moveSerial, this.comboIndex + 1);
     // Re-time the magnetism dash proportionally (it must end by the contact frame).
     if (p.dashFrames > 0 && fr < p.dashFrames) p.dashFrames = Math.max(fr + 1, Math.min(S, Math.round((p.dashFrames * S) / S0)));
     if (delta > 0) {
@@ -254,7 +311,7 @@ export class RhythmDirector implements RhythmSim {
 
   /** Semitone offset of the n-th note of a combo: walks the song scale over the current bar's chord. */
   private comboSemis(n: number): number {
-    const c = this.clock, sc = this.song.scale;
+    const c = this.clock, sc = this.conductor.kind === 'song' ? this.song.scale : [0, 3, 5, 7, 10];
     const sec = c.section(this.now);
     const bar = c.barInfo(this.now).bar - c.segment(this.now).bar0;
     const chord = sec.chords.length ? sec.chords[((bar % sec.chords.length) + sec.chords.length) % sec.chords.length] : 0;

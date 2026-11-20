@@ -130,6 +130,7 @@ export class Game {
     this.cam.snap();
     audio.stopMusic();
     this.endRhythm();
+    this.rhythm.stopMic();
     this.rui.closeAll();
   }
 
@@ -159,11 +160,32 @@ export class Game {
   /** Start a run: Classic goes straight in; Rhythm Mode picks a song first. */
   private beginRun(after: (() => void) | null): void {
     if (!settings.rhythmMode || this.skipPicker) { this.startRun(); after?.(); return; }
+    const go = () => { this.rui.close('picker'); this.startRun(); after?.(); };
     this.rui.showPicker({
-      current: 'song:' + this.rhythm.song.id,
-      onSong: (s) => { this.rhythm.selectSong(s); saveSettings(); this.rui.close('picker'); this.startRun(); after?.(); },
-      onFile: null,
-      onMic: null,
+      current: this.rhythm.source === 'song' ? 'song:' + this.rhythm.song.id : this.rhythm.source,
+      onSong: (s) => { this.rhythm.selectSong(s); saveSettings(); go(); },
+      onFile: (f, st) => {
+        st.busy(true);
+        st.set('Loading…');
+        this.rhythm.loadFile(f, (fr, label) => { st.progress(fr); st.set(`Finding the beat… ${label} ${Math.round(fr * 100)}%`); })
+          .then((song) => {
+            st.progress(1);
+            st.set(`✓ ${song.name} — ${Math.round(song.map.bpm)} BPM${song.map.grid ? '' : ' (live tempo)'}`);
+            this.rhythm.selectFile(song);
+            window.setTimeout(() => { if (this.rui.isOpen('picker')) go(); }, 700);
+          })
+          .catch((e: unknown) => { st.progress(-1); st.set(e instanceof Error ? e.message : String(e), true); })
+          .finally(() => st.busy(false));
+      },
+      onMic: (st) => {
+        st.busy(true);
+        st.set('Asking for the microphone…');
+        this.rhythm.selectMic().then((ok) => {
+          st.busy(false);
+          if (!ok) { st.set(this.rhythm.tracker.error || 'Microphone unavailable', true); return; }
+          go();
+        });
+      },
       onCalibrate: () => { this.rui.close('picker'); this.startCalibration(() => this.beginRun(after)); },
       onBack: () => { this.rui.close('picker'); this.toTitle(); },
     });

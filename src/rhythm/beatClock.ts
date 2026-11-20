@@ -44,6 +44,9 @@ export interface Segment {
   section: SectionInfo;
 }
 
+/** Used only while a map is still empty (e.g. Listen mode before the first tempo estimate). */
+const IDLE: Segment = { beat: 0, time: 0, spb: 0.5, bpb: 4, barBeat0: 0, bar0: 0, section: { name: '', kind: 'verse', intensity: 0, chords: [0], index: -1, bars: 0 } };
+
 export class TempoMap {
   readonly segs: Segment[] = [];
 
@@ -58,6 +61,7 @@ export class TempoMap {
 
   private segAtTime(t: number): Segment {
     const a = this.segs;
+    if (a.length === 0) return IDLE;
     let lo = 0, hi = a.length - 1;
     if (t <= a[0].time) return a[0];
     while (lo < hi) {
@@ -69,6 +73,7 @@ export class TempoMap {
 
   private segAtBeat(b: number): Segment {
     const a = this.segs;
+    if (a.length === 0) return IDLE;
     let lo = 0, hi = a.length - 1;
     if (b <= a[0].beat) return a[0];
     while (lo < hi) {
@@ -104,7 +109,9 @@ export class BeatClock {
   /** Player latency calibration (ms): subtracted from input times. */
   inputOffsetMs = 0;
 
-  get ready(): boolean { return !!this.ctx && this.map.segs.length > 0 && isFinite(this.perfOffset); }
+  get ready(): boolean { return this.synced && this.map.segs.length > 0; }
+  /** The perf ↔ audio mapping is known. */
+  get synced(): boolean { return !!this.ctx && isFinite(this.perfOffset); }
 
   // ------------------------------------------------------------ clock mapping
   /** Re-estimate the perf ↔ heard-context mapping. Call once per frame. */
