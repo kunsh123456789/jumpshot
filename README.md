@@ -123,8 +123,8 @@ Animation is **stepped drawings with holds**, not interpolation.
 | Setting | Options |
 |---|---|
 | Animation style | **Hand-Drawn** (stepped drawings, default) / Smooth (the previous interpolated pose-to-pose system) |
-| Hand-Drawn step rate | 8–20 fps (default 20). It paces looping drawings (idle, run, tumbles) and the stepped root travel. Attack and reaction drawings always change on their authored frames |
-| Attack smoothness | Low / **Normal** / High: how many generated in-between drawings attacks get and how long their smear chains are (Hand-Drawn only; Smooth ignores it) |
+| Hand-Drawn step rate | 8–20 fps (default 12). It paces looping drawings (idle, run, tumbles) and the stepped root travel. Attack and reaction drawings always change on their authored frames |
+| Attack smoothness | **Low** / Normal / High: how many generated in-between drawings attacks get and how long their smear chains are (Hand-Drawn only; Smooth ignores it) |
 | Paper page | **Auto** (changes with waves) or a fixed Blank / Lined / Graph / Sketchbook / Kraft page |
 | Line boil | Background doodles re-drawn at ~7 fps, like a hand-drawn cartoon (on by default) |
 | High contrast | Plain page, no doodles, bolder HUD lines |

@@ -61,6 +61,9 @@ export interface WeaponDef {
   tips: string[];
   /** Procedural sketch icon centred on (x, y), about s px across. */
   icon(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, col: string): void;
+  /** The weapon's striking segment for a joint set ([baseX, baseY, tipX, tipY] into out). When set,
+   *  smeared drawings also fill the area the weapon swept with a hatched crescent (reference 2-30). */
+  sweep?: (j: Float32Array, scale: number, out: Float32Array) => void;
   /** The held object, drawn over the hero from its joints (null = bare hands). */
   held: ((ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, col: string, wpp: number) => void) | null;
 }

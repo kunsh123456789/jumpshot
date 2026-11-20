@@ -76,17 +76,31 @@ export function drawWeaponFx(ctx: CanvasRenderingContext2D, w: World, alpha: num
     ctx.strokeStyle = red; ctx.lineWidth = Math.max(2, wd * 0.45);
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     if (DRAW.ink) { ctx.strokeStyle = INK.paper; ctx.lineWidth = Math.max(1, wd * 0.14); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
-    // scribble loops around the core
-    ctx.strokeStyle = red; ctx.lineWidth = 1.6 * wpp + 0.6;
+    // Cursive loops along the beam (reference 76-82): a prolate cycloid, "eeee" written along the line,
+    // with the phase advancing per drawing step so the loops crawl forward.
+    ctx.strokeStyle = red; ctx.lineWidth = 1.8 * wpp + 0.6;
     ctx.beginPath();
-    const loops = Math.max(4, Math.floor(L / 34));
-    for (let i = 0; i < loops; i++) {
-      const t0 = i / loops, t1 = (i + 1) / loops;
-      const r = wd * (0.5 + rnd() * 0.5);
-      const cx = x1 + dx * (t0 + t1) / 2, cy = y1 + dy * (t0 + t1) / 2;
-      ctx.moveTo(x1 + dx * t0 + nx * r * 0.2, y1 + dy * t0 + ny * r * 0.2);
-      ctx.quadraticCurveTo(cx + nx * r, cy + ny * r, x1 + dx * t1 - nx * r * 0.3, y1 + dy * t1 - ny * r * 0.3);
-      ctx.quadraticCurveTo(cx - nx * r, cy - ny * r, x1 + dx * t0 + nx * r * 0.2, y1 + dy * t0 + ny * r * 0.2);
+    const pitch = Math.max(16, wd * 1.1), rad = wd * 0.62;
+    const nPts = Math.min(900, Math.ceil((L / pitch) * 14));
+    const ph = step * 1.7;
+    for (let i = 0; i <= nPts; i++) {
+      const s0 = (i / nPts) * L;
+      const th = (s0 / pitch) * TAU + ph;
+      const along = s0 + Math.cos(th) * rad * 0.9;
+      const off = Math.sin(th) * rad * (0.85 + 0.15 * Math.sin(s0 * 0.05 + step));
+      const px = x1 + (dx / L) * along + nx * off, py = y1 + (dy / L) * along + ny * off;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    // debris flicked off the beam
+    ctx.lineWidth = 1.4 * wpp + 0.4;
+    ctx.beginPath();
+    const nd = Math.min(18, Math.floor(L / 60));
+    for (let i = 0; i < nd; i++) {
+      const t = rnd(), side = rnd() < 0.5 ? -1 : 1, d = wd * (1.2 + rnd() * 2.2) * (1.4 - k);
+      const bx = x1 + dx * t + nx * side * d, by = y1 + dy * t + ny * side * d;
+      const a = rnd() * TAU, l = 3 + rnd() * 6;
+      ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(a) * l, by + Math.sin(a) * l);
     }
     ctx.stroke();
     // reflected segment (stretch-goal flag)

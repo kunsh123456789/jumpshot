@@ -228,7 +228,7 @@ Particles advance on the drawing step in Hand-Drawn mode, so FX move in the same
 
 **In-betweens, not interpolation.** Hand-Drawn stays stepped. The smoothness comes from *more drawings* on the attack segments, generated with arc-aware, eased placement, not from tweening every tick. That keeps the held-drawing look while the swing reads as a continuous arc. Contacts still latch on the exact tick at every smoothness level (14/14 measured), and Rhythm strikes still land within ~8 ms of the grid (p95 7.9 ms).
 
-**Default step rate is now 20.** With in-betweens and smear chains, 12 fps loops looked choppy next to the smoother attacks. 20 keeps the hand-drawn hold on idle/run while matching the attack rhythm better. The slider still goes down to 8.
+**Default step rate.** Pass 6 raised it to 20. After pass 7 the defaults went back to **12 fps and Low attack smoothness** at the user's request (both still adjustable in Settings). Saves that had silently picked up the old defaults move to the new ones once (`defaultsRev` in the settings).
 
 **Smear chains instead of single smears.** One dense hatch on one drawing read as a flash. A chain (dense on the fastest drawing, then thinning over contact and follow-through) reads as the swing sweeping through and dissipating, which is how the reference does it.
 
@@ -276,3 +276,7 @@ Particles advance on the drawing step in Hand-Drawn mode, so FX move in the same
 **UI is functional only.** The loadout screen, swap strip, weapon tooltip and heat bar reuse the existing panel/card/button styles with a plain layout and carry `TODO(ui-pass)` comments.
 
 **Future ideas.** Mid-wave weapon swapping (deliberately not added); weapon-specific Super finishers; a Jackpot Core Frenzy flavor per weapon once a Jackpot Core exists; hand-tuned throw arcs for each enemy weight; a proper Hook vs. boss interaction (pull the hero to the boss instead of the boss to the hero).
+
+## After pass 7: the second reference upload
+
+See `REFERENCE_NOTES.md` ("Second upload"). The biggest change is a **weapon-sweep smear**: a weapon can expose its striking segment, and smeared drawings then fill the area the weapon swept with a hatched crescent (the reference's signature polearm look). Staff spin/helicopter drawings now turn the staff with the arms rather than rotating the whole body, the vault plants the staff upright with the hero on top, and laser beams are written as cursive loops. Not used yet: thrown weapons, lightning/whirlwind FX.

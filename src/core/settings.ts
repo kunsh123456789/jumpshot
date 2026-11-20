@@ -52,23 +52,31 @@ export const settings: Settings = {
   songId: 'neon',
   beatHud: true,
   animStyle: 'drawn',
-  stepRate: 20,
+  stepRate: 12,
   look: 'pixel',
   pixelRes: 0.4,
-  attackSmooth: 'normal',
+  attackSmooth: 'low',
   page: 'auto',
   boil: true,
   highContrast: false,
 };
 
+const DEFAULTS_REV = 2;
+
 export function loadSettings(): void {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) Object.assign(settings, JSON.parse(raw));
+    if (raw) {
+      const saved = JSON.parse(raw) as Partial<Settings> & { defaultsRev?: number };
+      // Defaults revision 2: step rate 12 fps and Low attack smoothness. Older saves picked up the
+      // previous defaults (20 fps / Normal) automatically, so they move to the new defaults once.
+      if ((saved.defaultsRev ?? 0) < DEFAULTS_REV) { delete saved.stepRate; delete saved.attackSmooth; }
+      Object.assign(settings, saved);
+    }
   } catch { /* ignore */ }
 }
 export function saveSettings(): void {
-  try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch { /* ignore */ }
+  try { localStorage.setItem(KEY, JSON.stringify({ ...settings, defaultsRev: DEFAULTS_REV })); } catch { /* ignore */ }
 }
 
 const SAVE_KEY = 'jumpshot.save.v1';

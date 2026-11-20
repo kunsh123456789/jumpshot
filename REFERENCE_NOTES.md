@@ -37,3 +37,19 @@ Measured on the sheets (each cell is 220×160):
 | **Locked wide camera** | The frame never moves (all) | A locked wide shot (figures about 14 % of the screen height), a gentle horizontal drift to keep the action in frame, small brief punch-ins only. No spring follow or auto-zoom |
 | **Big moments** | Radial black/white burst (410–422), inverted night frames (410–414), zoom-in frames (368, 394) | The existing impact frame becomes a hard black/white invert on heavy hits and finishers, and finishers get a scribble burst. The radial burst background was used for finishers |
 | **Telegraph** | Not in the reference | Kept readable: a winding-up enemy flashes red on alternating drawings, with a small red pixel burst at the head |
+
+## Second upload (after revision pass 7)
+
+New material: `sheet_000-024.png` (the opening frames, not seen before) and `gif2_sheet0-5.png` (frames 0-358 of a second clip, every other frame). The other uploaded files were byte-identical copies of sheets already here and were removed.
+
+| Frames | What it shows | Applied to |
+|---|---|---|
+| 000-024, gif2 0-30 | A polearm fighter: low wide crouch with the pole diagonal, big **filled crescent smears** traced by the weapon tip, a ground spin with several crescents, an air spin with two crescents in a Z | **Staff:** a weapon-sweep smear (`WeaponDef.sweep` + `weaponCrescent` in `render/inkFx.ts`) fills the area the staff itself swept between drawings with grip-to-tip hatch and a heavy rim, thinning over the smear chain. The spinning sweep and helicopter now rotate the staff with the arms instead of spinning the whole body |
+| gif2 36-46 | **Pole vault:** the pole planted upright in the floor, the hero perched at its top, then swinging over with a crescent | **Staff vault:** during the plant and launch drawings the staff is drawn upright from the floor to the hands, the hero is redrawn high on the pole with legs tucked, then kicking over |
+| gif2 54-58 | The weapon thrown, spinning away | Not used yet (a staff throw would need a projectile weapon move) |
+| gif2 76-82 | Energy beam across the screen as a chain of **cursive loops** with debris flicking off | **Laser:** beams are now a prolate cycloid (loops written along the line, crawling forward per drawing) over a straight core, with debris strokes |
+| gif2 94, 104, 288-298, 322, 350 | Inverted impact frames on the biggest hits, a white crescent on black | Already covered by the inverted impact frame (heavy hits, charged beam) |
+| gif2 158-170 | Jagged lightning and a hatched whirlwind ball | Not used yet |
+| gif2 200-238 | A stretched arm grabbing and dragging, held upside down, then thrown | Confirms the Hook pull and the Throw hold/release; no change |
+| gif2 262-284 | Close grappling into an over-the-shoulder throw with a smear | Matches the Throw heave; no change |
+| gif2 336-356 | Dizzy stars around a stunned fighter | The stunned stars already exist |

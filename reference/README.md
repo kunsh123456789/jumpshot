@@ -14,4 +14,4 @@ Drop reference material in this folder and the animation pass will match it:
 
 When this folder has images, they are studied before any animation work: line weight, proportions, pose exaggeration, timing (count the frames between keys), smear shapes and impact frames. The results are transferred into `src/data/anims/`.
 
-When this pass was made the folder was empty, so the style follows the written brief: thick round-cap lines, strong exaggerated key poses, snap → hold → settle timing, smears and impact frames.
+Current contents: `sheet_000-099` and `sheet_360-466` (the first reference clip, contact sheets of every frame) and `gif2_sheet0-5` (a second clip, frames 0-358, every other frame). What was taken from each is in `REFERENCE_NOTES.md`.

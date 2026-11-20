@@ -8,6 +8,7 @@ import { INKFX } from '../data/inkLook';
 import { DRAW } from './drawStyle';
 import { INK, inkColor, inkHooks, burst } from './ink';
 import { settings } from '../core/settings';
+import { weaponById } from '../data/weapons';
 
 /**
  * Hand-drawn FX for the ink look (revision pass 5, step 5), all pooled
@@ -244,6 +245,55 @@ export class InkFx {
 }
 export const inkFx = new InkFx();
 
+// ------------------------------------------------------------ weapon crescent smears
+const CS = 10;
+const cBX = new Float32Array(CS), cBY = new Float32Array(CS), cTX = new Float32Array(CS), cTY = new Float32Array(CS);
+const seg4 = new Float32Array(4);
+/**
+ * Weapon crescent (reference frames 2-30): the area the weapon itself swept
+ * between the previous drawing and this one, filled with dense hatch strokes
+ * running from the grip to the tip, with a heavy outer edge. Thins out over
+ * the smear chain like the limb smears.
+ */
+function weaponCrescent(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, col: string, wpp: number): void {
+  const wd = weaponById(f.weapon);
+  if (!wd.sweep) return;
+  const a = f.anim, sc = f.scale;
+  for (let i = 0; i < CS; i++) {
+    if (i === CS - 1) wd.sweep(j, sc, seg4);
+    else { lerpPose(a.arcFrom, a.arcTo, i / (CS - 1), smPose); computeJoints(smPose, a.dX, a.dY, a.dFace, sc, WORLD.groundY, smJ, a.rig); wd.sweep(smJ, sc, seg4); }
+    cBX[i] = seg4[0]; cBY[i] = seg4[1]; cTX[i] = seg4[2]; cTY[i] = seg4[3];
+  }
+  const sweep = Math.hypot(cTX[CS - 1] - cTX[0], cTY[CS - 1] - cTY[0]);
+  if (sweep < 30 * sc) return;
+  const step = a.chainStep;
+  const dens = [1, 0.6, 0.35, 0.2][Math.min(3, step)];
+  const k0 = step === 0 ? 0 : 0.15 * step;
+  seed = a.dSeed ^ 0x9e3779b1 ^ (step * 7919);
+  ctx.strokeStyle = col; ctx.lineCap = 'round';
+  // hatch: radial strokes across the swept band (denser toward the tip, like a brushed crescent)
+  const n = Math.round((16 + Math.min(40, sweep / (6 * sc))) * dens);
+  ctx.lineWidth = 1.6 * wpp;
+  ctx.beginPath();
+  for (let s = 0; s < n; s++) {
+    const k = k0 + (1 - k0) * rnd();
+    const fi = k * (CS - 1), i0 = Math.min(CS - 2, Math.floor(fi)), t = fi - i0;
+    const bx = cBX[i0] + (cBX[i0 + 1] - cBX[i0]) * t, by = cBY[i0] + (cBY[i0 + 1] - cBY[i0]) * t;
+    const tx = cTX[i0] + (cTX[i0 + 1] - cTX[i0]) * t, ty = cTY[i0] + (cTY[i0 + 1] - cTY[i0]) * t;
+    const u0 = 0.35 + rnd() * 0.35, u1 = 0.85 + rnd() * 0.2;
+    ctx.moveTo(bx + (tx - bx) * u0, by + (ty - by) * u0);
+    ctx.lineTo(bx + (tx - bx) * u1, by + (ty - by) * u1);
+  }
+  ctx.stroke();
+  // heavy outer edge along the tip path (the crescent's rim), thinning with the chain
+  ctx.lineWidth = (3.2 - step * 0.7) * wpp;
+  ctx.beginPath();
+  const i1 = Math.floor(k0 * (CS - 1));
+  ctx.moveTo(cTX[i1], cTY[i1]);
+  for (let i = i1 + 1; i < CS; i++) ctx.lineTo(cTX[i], cTY[i]);
+  ctx.stroke();
+}
+
 // ------------------------------------------------------------ scribble-hatch smear chains
 const SMP = 8;
 const smPose = new Float32Array(POSE_N);
@@ -263,6 +313,7 @@ const LIMBS: [number, number, number, number][] = [[1, J.handA, J.elbA, J.shA], 
  */
 inkHooks.smear = (ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, col: string, wpp: number): void => {
   const a = f.anim;
+  if (a.dSmear && f.team === 'player') weaponCrescent(ctx, f, j, col, wpp);
   const cfg = a.smearCfg;
   const sc = f.scale;
   const step = a.chainStep;

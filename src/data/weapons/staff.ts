@@ -2,7 +2,8 @@ import type { WeaponDef } from './types';
 import { addMove, CANCEL } from '../moves';
 import { strikeAnim, LOW, AIRP } from './author';
 import { J } from '../../render/rig';
-import { PLAYER } from '../tuning';
+import { PLAYER, WORLD } from '../tuning';
+import type { Fighter } from '../../sim/fighter';
 
 /**
  * STAFF: reach, sweeps and style. A long thin staff in both hands: more reach
@@ -97,27 +98,27 @@ const anims = [
     hit: { ...LOW, lean: 0.78, rootX: 24, aU: 1.7, aL: 0.0, bU: 1.45, bL: 0.2, footA: 52, footB: -40, head: -0.3, spin: 0.12, stretch: 1.08 },
     follow: [{ ...LOW, lean: 0.7, rootX: 22, aU: 2.2, aL: 0.2, bU: 1.9, bL: 0.4, footA: 50, spin: 0.1 }, { ...LOW, ...GRIP, rootX: 8 }, { ...LOW, ...GRIP }] }),
   strikeAnim('st_spin', spin, { strike: 'body', smear: ['handA', 'handB'], inbetweens: 1,
-    antic: [{ ...LOW, rootY: -40, lean: 0.3, aU: -0.8, aL: 0.4, bU: -1.0, bL: 0.6, spin: -0.5, flex: 6 }, { ...LOW, rootY: -46, lean: 0.25, aU: -1.3, aL: 0.2, bU: -1.5, bL: 0.4, spin: -0.8, flex: 8 }],
-    hit: { ...LOW, rootY: -50, lean: 0.55, aU: 1.6, aL: 0.0, bU: 1.5, bL: 0.1, spin: 1.6, footA: 56, footB: -52, head: -0.1, stretch: 1.1 },
-    hit2: { ...LOW, rootY: -50, lean: 0.55, aU: 1.6, aL: 0.0, bU: 1.5, bL: 0.1, spin: 3.4, footA: 56, footB: -52 },
-    follow: [{ ...LOW, rootY: -44, lean: 0.5, aU: 1.5, aL: 0.2, bU: 1.3, bL: 0.4, spin: 6.0 }, { ...LOW, ...GRIP, spin: 6.28 }, { ...LOW, ...GRIP, spin: 6.28 }] }),
+    antic: [{ ...LOW, rootY: -40, lean: 0.3, aU: -0.8, aL: 0.4, bU: -1.0, bL: 0.6, spin: -0.15, flex: 6 }, { ...LOW, rootY: -46, lean: 0.25, aU: -1.3, aL: 0.2, bU: -1.5, bL: 0.4, spin: -0.2, flex: 8 }],
+    hit: { ...LOW, rootY: -54, lean: 0.6, aU: 1.62, aL: 0.0, bU: 1.45, bL: 0.15, spin: 0.15, footA: 58, footB: -54, head: -0.1, stretch: 1.1 },
+    hit2: { ...LOW, rootY: -54, lean: 0.35, aU: 0.9, aL: 0.0, bU: -0.6, bL: 0.2, spin: -0.1, footA: 58, footB: -54, head: 0.0 },
+    follow: [{ ...LOW, rootY: -48, lean: 0.25, aU: -0.9, aL: 0.2, bU: -1.2, bL: 0.3 }, { ...LOW, rootY: -40, lean: 0.4, aU: 0.6, aL: 0.5, bU: 0.3, bL: 0.8 }, { ...LOW, ...GRIP }] }),
   strikeAnim('st_vault', vault, { strike: 'body', reach: 'handA', smear: ['footA', 'footB'],
-    antic: [{ ...LOW, rootY: -44, lean: 0.65, aU: 0.7, aL: 0.3, bU: 0.4, bL: 0.6 }, { rootY: -20, lean: 0.4, aU: 0.15, aL: 0.1, bU: 0.0, bL: 0.2, footA: 30, footB: -46, liftB: 20, flex: -6 }],
-    hit: { rootY: 30, lean: -0.3, aU: 0.2, aL: 0.0, bU: 0.1, bL: 0.1, laU: 2.6, laL: -0.2, lbU: 2.2, lbL: -0.5, plant: 0, head: -0.4, stretch: 1.15 },
-    follow: [{ rootY: 40, lean: -0.5, aU: 0.4, aL: 0.2, laU: 2.9, laL: -0.3, lbU: 2.5, lbL: -0.6, plant: 0, head: -0.3 }, { ...LOW, ...GRIP }] }),
+    antic: [{ ...LOW, rootY: -44, lean: 0.7, aU: 1.0, aL: 0.2, bU: 0.75, bL: 0.4 }, { rootY: 34, lean: -0.1, aU: 3.05, aL: 0.1, bU: 2.95, bL: 0.2, laU: 1.6, laL: -2.2, lbU: 1.2, lbL: -2.0, plant: 0, head: -0.1 }],
+    hit: { rootY: 56, lean: -0.45, aU: 0.35, aL: 0.0, bU: 0.25, bL: 0.1, laU: 2.5, laL: -0.2, lbU: 2.1, lbL: -0.5, plant: 0, head: -0.4, stretch: 1.15 },
+    follow: [{ rootY: 46, lean: -0.6, aU: 0.6, aL: 0.3, laU: 2.8, laL: -0.4, lbU: 2.4, lbL: -0.7, plant: 0, head: -0.3 }, { ...LOW, ...GRIP }] }),
   strikeAnim('st_vaultH', vaultH, { strike: 'body', reach: 'handA', smear: ['footA', 'footB'], inbetweens: 1,
-    antic: [{ ...LOW, rootY: -48, lean: 0.72, aU: 0.7, aL: 0.3, bU: 0.4, bL: 0.6, flex: -6 }, { rootY: -24, lean: 0.5, aU: 0.1, aL: 0.1, bU: 0.0, bL: 0.2, footA: 34, footB: -50, liftB: 24, flex: -8 }],
-    hit: { rootY: 36, lean: -0.4, aU: 0.15, aL: 0.0, bU: 0.05, bL: 0.1, laU: 2.8, laL: -0.1, lbU: 2.4, lbL: -0.4, plant: 0, head: -0.45, stretch: 1.22 },
-    follow: [{ rootY: 44, lean: -0.6, aU: 0.4, aL: 0.2, laU: 3.0, laL: -0.2, lbU: 2.6, lbL: -0.5, plant: 0, head: -0.35 }, { ...LOW, ...GRIP }] }),
+    antic: [{ ...LOW, rootY: -48, lean: 0.75, aU: 1.0, aL: 0.2, bU: 0.75, bL: 0.4, flex: -6 }, { rootY: 40, lean: -0.15, aU: 3.08, aL: 0.05, bU: 3.0, bL: 0.15, laU: 1.7, laL: -2.3, lbU: 1.3, lbL: -2.1, plant: 0, head: -0.1 }],
+    hit: { rootY: 64, lean: -0.55, aU: 0.3, aL: 0.0, bU: 0.2, bL: 0.1, laU: 2.7, laL: -0.1, lbU: 2.3, lbL: -0.4, plant: 0, head: -0.45, stretch: 1.22 },
+    follow: [{ rootY: 52, lean: -0.7, aU: 0.6, aL: 0.3, laU: 3.0, laL: -0.3, lbU: 2.6, lbL: -0.6, plant: 0, head: -0.35 }, { ...LOW, ...GRIP }] }),
   strikeAnim('st_heli', heli, { strike: 'body', smear: ['handA', 'handB'],
     antic: [{ ...LOW, aU: 2.6, aL: 0.4, bU: 2.4, bL: 0.6, lean: 0.2 }],
-    hit: { ...LOW, rootY: -20, aU: 3.0, aL: 0.1, bU: 2.9, bL: 0.2, lean: 0.05, spin: 0.9, head: -0.3 },
-    hit2: { ...LOW, rootY: -20, aU: 3.0, aL: 0.1, bU: 2.9, bL: 0.2, lean: 0.05, spin: -0.9, head: -0.3 },
+    hit: { ...LOW, rootY: -20, aU: 3.0, aL: 0.1, bU: 2.4, bL: 0.6, lean: 0.12, spin: 0.1, head: -0.3 },
+    hit2: { ...LOW, rootY: -20, aU: 2.3, aL: 0.2, bU: 3.0, bL: 0.1, lean: 0.12, spin: -0.1, head: -0.3 },
     follow: [{ ...LOW, aU: 2.7, aL: 0.3, bU: 2.5, bL: 0.4 }, { ...LOW, ...GRIP }] }),
   strikeAnim('st_heliH', heliH, { strike: 'body', smear: ['handA', 'handB'],
     antic: [{ ...LOW, rootY: -36, aU: 2.6, aL: 0.4, bU: 2.4, bL: 0.6, lean: 0.25 }, { ...LOW, rootY: -40, aU: 2.9, aL: 0.2, bU: 2.7, bL: 0.4, lean: 0.2, spin: -0.4 }],
-    hit: { ...LOW, rootY: -24, aU: 3.05, aL: 0.05, bU: 2.95, bL: 0.1, lean: 0.0, spin: 1.2, head: -0.35 },
-    hit2: { ...LOW, rootY: -24, aU: 3.05, aL: 0.05, bU: 2.95, bL: 0.1, lean: 0.0, spin: -1.2, head: -0.35 },
+    hit: { ...LOW, rootY: -24, aU: 3.05, aL: 0.05, bU: 2.4, bL: 0.6, lean: 0.1, spin: 0.12, head: -0.35 },
+    hit2: { ...LOW, rootY: -24, aU: 2.3, aL: 0.2, bU: 3.05, bL: 0.05, lean: 0.1, spin: -0.12, head: -0.35 },
     follow: [{ ...LOW, aU: 2.7, aL: 0.3, bU: 2.5, bL: 0.4, spin: 0.3 }, { ...LOW, ...GRIP }] }),
   strikeAnim('st_plant', plant, { strike: 'arm', smear: ['handA'],
     antic: [{ ...LOW, rootY: -10, lean: 0.1, aU: 2.8, aL: 0.2, bU: 2.6, bL: 0.4, head: -0.2 }, { rootY: 0, lean: -0.1, aU: 3.1, aL: 0.1, bU: 3.0, bL: 0.2, footA: 30, footB: -30, liftA: 10, head: -0.3 }],
@@ -145,8 +146,8 @@ const anims = [
     follow: [{ ...AIRP, aU: 3.0, aL: 0.1, bU: 2.9, bL: 0.2, spin: 2.0 }, { ...AIRP, ...GRIP, spin: 0 }] }),
   strikeAnim('st_aheli', aheli, { base: 'air', strike: 'body', smear: ['handA', 'handB'],
     antic: [{ ...AIRP, aU: 2.6, aL: 0.4, bU: 2.4, bL: 0.6 }],
-    hit: { ...AIRP, aU: 3.05, aL: 0.05, bU: 2.95, bL: 0.1, spin: 1.0, head: -0.3 },
-    hit2: { ...AIRP, aU: 3.05, aL: 0.05, bU: 2.95, bL: 0.1, spin: -1.0, head: -0.3 },
+    hit: { ...AIRP, aU: 3.05, aL: 0.05, bU: 2.4, bL: 0.6, spin: 0.15, head: -0.3 },
+    hit2: { ...AIRP, aU: 2.3, aL: 0.2, bU: 3.05, bL: 0.05, spin: -0.15, head: -0.3 },
     follow: [{ ...AIRP, aU: 2.7, aL: 0.3, bU: 2.5, bL: 0.4 }] }),
   strikeAnim('st_plunge', plunge, { base: 'air', strike: 'arm', smear: ['handA', 'handB'],
     antic: [{ ...AIRP, aU: 3.0, aL: 0.2, bU: 2.9, bL: 0.3, lean: -0.3, laU: 1.8, laL: -2.2, head: -0.2 }],
@@ -154,18 +155,32 @@ const anims = [
     follow: [{ ...AIRP, aU: 0.5, aL: 0.1, bU: 0.35, bL: 0.2, lean: 0.6, spin: 0.25 }, { ...AIRP, ...GRIP }] }),
 ];
 
-/** Held staff: one long line through both hands, extended past them. */
-function heldStaff(ctx: CanvasRenderingContext2D, f: { scale: number }, j: Float32Array, col: string, wpp: number): void {
+/** The staff line through both hands: [grip x, grip y, tip x, tip y, butt x, butt y]. */
+function staffLine(j: Float32Array, scale: number, out: Float32Array): void {
   const ax = j[J.handA * 2], ay = j[J.handA * 2 + 1], bx = j[J.handB * 2], by = j[J.handB * 2 + 1];
   let dx = ax - bx, dy = ay - by;
   let L = Math.hypot(dx, dy);
   if (L < 6) { dx = ax - j[J.elbA * 2]; dy = ay - j[J.elbA * 2 + 1]; L = Math.hypot(dx, dy) || 1; }
   dx /= L; dy /= L;
-  const len = 168 * f.scale, cx = (ax + bx) / 2, cy = (ay + by) / 2;
+  const len = 168 * scale, cx = (ax + bx) / 2, cy = (ay + by) / 2;
+  out[0] = cx; out[1] = cy;
+  out[2] = cx + dx * len * 0.58; out[3] = cy + dy * len * 0.58;
+  if (out.length >= 6) { out[4] = cx - dx * len * 0.42; out[5] = cy - dy * len * 0.42; }
+}
+const line6 = new Float32Array(6);
+
+/** Held staff: one long line through both hands. During the vault it is planted upright in the floor (reference 36-42). */
+function heldStaff(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, col: string, wpp: number): void {
   ctx.strokeStyle = col; ctx.lineWidth = 2.4 * wpp + 0.8; ctx.lineCap = 'round';
+  const a = f.anim, cur = a.cur;
   ctx.beginPath();
-  ctx.moveTo(cx - dx * len * 0.42, cy - dy * len * 0.42);
-  ctx.lineTo(cx + dx * len * 0.58, cy + dy * len * 0.58);
+  if (cur && (cur.id === 'st_vault' || cur.id === 'st_vaultH') && (f.state === 'move' || f.team === 'player') && a.t >= cur.contact * 0.5 && a.t < cur.contact + 8) {
+    const gx = (j[J.handA * 2] + j[J.handB * 2]) / 2, gy = Math.min(j[J.handA * 2 + 1], j[J.handB * 2 + 1]);
+    ctx.moveTo(gx, WORLD.groundY); ctx.lineTo(gx + 2, gy - 18 * f.scale);
+  } else {
+    staffLine(j, f.scale, line6);
+    ctx.moveTo(line6[4], line6[5]); ctx.lineTo(line6[2], line6[3]);
+  }
   ctx.stroke();
 }
 
@@ -205,5 +220,6 @@ export const staff: WeaponDef = {
     ctx.moveTo(x + s * 0.08, y - s * 0.18); ctx.lineTo(x + s * 0.18, y - s * 0.08);
     ctx.stroke();
   },
+  sweep: staffLine,
   held: heldStaff,
 };

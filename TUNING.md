@@ -250,7 +250,7 @@ Beat-detection constants live in `rhythm/analyze.ts` and `rhythm/live.ts`. They 
 
 ## Hand-Drawn animation and ink look
 
-**Settings:** `animStyle` ('drawn' | 'smooth'), `attackSmooth` ('low' | 'normal' | 'high'), `stepRate` (8–20 fps, default 20, so a step is 60 / rate ticks, clamped to 3–8), `look` ('pixel' | 'crisp' | 'smooth'), `pixelRes` (0.3–0.55 of the logical view).
+**Settings:** `animStyle` ('drawn' | 'smooth'), `attackSmooth` ('low' | 'normal' | 'high', default 'low'), `stepRate` (8–20 fps, default 12, so a step is 60 / rate ticks, clamped to 3–8), `look` ('pixel' | 'crisp' | 'smooth'), `pixelRes` (0.3–0.55 of the logical view).
 
 **Drawings.** `drawn({ id, base, drawings: [{ hold, p, smear?, impact?, sfx?, ones?, inbetween? }] })`:
 - `hold`: ticks on screen. Attack drawings sum to the move's length, and the contact drawing starts exactly on the move's startup frame.
