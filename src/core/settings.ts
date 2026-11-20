@@ -29,6 +29,8 @@ export interface Settings {
   attackSmooth: 'low' | 'normal' | 'high';
   /** Fists drawings: the Reference v2 set (default) or the Legacy pass 5-7 drawings. */
   fistAnims: 'v2' | 'legacy';
+  /** Sound effects: recorded samples (CC0, Freesound) or the original synthesized set. */
+  sfxStyle: 'recorded' | 'synth';
   /** Paper page: 'auto' rotates by wave (kraft on boss waves). */
   page: 'auto' | 'blank' | 'lined' | 'graph' | 'sketch' | 'kraft';
   /** Doodle / UI line boil (re-drawn at ~7 fps). */
@@ -59,6 +61,7 @@ export const settings: Settings = {
   pixelRes: 0.4,
   attackSmooth: 'low',
   fistAnims: 'v2',
+  sfxStyle: 'recorded',
   page: 'auto',
   boil: true,
   highContrast: false,

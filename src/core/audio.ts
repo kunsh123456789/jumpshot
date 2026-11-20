@@ -1,7 +1,13 @@
 import { settings } from './settings';
 import { fxRng } from './rng';
 
+/** Recorded sound effects (CC0, from Freesound; see SOUND_CREDITS.md), bundled with the build. */
+const SFX_URLS = import.meta.glob('../assets/sfx/*.mp3', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+
 /**
+ * WebAudio sound. Effects play recorded samples when Settings -> Sound effects
+ * is Recorded (default) and the sample has loaded; every effect also has a
+ * synthesized version (the fallback, and the Synth setting).
  * Fully synthesized WebAudio sound. A shared noise buffer is generated once;
  * each sound builds a few short-lived nodes (cheap, GC'd by the browser).
  */
@@ -14,6 +20,8 @@ class Audio {
   private comp!: DynamicsCompressorNode;
   private noise!: AudioBuffer;
   private lastPlay: Record<string, number> = {};
+  /** Decoded recorded samples by name (file name without extension). */
+  private bufs: Record<string, AudioBuffer> = {};
   private musicTimer = 0;
   private musicStep = 0;
   private musicNext = 0;
@@ -42,8 +50,34 @@ class Audio {
       const d = this.noise.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       this.applyVolume();
+      this.loadSamples();
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
+  }
+
+  private loadSamples(): void {
+    const ctx = this.ctx!;
+    for (const [path, url] of Object.entries(SFX_URLS)) {
+      const name = path.slice(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
+      fetch(url).then((r) => r.arrayBuffer()).then((b) => ctx.decodeAudioData(b)).then((buf) => { this.bufs[name] = buf; }).catch(() => { /* synth fallback */ });
+    }
+  }
+
+  /** Play a recorded sample; false when the Synth setting is on or it isn't loaded (the caller synthesizes instead). */
+  private rec(name: string | string[], gain: number, rate = 1, delay = 0): boolean {
+    if (settings.sfxStyle === 'synth' || !this.ctx) return false;
+    const n = Array.isArray(name) ? name[Math.floor(fxRng.next() * name.length)] : name;
+    const b = this.bufs[n];
+    if (!b) return false;
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = b;
+    src.playbackRate.value = rate;
+    const g = ctx.createGain();
+    g.gain.value = gain;
+    src.connect(g); g.connect(this.sfx);
+    src.start(ctx.currentTime + delay);
+    return true;
   }
 
   applyVolume(): void {
@@ -98,6 +132,12 @@ class Audio {
     const r = 0.94 + fxRng.next() * 0.12;
     const p = pitch * r;
     const v = (0.55 + weight * 0.45) * (0.85 + fxRng.next() * 0.3);
+    if (this.rec(kind === 'heavy' ? 'heavy' : kind === 'kick' ? ['punch3', 'slam'] : ['punch1', 'punch2', 'punch3'], 0.9 * v, p * (kind === 'kick' ? 0.85 : 1))) {
+      if (weight >= 0.7) this.rec('slam', 0.45 * v, p * 0.9);
+      if (kind === 'slash') this.rec('staff', 0.4 * v, p * 1.2);
+      if (crit) this.rec('ping', 0.5, p * 1.3);
+      return;
+    }
     // body thump
     this.tone(t, 'sine', (170 - weight * 70) * p, 42 * p, 0.09 + weight * 0.16, 0.9 * v);
     this.tone(t, 'triangle', (320 - weight * 120) * p, 90 * p, 0.05 + weight * 0.06, 0.35 * v);
@@ -113,12 +153,14 @@ class Audio {
     if (!this.ok('whoosh', 0.03)) return;
     const t = this.ctx!.currentTime;
     const d = 0.1 + weight * 0.12;
+    if (this.rec(['whoosh1', 'whoosh2', 'whoosh3'], 0.35 + weight * 0.45, 1.15 - weight * 0.3 + (fxRng.next() - 0.5) * 0.1)) return;
     this.noiseBurst(t, d, 0.12 + weight * 0.2, 'bandpass', 600 + weight * 300, 1.4, 2400 + weight * 1500);
   }
 
   launch(): void {
     if (!this.ok('launch', 0.05)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec('launch', 0.8, 1.1)) { this.rec('whoosh2', 0.4, 0.8); return; }
     this.tone(t, 'sine', 140, 720, 0.22, 0.5);
     this.tone(t, 'square', 280, 1200, 0.12, 0.08);
     this.noiseBurst(t, 0.28, 0.35, 'bandpass', 500, 1.2, 4000);
@@ -127,6 +169,7 @@ class Audio {
   spike(power = 1): void {
     if (!this.ok('spike', 0.05)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec('slam', 0.8 + power * 0.2, 0.8)) { this.rec('boom', 0.4 + power * 0.3, 1.1); return; }
     this.tone(t, 'sine', 110, 28, 0.5 + power * 0.3, 1.0);
     this.tone(t, 'sawtooth', 70, 30, 0.25, 0.18);
     this.noiseBurst(t, 0.5 + power * 0.3, 0.8, 'lowpass', 1400, 0.8, 120);
@@ -136,6 +179,7 @@ class Audio {
   boom(): void {
     if (!this.ok('boom', 0.08)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec('boom', 1.0, 0.9)) return;
     this.tone(t, 'sine', 90, 22, 1.1, 1.0);
     this.tone(t, 'triangle', 180, 40, 0.5, 0.4);
     this.noiseBurst(t, 1.0, 0.9, 'lowpass', 2000, 0.7, 60);
@@ -145,15 +189,23 @@ class Audio {
   parry(): void {
     if (!this.ok('parry', 0.05)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec('parry', 0.7, 1.05)) return;
     for (const f of [1760, 2637, 3520]) this.tone(t, 'sine', f, f * 0.98, 0.6, 0.18, undefined, 0.001);
     this.tone(t, 'square', 880, 880, 0.08, 0.1);
     this.noiseBurst(t, 0.18, 0.4, 'highpass', 4000, 0.7, 9000);
   }
 
   /** Weapon sounds (revision pass 7). */
-  weapon(kind: 'hookFire' | 'hookHit' | 'reel' | 'zap' | 'beam' | 'grab' | 'throw' | 'overheat' | 'swap' | 'deflect'): void {
+  weapon(kind: 'hookFire' | 'hookHit' | 'reel' | 'zap' | 'beam' | 'grab' | 'throw' | 'overheat' | 'swap' | 'deflect' | 'thunder'): void {
     if (!this.ok('w' + kind, 0.04)) return;
     const t = this.ctx!.currentTime;
+    const REC: Record<string, [string | string[], number, number]> = {
+      hookFire: ['chain', 0.6, 1.1], hookHit: ['clank', 0.7, 1.0], reel: ['chain', 0.5, 1.35], zap: [['zap1', 'zap2'], 0.55, 1.0],
+      beam: ['beam', 0.8, 0.9], grab: ['grab', 0.7, 1.0], throw: ['whoosh3', 0.7, 0.8], overheat: ['steam', 0.6, 1.0],
+      swap: ['staff', 0.4, 1.3], deflect: ['ping', 0.6, 1.0], thunder: ['thunder', 0.9, 0.7],
+    };
+    const rc = REC[kind];
+    if (rc && this.rec(rc[0], rc[1], rc[2])) { if (kind === 'thunder') this.rec('boom', 0.6, 0.7, 0.02); return; }
     switch (kind) {
       case 'hookFire': // snap + a rattling chain
         this.noiseBurst(t, 0.05, 0.4, 'highpass', 3000, 1, 8000);
@@ -194,12 +246,17 @@ class Audio {
       case 'deflect':
         this.tone(t, 'triangle', 1760, 1600, 0.12, 0.15);
         break;
+      case 'thunder':
+        this.noiseBurst(t, 0.9, 0.8, 'lowpass', 2400, 0.7, 80);
+        this.tone(t, 'sawtooth', 90, 30, 0.6, 0.3);
+        break;
     }
   }
 
   dodge(): void {
     if (!this.ok('dodge', 0.04)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec('dodge', 0.5, 1 + (fxRng.next() - 0.5) * 0.1)) return;
     this.noiseBurst(t, 0.16, 0.18, 'bandpass', 2400, 1.5, 700);
   }
 
@@ -221,6 +278,7 @@ class Audio {
   block(): void {
     if (!this.ok('block', 0.03)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec('block', 0.8, 1.0)) return;
     this.tone(t, 'square', 620, 540, 0.09, 0.16);
     this.tone(t, 'triangle', 1240, 1100, 0.18, 0.14);
     this.noiseBurst(t, 0.06, 0.4, 'highpass', 3000, 0.7);
@@ -242,6 +300,7 @@ class Audio {
   ko(): void {
     if (!this.ok('ko', 0.05)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec('heavy', 0.9, 0.8)) { this.rec('boom', 0.35, 1.3); return; }
     this.tone(t, 'sine', 160, 30, 0.6, 0.8);
     this.noiseBurst(t, 0.5, 0.6, 'lowpass', 2600, 0.8, 100);
     for (let i = 0; i < 4; i++) this.tone(t + i * 0.04, 'sine', 1200 + i * 400, 1500 + i * 400, 0.25, 0.06);
@@ -250,6 +309,7 @@ class Audio {
   pickup(kind: 'health' | 'orb'): void {
     if (!this.ok('pick' + kind, 0.04)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec('pickup', 0.45, kind === 'orb' ? 1.25 : 0.95)) return;
     const base = kind === 'health' ? 660 : 990;
     this.tone(t, 'sine', base, base * 1.5, 0.12, 0.16);
     this.tone(t + 0.05, 'sine', base * 1.5, base * 2, 0.12, 0.12);
@@ -285,6 +345,7 @@ class Audio {
   paper(kind: 'tap' | 'scratch' | 'rustle' | 'page' | 'crumple'): void {
     if (!this.ok('paper' + kind, 0.04)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec(kind === 'tap' ? 'pencil' : kind, kind === 'tap' ? 0.5 : 0.45)) return;
     switch (kind) {
       case 'tap':
         this.noiseBurst(t, 0.03, 0.18, 'bandpass', 2400, 2.5, 1600);

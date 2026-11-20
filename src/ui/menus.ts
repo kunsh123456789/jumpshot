@@ -214,6 +214,7 @@ export class Menus {
     }
     slider('Master volume', 'masterVolume', 0, 1, 0.05);
     slider('Music volume', 'musicVolume', 0, 1, 0.05);
+    select('Sound effects', 'set-sfxStyle', [['recorded', 'Recorded (Freesound, CC0)'], ['synth', 'Synthesized (original)']], () => settings.sfxStyle, (v) => { settings.sfxStyle = v as 'recorded' | 'synth'; });
     slider('Screen shake', 'shake', 0, 1.5, 0.05);
     slider('Hit-stop strength', 'hitstop', 0, 1.5, 0.05);
     slider('Flick sensitivity', 'sensitivity', 0.5, 1.6, 0.05);

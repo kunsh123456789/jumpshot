@@ -36,7 +36,7 @@ export class FxDirector {
     ev.on('hit', (e) => {
       const m = e.move;
       // Reference FX: lightning strikes, the white-crescent impact frame.
-      if (m?.fx?.lightning && e.attacker.team === 'player') { lightning(e.victim.cx, e.victim.cy, e.victim.id * 97 + e.combo); if (!settings.reduceFlashes) effects.invert = ANIM.invertSec; this.cam.shake(10, 0, 1, 0.3); }
+      if (m?.fx?.lightning && e.attacker.team === 'player') { lightning(e.victim.cx, e.victim.cy, e.victim.id * 97 + e.combo); audio.weapon('thunder'); if (!settings.reduceFlashes) effects.invert = ANIM.invertSec; this.cam.shake(10, 0, 1, 0.3); }
       if ((m?.fx?.crescent || e.kind === 'finisher') && e.attacker.team === 'player' && !settings.reduceFlashes) { crescentFlash(e.x, e.y, e.dirX); effects.invert = Math.max(effects.invert, ANIM.invertSec * 1.5); }
       const weight = e.weight;
       const color = e.kind === 'armor' ? '#c9b6ff' : m ? m.trail.color : e.kind === 'bowl' ? '#ffd23f' : e.kind === 'shock' ? '#9fd8ff' : e.kind === 'reflect' ? '#3fe0ff' : '#ffffff';
