@@ -160,6 +160,45 @@ export class Menus {
       row.appendChild(span); row.appendChild(inp);
       p.appendChild(row);
     };
+    // ---- Look & animation (revision pass 5) ----
+    const select = (label: string, id: string, opts: [string, string][], get: () => string, set: (v: string) => void) => {
+      const row = document.createElement('label');
+      row.className = 'row';
+      const span = document.createElement('span'); span.textContent = label;
+      const sel = document.createElement('select'); sel.id = id;
+      sel.style.cssText = 'font:inherit;font-weight:800;background:#141a30;color:#fff;border:1px solid rgba(160,220,255,.4);border-radius:8px;padding:4px 6px';
+      for (const [v, t] of opts) { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); }
+      sel.value = get();
+      sel.addEventListener('change', () => { set(sel.value); saveSettings(); window.dispatchEvent(new Event('jumpshot-look')); });
+      row.appendChild(span); row.appendChild(sel);
+      p.appendChild(row);
+    };
+    select('Animation style', 'set-animStyle', [['drawn', 'Hand-Drawn (stepped)'], ['smooth', 'Smooth (interpolated)']], () => settings.animStyle, (v) => { settings.animStyle = v as 'drawn' | 'smooth'; });
+    {
+      const row = document.createElement('label');
+      row.className = 'row';
+      const span = document.createElement('span');
+      const fmt = () => `Hand-Drawn step rate: ${settings.stepRate} fps`;
+      span.textContent = fmt();
+      const inp = document.createElement('input');
+      inp.type = 'range'; inp.min = '8'; inp.max = '20'; inp.step = '1'; inp.value = String(settings.stepRate); inp.id = 'set-stepRate';
+      inp.addEventListener('input', () => { settings.stepRate = parseInt(inp.value, 10); span.textContent = fmt(); saveSettings(); });
+      row.appendChild(span); row.appendChild(inp);
+      p.appendChild(row);
+    }
+    select('Look', 'set-look', [['pixel', 'Pixel (ink page, 1-bit)'], ['crisp', 'Crisp (ink page, full res)'], ['smooth', 'Smooth (previous neon look)']], () => settings.look, (v) => { settings.look = v as 'pixel' | 'crisp' | 'smooth'; });
+    {
+      const row = document.createElement('label');
+      row.className = 'row';
+      const span = document.createElement('span');
+      const fmt = () => `Pixel Look resolution: ${Math.round(settings.pixelRes * 100)}%`;
+      span.textContent = fmt();
+      const inp = document.createElement('input');
+      inp.type = 'range'; inp.min = '0.3'; inp.max = '0.55'; inp.step = '0.025'; inp.value = String(settings.pixelRes); inp.id = 'set-pixelRes';
+      inp.addEventListener('input', () => { settings.pixelRes = parseFloat(inp.value); span.textContent = fmt(); saveSettings(); window.dispatchEvent(new Event('jumpshot-look')); });
+      row.appendChild(span); row.appendChild(inp);
+      p.appendChild(row);
+    }
     slider('Master volume', 'masterVolume', 0, 1, 0.05);
     slider('Music volume', 'musicVolume', 0, 1, 0.05);
     slider('Screen shake', 'shake', 0, 1.5, 0.05);

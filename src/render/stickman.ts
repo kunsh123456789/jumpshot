@@ -6,6 +6,7 @@ import { ANIM, WORLD } from '../data/tuning';
 import { settings } from '../core/settings';
 import { effects } from './effects';
 import { LIMB_BIT } from '../data/anims/types';
+import { DRAW } from './drawStyle';
 
 const jt = new Float32Array(JOINT_N * 2);
 const pp = new Float32Array(POSE_N);
@@ -32,15 +33,25 @@ export function shade(hex: string, k: number): string {
  */
 export function interpJoints(f: Fighter, alpha: number, time: number): Float32Array {
   const a = f.anim;
-  lerpPose(a.prevPose, a.pose, alpha, pp);
-  const bx = f.px + (f.x - f.px) * alpha;
-  const by = f.py + (f.y - f.py) * alpha;
-  const face = a.prevFace + (a.face - a.prevFace) * alpha;
-  computeJoints(pp, bx, by, face, f.scale, WORLD.groundY, jt, a.rig);
+  let face: number;
+  if (DRAW.stepped) {
+    // Hand-Drawn: exactly the latched drawing at its latched root. No render interpolation.
+    pp.set(a.dPose);
+    face = a.dFace;
+    computeJoints(pp, a.dX, a.dY, face, f.scale, WORLD.groundY, jt, a.rig);
+  } else {
+    lerpPose(a.prevPose, a.pose, alpha, pp);
+    const bx = f.px + (f.x - f.px) * alpha;
+    const by = f.py + (f.y - f.py) * alpha;
+    face = a.prevFace + (a.face - a.prevFace) * alpha;
+    computeJoints(pp, bx, by, face, f.scale, WORLD.groundY, jt, a.rig);
+  }
   applyReach(f, alpha, face, jt);
   const victim = f.hitstop > 0 && (f.team === 'enemy' || f.state === 'hurt') && f.state !== 'dead';
   if (victim) {
-    const v = Math.sin(time * TAU * ANIM.hitstopShakeHz) * ANIM.hitstopShakeAmp;
+    // Hand-Drawn: the shudder alternates between two drawings instead of a smooth vibration.
+    const tt = DRAW.stepped ? (Math.floor(time * 20) % 2 ? 0.25 : 0.75) : time;
+    const v = Math.sin(tt * TAU * (DRAW.stepped ? 1 : ANIM.hitstopShakeHz)) * ANIM.hitstopShakeAmp;
     const ox = v * (f.hitDirX || 1), oy = v * 0.4 * f.hitDirY;
     for (let i = 0; i < JOINT_N; i++) { jt[i * 2] += ox; jt[i * 2 + 1] += oy; }
   }
@@ -50,7 +61,7 @@ export function interpJoints(f: Fighter, alpha: number, time: number): Float32Ar
 /** 2-bone IK of the striking limb onto the target at contact (after the authored pose). */
 function applyReach(f: Fighter, alpha: number, face: number, out: Float32Array): void {
   const a = f.anim;
-  const w = a.prevReachW + (a.reachW - a.prevReachW) * alpha;
+  const w = DRAW.stepped ? a.dReachW : a.prevReachW + (a.reachW - a.prevReachW) * alpha;
   if (w <= 0.01 || !a.reachLimb || !f.hasLook) return;
   const R = a.rig, s = f.scale;
   let root: number, mid: number, end: number, l1: number, l2: number, bend: number;

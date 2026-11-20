@@ -86,6 +86,36 @@ export function evalAnim(def: AnimDef, t: number, out: Float32Array, stagger = t
   }
 }
 
+/**
+ * Hand-Drawn playback: the drawing on screen at time t. Each key is a drawing
+ * held until the next key (no in-betweens), except segments flagged `ones`
+ * (full-rate interpolation) or `inb` (that many generated in-betweens).
+ * Returns an id for the drawing shown (changes exactly when the drawing does).
+ */
+export function evalAnimStepped(def: AnimDef, t: number, out: Float32Array): number {
+  const ks = def.keys;
+  if (ks.length === 1) { out.set(ks[0].pose); return 0; }
+  let tt = t;
+  if (def.loop) tt = ((t % def.len) + def.len) % def.len;
+  let i = 0;
+  if (tt < ks[0].f) i = def.loop ? ks.length - 1 : 0;
+  else while (i < ks.length - 1 && ks[i + 1].f <= tt) i++;
+  const k = ks[i];
+  const last = i === ks.length - 1;
+  if ((k.ones || k.inb > 0) && (!last || def.loop)) {
+    const nf = last ? def.len + ks[0].f : ks[i + 1].f;
+    const local = tt >= k.f ? tt - k.f : tt + def.len - k.f;
+    const span = Math.max(1, nf - k.f);
+    if (k.ones) { evalAnim(def, t, out, false); return i * 64 + 1 + Math.min(62, Math.floor(local)); }
+    const steps = k.inb + 1;
+    const q = Math.floor((local / span) * steps) / steps;
+    evalAnim(def, (k.f + q * span) % (def.loop ? def.len : Infinity), out, false);
+    return i * 64 + Math.round(q * steps);
+  }
+  out.set(k.pose);
+  return i * 64;
+}
+
 export interface AnimFlags { smear: number; trail: number; impact: boolean; reachW: number; snapping: boolean }
 
 /** Flags active at time t (segment INTO the next key carries its smear/trail). */

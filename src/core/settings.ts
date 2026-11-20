@@ -17,6 +17,14 @@ export interface Settings {
   songId: string;
   /** Show the beat-track HUD in Rhythm Mode. */
   beatHud: boolean;
+  /** Animation Style: stepped hand-drawn drawings, or the interpolated pose-to-pose system. */
+  animStyle: 'drawn' | 'smooth';
+  /** Hand-Drawn step rate (drawings per second, 8-20). */
+  stepRate: number;
+  /** Render look: low-res 1-bit ink page / the same ink page at full resolution / the previous smooth neon look. */
+  look: 'pixel' | 'crisp' | 'smooth';
+  /** Pixel Look resolution as a fraction of the 1280x720 logical view. */
+  pixelRes: number;
 }
 
 const KEY = 'jumpshot.settings.v1';
@@ -35,6 +43,10 @@ export const settings: Settings = {
   rhythmOffset: 0,
   songId: 'neon',
   beatHud: true,
+  animStyle: 'drawn',
+  stepRate: 12,
+  look: 'pixel',
+  pixelRes: 0.4,
 };
 
 export function loadSettings(): void {

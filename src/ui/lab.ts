@@ -1,7 +1,8 @@
 import { layout } from '../core/layout';
 import { ANIMS, ANIM_FILE, getAnim } from '../data/anims';
 import { CHANNELS, rebuild, type AnimDef, type EaseId } from '../data/anims/types';
-import { evalAnim, animFlags, type AnimFlags } from '../render/animPlayer';
+import { evalAnim, evalAnimStepped, animFlags, type AnimFlags } from '../render/animPlayer';
+import { DRAW, syncDrawStyle } from '../render/drawStyle';
 import { Ch, J, JOINT_N, POSE_N, computeJoints, type ChName, type PoseSpec } from '../render/rig';
 import { Fighter } from '../sim/fighter';
 import { ENEMIES, type EnemyKind } from '../data/enemies';
@@ -153,11 +154,15 @@ export class AnimLab {
   private buildKeys(): void {
     const row = this.ui.keys;
     row.innerHTML = '';
-    this.def.keys.forEach((k, i) => {
+    const ks = this.def.keys, len = Math.max(1, this.def.len);
+    ks.forEach((k, i) => {
       const b = document.createElement('button');
-      b.textContent = String(k.f);
-      b.title = `key ${i}: f${k.f} ${k.e}${k.impact ? ' IMPACT' : ''}${k.smear ? ' smear' : ''}${k.hold ? ' hold' : ''}`;
-      b.style.cssText = `position:absolute;left:calc(${(k.f / Math.max(1, this.def.len)) * 100}% - 10px);top:0;width:22px;height:20px;padding:0;font:10px monospace;border-radius:4px;border:1px solid #567;cursor:pointer;color:#fff;background:${k.impact ? '#a02838' : k.smear ? '#285aa0' : '#2a3350'}`;
+      // Each drawing is a block as wide as its hold (ticks on screen).
+      const hold = (i + 1 < ks.length ? ks[i + 1].f : len) - k.f;
+      b.textContent = DRAW.stepped ? `${i}·${hold}` : String(k.f);
+      b.title = `drawing ${i}: starts f${k.f}, holds ${hold} ticks · ${k.e}${k.impact ? ' · CONTACT' : ''}${k.smear ? ' · smear' : ''}${k.ones ? ' · ones' : ''}${k.inb ? ` · ${k.inb} in-betweens` : ''}`;
+      const left = (k.f / len) * 100, width = DRAW.stepped ? Math.max(1.5, (hold / len) * 100) : 0;
+      b.style.cssText = `position:absolute;left:${DRAW.stepped ? `${left}%` : `calc(${left}% - 10px)`};top:0;width:${DRAW.stepped ? `calc(${width}% - 2px)` : '22px'};height:20px;padding:0;font:10px monospace;border-radius:4px;border:1px solid #567;cursor:pointer;color:#fff;overflow:hidden;background:${k.impact ? '#a02838' : k.smear ? '#285aa0' : '#2a3350'}`;
       b.addEventListener('click', (e) => { e.stopPropagation(); this.keyIdx = i; this.playing = false; this.t = k.f; this.buildEditor(); this.syncUi(); });
       row.appendChild(b);
     });
@@ -175,6 +180,26 @@ export class AnimLab {
     es.style.cssText = 'width:100%;background:#111829;color:#fff;margin-bottom:6px';
     es.addEventListener('change', () => { spec.e = es.value as EaseId; rebuild(this.def); this.buildKeys(); });
     ed.appendChild(es);
+    // Hold length of this drawing (shifts the later drawings; attack lengths are tied to move frame data).
+    {
+      const sorted = this.def.spec.keys.slice().sort((a, b) => a.f - b.f);
+      const i = this.keyIdx;
+      const hold = (i + 1 < sorted.length ? sorted[i + 1].f : this.def.spec.len) - spec.f;
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px';
+      row.innerHTML = '<span style="color:#ffe96a">hold (ticks)</span>';
+      const inp = document.createElement('input'); inp.type = 'number'; inp.min = '1'; inp.max = '60'; inp.value = String(hold); inp.style.width = '60px';
+      inp.addEventListener('change', () => {
+        const d = Math.max(1, Math.round(parseFloat(inp.value) || 1)) - hold;
+        for (let k = i + 1; k < sorted.length; k++) sorted[k].f += d;
+        this.def.spec.len += d;
+        rebuild(this.def);
+        (this.ui.scrub as HTMLInputElement).max = String(this.def.len);
+        this.buildKeys(); this.buildEditor();
+      });
+      row.appendChild(inp);
+      ed.appendChild(row);
+    }
     for (const ch of CHANNELS) {
       const [lo, hi, st] = RANGES[ch] ?? [-3.5, 3.5, 0.01];
       const row = document.createElement('div');
@@ -234,13 +259,32 @@ export class AnimLab {
     if (s.strike) head.push(`strike: '${s.strike}'`);
     if (s.reach) head.push(`reach: '${s.reach}'`);
     const name = s.id.replace(/\.(\w)/g, (_m, c: string) => c.toUpperCase());
-    const text = `// data/anims/${ANIM_FILE[s.id] ?? 'enemies'}.ts\nexport const ${name}: AnimDef = anim({\n  ${head.join(', ')},\n  keys: [\n${keys}\n  ],\n});\n`;
+    let text = `// data/anims/${ANIM_FILE[s.id] ?? 'enemies'}.ts\nexport const ${name}: AnimDef = anim({\n  ${head.join(', ')},\n  keys: [\n${keys}\n  ],\n});\n`;
+    if (DRAW.stepped) {
+      // Hand-Drawn export: drawings with holds (the drawn() format).
+      const sorted = s.keys.slice().sort((a, b) => a.f - b.f);
+      const drawings = sorted.map((k, i) => {
+        const hold = (i + 1 < sorted.length ? sorted[i + 1].f : s.len) - k.f;
+        const parts = [`hold: ${hold}`, `p: ${fmt(k.p)}`];
+        if (k.e && k.e !== (k.impact ? 'snapIn' : 'inOut')) parts.push(`e: '${k.e}'`);
+        if (k.smear) parts.push(`smear: [${k.smear.map((x) => `'${x}'`).join(', ')}]`);
+        if (k.impact) parts.push('impact: true');
+        if (k.trail) parts.push(`trail: '${k.trail}'`);
+        if (k.sfx) parts.push(`sfx: '${k.sfx}'`);
+        if (k.ones) parts.push('ones: true');
+        if (k.inbetween) parts.push(`inbetween: ${k.inbetween}`);
+        return `    { ${parts.join(', ')} },`;
+      }).join('\n');
+      const h2 = head.filter((x) => !x.startsWith('len:'));
+      text = `// data/anims/${ANIM_FILE[s.id] ?? 'enemies'}.ts\nexport const ${name}: AnimDef = drawn({\n  ${h2.join(', ')},\n  drawings: [\n${drawings}\n  ],\n});\n`;
+    }
     console.log(text);
     navigator.clipboard?.writeText(text).then(() => { this.ui.info.textContent = 'Exported: copied to clipboard and logged to the console.'; }, () => { this.ui.info.textContent = 'Exported to the console (clipboard unavailable).'; });
   }
 
   // ---------------------------------------------------------------- frame
   frame(ctx: CanvasRenderingContext2D, dt: number): void {
+    syncDrawStyle();
     const def = this.def;
     const prevT = this.t;
     if (this.playing) {
@@ -304,7 +348,8 @@ export class AnimLab {
       for (let li = 0; li < 4; li++) {
         ctx.fillStyle = cols[li];
         for (let tt = 0; tt <= def.len; tt += 1) {
-          evalAnim(def, tt, this.buf);
+          if (DRAW.stepped) { if (!def.keys.some((k) => k.f === tt)) continue; evalAnimStepped(def, tt, this.buf); }
+          else evalAnim(def, tt, this.buf);
           computeJoints(this.buf, fx, fy, 1, f.scale, WORLD.groundY, this.jn, f.anim.rig);
           ctx.globalAlpha = 0.5;
           ctx.fillRect(this.jn[limbs[li] * 2] - 1.5, this.jn[limbs[li] * 2 + 1] - 1.5, 3, 3);
@@ -358,6 +403,18 @@ export class AnimLab {
     a.trailActive = false;
     a.cur = def;
     computeJoints(a.pose, x, y, facing, f.scale, WORLD.groundY, a.joints, a.rig);
+    if (DRAW.stepped) {
+      // Hand-Drawn preview: the drawing on screen at t, smear sweeping from the previous drawing.
+      const id = evalAnimStepped(def, t, a.dPose);
+      const ki = id >> 6;
+      const prevKey = def.keys[Math.max(0, ki - 1)];
+      evalAnimStepped(def, prevKey.f, a.dPrevPose);
+      a.dX = a.dPrevX = x; a.dY = a.dPrevY = y; a.dFace = facing;
+      a.dSmear = ki > 0 ? def.keys[ki].smear : 0;
+      a.dSeed = ki * 977 + def.id.length * 131;
+      a.dReachW = this.flags.reachW;
+      a.dEcho = 0;
+    }
   }
 
   onKey(e: KeyboardEvent): boolean {

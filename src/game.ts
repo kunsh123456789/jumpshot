@@ -24,6 +24,7 @@ import { clamp } from './core/math';
 import { RhythmDirector } from './rhythm/director';
 import { RhythmHud, drawRhythmWorld } from './rhythm/hud';
 import { RhythmUI, type CalibView } from './rhythm/ui';
+import { DRAW, syncDrawStyle } from './render/drawStyle';
 import { RHYTHM } from './data/rhythm';
 import { SONGS } from './data/songs';
 
@@ -434,10 +435,15 @@ export class Game {
     const acceptInput = this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'clear';
     if (acceptInput) for (let i = 0; i < ev.length; i++) this.inputs.push(ev[i]);
     ev.length = 0;
+    syncDrawStyle();
+    DRAW.gridTick = false;
+    DRAW.gridMode = false;
     if (this.world.rhythm) {
       // Rhythm Mode: this step's time on the audio clock, then judge its inputs.
       this.rhythm.now = this.rhythm.heardAt(this.simNow || performance.now());
       this.rhythm.judgeInputs(this.inputs);
+      DRAW.gridTick = this.rhythm.drawGridTick();
+      DRAW.gridMode = this.rhythm.live;
     }
     this.world.camLeft = this.cam.viewLeft();
     this.world.camRight = this.cam.viewRight();

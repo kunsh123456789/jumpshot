@@ -355,4 +355,17 @@ export class RhythmDirector implements RhythmSim {
     if (n.t <= audio.ctx.currentTime) { this.note = null; return; }
     if (p.state !== 'move' || p.moveSerial !== n.serial) this.cancelNote();
   }
+
+  /**
+   * Hand-Drawn on the beat: true on the tick a musical subdivision starts, where the
+   * subdivision (2, 3, 4, 6 or 8 per beat) is the one closest to the chosen step rate.
+   */
+  drawGridTick(): boolean {
+    if (!this.live) return false;
+    const c = this.clock;
+    const beatTicks = c.beatLen(this.now) * 60;
+    let div = 4, best = Infinity;
+    for (const d of [2, 3, 4, 6, 8]) { const e = Math.abs(beatTicks / d - 60 / Math.max(8, Math.min(20, settings.stepRate))); if (e < best) { best = e; div = d; } }
+    return c.sub(this.now, div) !== c.sub(this.now - FRAME, div);
+  }
 }

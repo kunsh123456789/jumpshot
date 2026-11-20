@@ -33,6 +33,23 @@ export interface KeySpec {
   trail?: LimbId;
   /** Sound cue when playback crosses this key. */
   sfx?: 'step' | 'whoosh' | 'land';
+  /** Hand-Drawn style: show the segment after this key interpolated at full rate (super-fast moments). */
+  ones?: boolean;
+  /** Hand-Drawn style: generate this many in-between drawings (0-2) on the segment after this key. */
+  inbetween?: number;
+}
+
+/** One drawing of a Hand-Drawn animation: a full pose shown for `hold` sim ticks. */
+export interface DrawingSpec extends Omit<KeySpec, 'f' | 'hold'> {
+  /** How many 60 Hz ticks this drawing stays on screen (5-6 ≈ 10-12 fps). */
+  hold: number;
+}
+
+/** A Hand-Drawn animation: drawings with holds (compiled into keys; Smooth style interpolates them). */
+export interface DrawnSpec extends Omit<AnimSpec, 'keys' | 'len'> {
+  drawings: DrawingSpec[];
+  /** Total length; defaults to the sum of holds. */
+  len?: number;
 }
 
 export interface AnimSpec {
@@ -58,6 +75,8 @@ export interface Key {
   impact: boolean;
   trail: number;
   sfx: KeySpec['sfx'] | null;
+  ones: boolean;
+  inb: number;
 }
 
 export interface AnimDef {
@@ -112,6 +131,8 @@ export function anim(spec: AnimSpec): AnimDef {
     impact: !!k.impact,
     trail: limbMask(k.trail),
     sfx: k.sfx ?? null,
+    ones: !!k.ones,
+    inb: Math.max(0, Math.min(2, k.inbetween ?? 0)),
   }));
   const ik = keys.find((k) => k.impact);
   return {
@@ -119,6 +140,25 @@ export function anim(spec: AnimSpec): AnimDef {
     strike: spec.strike ?? 'arm', reach: spec.reach ? LIMB_BIT[spec.reach] : 0,
     contact: ik ? ik.f : -1, keys, spec,
   };
+}
+
+/**
+ * Build an animation from drawings + holds. Drawing i starts at the sum of the
+ * previous holds. Hand-Drawn style shows each drawing for its hold (no
+ * in-betweens); Smooth style eases between them (into the contact drawing with
+ * snapIn so the hit still arrives hard).
+ */
+export function drawn(spec: DrawnSpec): AnimDef {
+  let f = 0;
+  const keys: KeySpec[] = [];
+  for (const d of spec.drawings) {
+    const { hold, ...rest } = d;
+    keys.push({ ...rest, f, e: d.e ?? (d.impact ? 'snapIn' : 'inOut') });
+    f += hold;
+  }
+  const def = anim({ ...spec, keys, len: spec.len ?? f });
+  def.spec = { ...def.spec, drawn: spec.drawings.map((d) => d.hold) } as AnimSpec;
+  return def;
 }
 
 /** Rebuild an AnimDef in place after the lab edits its spec. */

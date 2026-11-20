@@ -1,7 +1,8 @@
 import { Ch, IS_ANGLE, JOINT_N, J, POSE_N, RIG, angDelta, computeJoints, type RigDims } from './rig';
 import { ANIM, WORLD } from '../data/tuning';
 import type { AnimDef } from '../data/anims/types';
-import { animFlags, crossedKey, evalAnim, type AnimFlags } from './animPlayer';
+import { animFlags, crossedKey, evalAnim, evalAnimStepped, type AnimFlags } from './animPlayer';
+import { DRAW } from './drawStyle';
 import { ease } from '../core/math';
 
 export const SCARF_N = 7;
@@ -96,7 +97,51 @@ export class Animator {
   maxSpinDelta = 0;
   maxAngCh = 0;
 
+  // ---- Hand-Drawn display latch: what is actually drawn (stepped pose AND stepped root). ----
+  /** The drawing on screen and the root/facing it was drawn at. */
+  readonly dPose = new Float32Array(POSE_N);
+  dX = 0; dY = 0; dFace = 1;
+  /** The previous drawing shown (smear sweeps from it; echoes trail from its root). */
+  readonly dPrevPose = new Float32Array(POSE_N);
+  dPrevX = 0; dPrevY = 0;
+  /** Ticks since the last latch, last drawing id, smear limbs + seed of the shown drawing, echo copies. */
+  dAge = 0;
+  dId = -1;
+  dSmear = 0;
+  dSeed = 0;
+  dReachW = 0;
+  dEcho = 0;
+  /** Number of latches so far (tests / lab). */
+  dCount = 0;
+  private switched = true;
+  private impactShown = false;
+  private stepId = 0;
+
   constructor(hasScarf = false) { this.hasScarf = hasScarf; }
+
+  /**
+   * Show the current pose as a new drawing. Called on step ticks and on sacred
+   * events (an animation starts, the contact drawing, a new hit reaction),
+   * which always latch on their exact tick.
+   */
+  private latch(bx: number, by: number, facing: number, scale: number): void {
+    this.dPrevPose.set(this.dPose);
+    this.dPrevX = this.dX; this.dPrevY = this.dY;
+    this.dPose.set(this.pose);
+    this.dX = bx; this.dY = by; this.dFace = facing;
+    this.dAge = 0;
+    const def = this.cur;
+    const ki = this.stepId >> 6;
+    const changed = this.stepId !== this.dId;
+    this.dSmear = def && changed && !this.switched ? (def.keys[ki]?.smear ?? 0) : 0;
+    this.dSeed = (hashStr(def ? def.id : '') + ki * 977) | 0;
+    this.dReachW = this.reachW;
+    this.dId = this.stepId;
+    const dist = Math.hypot(this.dX - this.dPrevX, this.dY - this.dPrevY);
+    this.dEcho = this.switched && this.dCount > 0 && dist > 220 * scale ? 0 : dist > 46 * scale ? Math.min(3, Math.floor(dist / (46 * scale))) : 0;
+    this.switched = false;
+    this.dCount++;
+  }
 
   private switchTo(def: AnimDef, fade: number): void {
     this.lastTransition = `${this.clipName}→${def.id}`;
@@ -110,8 +155,10 @@ export class Animator {
     this.spinAdd = 0;
     this.from.set(this.pose);
     this.fadeT = 0;
-    this.fadeDur = Math.max(0, fade);
+    this.fadeDur = DRAW.stepped ? 0 : Math.max(0, fade);
     this.lastT = 0;
+    this.switched = true;
+    this.impactShown = false;
   }
 
   /** Show `def` at an explicit, gameplay-mapped time. */
@@ -156,7 +203,8 @@ export class Animator {
     if (!frozen) { this.stepFace(facing, fastTurn); this.clipAge++; }
     const def = this.cur;
     if (def) {
-      evalAnim(def, this.t, this.evalBuf);
+      if (DRAW.stepped) this.stepId = evalAnimStepped(def, this.t, this.evalBuf);
+      else evalAnim(def, this.t, this.evalBuf);
       animFlags(def, this.t, this.flags);
       if (!frozen && def.keys.some((k) => k.sfx)) {
         const k = crossedKey(def, this.lastT, this.t);
@@ -182,7 +230,7 @@ export class Animator {
       if (this.trailActive) this.trailJoint = this.flags.trail & 1 ? J.handA : this.flags.trail & 2 ? J.handB : this.flags.trail & 4 ? J.footA : J.footB;
       // Authored snaps and interruption crossfades are intentional; the pop detector
       // flags only what is left: unblended jumps and keys authored too close together.
-      if (this.flags.snapping || this.fadeT <= this.fadeDur && this.fadeDur > 0 && this.fadeT > 0) this.intentSnap = true;
+      if (this.flags.snapping || this.fadeT <= this.fadeDur && this.fadeDur > 0 && this.fadeT > 0 || DRAW.stepped) this.intentSnap = true;
     }
 
     // Pop-detector readings.
@@ -198,6 +246,15 @@ export class Animator {
 
     computeJoints(this.pose, bx, by, this.face, scale, WORLD.groundY, this.joints, this.rig);
     if (this.hasScarf) this.stepScarf(facing, scale, vx, frozen);
+
+    // Hand-Drawn: step the displayed drawing + root on the step grid; sacred events latch on their exact tick.
+    if (DRAW.stepped) {
+      if (!frozen) this.dAge++;
+      const sacred = this.switched || (this.flags.impact && !this.impactShown) || this.dCount === 0;
+      if (this.flags.impact) this.impactShown = true;
+      const due = !frozen && (DRAW.gridMode ? DRAW.gridTick || this.dAge >= DRAW.stepTicks * 2 : this.dAge >= DRAW.stepTicks);
+      if (sacred || due) this.latch(bx, by, facing, scale);
+    }
   }
 
   private stepScarf(facing: number, scale: number, vx: number, frozen: boolean): void {
@@ -245,7 +302,12 @@ export class Animator {
     this.turnT = this.turnDur = 1;
     this.scarfInit = false;
     this.trailCount = 0;
+    this.dPose.set(this.pose); this.dPrevPose.set(this.pose);
+    this.dFace = facing; this.dAge = 0; this.dEcho = 0; this.dSmear = 0; this.dCount = 0;
   }
+
+  /** Root position the snap happened at (spawn): seeds the drawn root. */
+  snapRoot(x: number, y: number): void { this.dX = this.dPrevX = x; this.dY = this.dPrevY = y; }
 
   pushTrail(x: number, y: number, t: number): void {
     const i = this.trailHead;
@@ -253,4 +315,10 @@ export class Animator {
     this.trailHead = (i + 1) % TRAIL_CAP;
     if (this.trailCount < TRAIL_CAP) this.trailCount++;
   }
+}
+
+function hashStr(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
 }

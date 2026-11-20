@@ -2,6 +2,7 @@ import { clamp } from '../core/math';
 import { Ch, shortDelta } from './rig';
 import type { Fighter } from '../sim/fighter';
 import type { Animator } from './animator';
+import { DRAW } from './drawStyle';
 import { ANIM, MOVE, PLAYER } from '../data/tuning';
 import { ANIMS, getAnim } from '../data/anims';
 import type { AnimDef } from '../data/anims/types';
@@ -40,9 +41,12 @@ export function poseFighter(f: Fighter, _time: number): void {
     const restart = a.moveSerial !== f.moveSerial;
     if (restart) a.moveSerial = f.moveSerial;
     // Rhythm Mode snapping re-times the startup; play the authored anticipation stretched/compressed over it.
-    const t = f.snapBase > 0 && f.moveFrame < f.effStartup
-      ? moveTime(def, f.snapBase, (f.moveFrame * f.snapBase) / f.effStartup)
-      : moveTime(def, f.effStartup, f.moveFrame);
+    // Hand-Drawn: show the drawing of the frame just processed, so the contact drawing appears on the
+    // exact tick the first active frame (the hit) is resolved, and an attack's first drawing on its first tick.
+    const fr = DRAW.stepped ? Math.max(0, f.moveFrame - 1) : f.moveFrame;
+    const t = f.snapBase > 0 && fr < f.effStartup
+      ? moveTime(def, f.snapBase, (fr * f.snapBase) / f.effStartup)
+      : moveTime(def, f.effStartup, fr);
     if (t < 0) {
       // Magnetism dash: authored dash pose; the strike's anticipation starts straight out of it.
       a.run(f.grounded ? ANIMS.dash : ANIMS.airDash, rate, ANIM.fadeCancel, restart);
@@ -66,7 +70,7 @@ export function poseFighter(f: Fighter, _time: number): void {
     if (f.state === 'windup') {
       const total = Math.max(1, f.timer + f.stateFrame);
       t = (C * f.stateFrame) / total;
-    } else if (f.state === 'attack') t = C + f.stateFrame;
+    } else if (f.state === 'attack') t = C + (DRAW.stepped ? Math.max(0, f.stateFrame - 1) : f.stateFrame);
     else t = C + atk.active + f.stateFrame;
     a.show(def, Math.min(def.len, t), ANIM.fadeFrames);
     a.trailColor = '#ff6a6a';
