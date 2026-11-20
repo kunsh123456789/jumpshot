@@ -8,6 +8,8 @@ import { Fighter } from '../sim/fighter';
 import { ENEMIES, type EnemyKind } from '../data/enemies';
 import { MOVES } from '../data/moves';
 import { drawFighter } from '../render/stickman';
+import { drawInkFighter, inkReflection, INK } from '../render/ink';
+import { INKLOOK } from '../data/inkLook';
 import { effects } from '../render/effects';
 import { WORLD } from '../data/tuning';
 import { audio } from '../core/audio';
@@ -301,8 +303,15 @@ export class AnimLab {
     effects.update(dt * this.speed);
     const d = layout.dpr;
     ctx.setTransform(d, 0, 0, d, 0, 0);
-    ctx.fillStyle = '#0d1020';
+    ctx.fillStyle = DRAW.ink ? INK.paper : '#0d1020';
     ctx.fillRect(0, 0, layout.cssW, layout.cssH);
+    const wpp = 1 / (INKLOOK.refRes * INKLOOK.zoom);
+    const drawF = (fi: Fighter) => {
+      if (!DRAW.ink) { drawFighter(ctx, fi, 1, this.time, 0); return; }
+      ctx.save(); ctx.beginPath(); ctx.rect(-600, WORLD.groundY + 2, 1200, 600); ctx.clip();
+      inkReflection(ctx, fi, 1, this.time, wpp); ctx.restore();
+      drawInkFighter(ctx, fi, 1, this.time, wpp);
+    };
     // stage transform: center the fighter, big
     const sc = Math.min((layout.cssW - 320) / 520, layout.cssH / 420) * 1.0;
     const cx = (layout.cssW - 320) / 2 + 30, gy = layout.cssH * 0.74;
@@ -314,7 +323,7 @@ export class AnimLab {
     for (let x = -400; x <= 400; x += 40) { ctx.moveTo(x, WORLD.groundY - 400); ctx.lineTo(x, WORLD.groundY); }
     for (let y = WORLD.groundY - 400; y <= WORLD.groundY; y += 40) { ctx.moveTo(-400, y); ctx.lineTo(400, y); }
     ctx.stroke();
-    ctx.strokeStyle = 'rgba(200,220,255,0.6)'; ctx.lineWidth = 2;
+    ctx.strokeStyle = DRAW.ink ? INK.ink : 'rgba(200,220,255,0.6)'; ctx.lineWidth = DRAW.ink ? 3 * wpp : 2;
     ctx.beginPath(); ctx.moveTo(-420, WORLD.groundY); ctx.lineTo(420, WORLD.groundY); ctx.stroke();
 
     const f = this.fighter;
@@ -337,7 +346,7 @@ export class AnimLab {
       this.place(dmy, react, rt, dmy.x, fy, -1);
       dmy.flash = def.contact >= 0 && this.t >= def.contact && this.t < def.contact + 2 ? 1 : 0;
       dmy.hitstop = this.holdLeft > 0 ? 1 : 0;
-      drawFighter(ctx, dmy, 1, this.time, 0);
+      drawF(dmy);
       f.hasLook = true; f.lookX = dmy.x; f.lookY = fy - 62 * dmy.scale - 30;
     } else f.hasLook = false;
 
@@ -379,7 +388,7 @@ export class AnimLab {
     }
     // the fighter at time t (with smear from t-2)
     this.place(f, def, this.t, fx, fy, 1);
-    drawFighter(ctx, f, 1, this.time, 0);
+    drawF(f);
     effects.drawParticles(ctx, false);
     effects.drawParticles(ctx, true);
     effects.drawSpeedLines(ctx, 0.12 / Math.max(0.1, this.speed), 18);

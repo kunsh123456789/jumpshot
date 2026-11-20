@@ -250,7 +250,9 @@ export class Animator {
     // Hand-Drawn: step the displayed drawing + root on the step grid; sacred events latch on their exact tick.
     if (DRAW.stepped) {
       if (!frozen) this.dAge++;
-      const sacred = this.switched || (this.flags.impact && !this.impactShown) || this.dCount === 0;
+      // One-shots (attacks, reactions): every authored drawing change shows on its exact tick, so drawings
+      // line up with the move's frame data. Loops (idle, run, tumble) and root travel follow the step grid.
+      const sacred = this.switched || (this.flags.impact && !this.impactShown) || this.dCount === 0 || (!!def && !def.loop && this.stepId !== this.dId);
       if (this.flags.impact) this.impactShown = true;
       const due = !frozen && (DRAW.gridMode ? DRAW.gridTick || this.dAge >= DRAW.stepTicks * 2 : this.dAge >= DRAW.stepTicks);
       if (sacred || due) this.latch(bx, by, facing, scale);

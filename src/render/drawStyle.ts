@@ -1,4 +1,5 @@
 import { settings } from '../core/settings';
+import { useHandDrawn } from '../data/anims';
 
 /**
  * Hand-Drawn presentation state shared by the animator, poser and renderer.
@@ -21,4 +22,5 @@ export function syncDrawStyle(): void {
   DRAW.stepped = settings.animStyle !== 'smooth';
   DRAW.stepTicks = Math.max(3, Math.min(8, Math.round(60 / Math.max(8, Math.min(20, settings.stepRate)))));
   DRAW.ink = settings.look !== 'smooth';
+  useHandDrawn(DRAW.stepped);
 }
