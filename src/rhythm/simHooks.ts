@@ -28,6 +28,8 @@ export interface RhythmSim {
   enemyWindup(w: World, e: Fighter, wind: number): number;
   /** Per wind-up tick: re-derive the remaining frames from the clock. */
   enemyWindupTick(w: World, e: Fighter): void;
+  /** Beat phase/count for beat-locked idle animation (null = free-running). */
+  poseBeat(): { phase: number; count: number } | null;
   /** Extra attack tokens from the song section. */
   tokenBonus(): number;
   /** Enemy cooldown multiplier from the song section. */

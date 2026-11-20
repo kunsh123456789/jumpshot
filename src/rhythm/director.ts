@@ -42,6 +42,8 @@ export class RhythmDirector implements RhythmSim {
   private snapTarget = 0;
   private enemyTarget = new WeakMap<Fighter, number>();
   private enemyWait = new WeakMap<Fighter, number>();
+  /** Tuned note pre-scheduled on the grid for the current move (cancelled if the move is interrupted). */
+  private note: { gain: GainNode; t: number; serial: number } | null = null;
 
   constructor() {
     const s = SONGS.find((x) => x.id === settings.songId);
@@ -111,12 +113,13 @@ export class RhythmDirector implements RhythmSim {
   }
 
   // ------------------------------------------------------------ RhythmSim (filled in by later milestones)
-  onMoveStart(_w: World, p: Fighter, ev: SwipeEvent | null, resnap: boolean): void {
+  onMoveStart(w: World, p: Fighter, ev: SwipeEvent | null, resnap: boolean): void {
     if (!resnap && ev) {
       const j = this.judged.get(ev);
       this.moveGrade = j ? j.grade : -1;
       this.bonusPaid = !(j && j.grade >= GOOD);
     } // ev = null: a chained follow-up keeps the grade of the input that started the string
+    this.comboIndex = w.combo.hits;
     this.snap(p);
   }
 
@@ -127,6 +130,7 @@ export class RhythmDirector implements RhythmSim {
    * snapMaxDelayMs). Slow tempos fall back to a finer grid. The dash and any
    * air hangs are re-timed with it.
    */
+  private comboIndex = 0;
   private snap(p: Fighter): void {
     const m = p.move;
     if (!this.live || !m) { p.snapBase = 0; this.snapTarget = 0; return; }
@@ -152,6 +156,7 @@ export class RhythmDirector implements RhythmSim {
     p.snapBase = S0;
     p.effStartup = S;
     this.snapTarget = best;
+    if (p.target && p.target.alive) this.scheduleNote(best, p.moveSerial, this.comboIndex + 1);
     // Re-time the magnetism dash proportionally (it must end by the contact frame).
     if (p.dashFrames > 0 && fr < p.dashFrames) p.dashFrames = Math.max(fr + 1, Math.min(S, Math.round((p.dashFrames * S) / S0)));
     if (delta > 0) {
@@ -238,4 +243,59 @@ export class RhythmDirector implements RhythmSim {
   private intensity(): number { return this.live ? this.clock.section(this.now).intensity : 0.5; }
   tokenBonus(): number { return Math.round(this.intensity() * RHYTHM.intensityTokenBonus - 0.2); }
   cooldownMult(): number { const i = this.intensity(); return RHYTHM.cooldownAtLow + (RHYTHM.cooldownAtHigh - RHYTHM.cooldownAtLow) * i; }
+
+  // ------------------------------------------------------------ musical juice
+  /** Beat phase / count for beat-locked idle loops. */
+  poseBeat(): { phase: number; count: number } | null {
+    if (!this.live) return null;
+    const c = this.clock;
+    return { phase: c.phase(this.now), count: c.beat(this.now) };
+  }
+
+  /** Semitone offset of the n-th note of a combo: walks the song scale over the current bar's chord. */
+  private comboSemis(n: number): number {
+    const c = this.clock, sc = this.song.scale;
+    const sec = c.section(this.now);
+    const bar = c.barInfo(this.now).bar - c.segment(this.now).bar0;
+    const chord = sec.chords.length ? sec.chords[((bar % sec.chords.length) + sec.chords.length) % sec.chords.length] : 0;
+    const i = Math.max(0, n - 1);
+    return chord + sc[i % sc.length] + 12 * Math.min(1, Math.floor(i / sc.length));
+  }
+
+  /** Hit-sound pitch multiplier: combo hits climb the song's scale (a long combo plays a melody). */
+  hitPitch(combo: number): number {
+    if (!this.live) return 1;
+    const s = this.comboSemis(combo) - 5;
+    return Math.max(0.7, Math.min(2.2, Math.pow(2, s / 12)));
+  }
+
+  /** Pluck a chord tone exactly on the grid point the strike will land on. */
+  private scheduleNote(tHeard: number, serial: number, n: number): void {
+    const ctx = audio.ctx;
+    if (!ctx || tHeard < ctx.currentTime + 0.004) return; // too close: the impact sound carries it
+    this.cancelNote();
+    const f = this.song.keyHz * 8 * Math.pow(2, this.comboSemis(n) / 12);
+    const g = ctx.createGain();
+    g.gain.value = 1;
+    g.connect(audio.music);
+    audio.tone(tHeard, 'triangle', f, f, 0.22, 0.09, g, 0.002);
+    audio.tone(tHeard, 'sine', f * 2, f * 2, 0.12, 0.04, g, 0.002);
+    this.note = { gain: g, t: tHeard, serial };
+  }
+
+  private cancelNote(): void {
+    const n = this.note;
+    if (!n || !audio.ctx) return;
+    if (n.t > audio.ctx.currentTime) { n.gain.gain.cancelScheduledValues(0); n.gain.gain.setValueAtTime(0, audio.ctx.currentTime); }
+    this.note = null;
+  }
+
+  /** After each sim step: drop the pre-scheduled note if its move was interrupted before contact. */
+  afterStep(w: World): void {
+    const n = this.note;
+    if (!n || !audio.ctx) return;
+    const p = w.player;
+    if (n.t <= audio.ctx.currentTime) { this.note = null; return; }
+    if (p.state !== 'move' || p.moveSerial !== n.serial) this.cancelNote();
+  }
 }

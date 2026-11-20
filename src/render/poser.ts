@@ -14,6 +14,17 @@ import { RIGS } from './rig';
  * move's first active frame, and hit-stop (a frozen fighter) holds it.
  * Pure presentation: reads sim state, never writes it.
  */
+/** Rhythm Mode: beat phase/count for beat-locked idle loops (null in Classic). */
+let poseBeat: { phase: number; count: number } | null = null;
+export function setPoseBeat(b: { phase: number; count: number } | null): void { poseBeat = b; }
+
+/** Idle loops have two bobs per cycle: lock each bob to a beat. */
+function beatIdle(a: Animator): void {
+  if (!poseBeat || !a.cur || !a.cur.loop) return;
+  const L = a.cur.len;
+  a.clock = a.t = (L / 4 + ((poseBeat.count & 1) + poseBeat.phase) * (L / 2)) % L;
+}
+
 export function poseFighter(f: Fighter, _time: number): void {
   const a = f.anim;
   if (a.rig === RIGS.player && f.kind !== 'player') a.rig = RIGS[f.kind] ?? RIGS.grunt;
@@ -151,6 +162,7 @@ function locomotion(f: Fighter, a: Animator, rate: number, moving: boolean): voi
       a.run(walk, rate * clamp(speed / ref, 0.5, 1.6), 5);
     } else {
       a.run(getAnim(kind, 'idle'), rate, 6);
+      if (poseBeat && rate > 0) beatIdle(a);
     }
     a.lastSpeed = speed;
     return;
@@ -175,7 +187,7 @@ function locomotion(f: Fighter, a: Animator, rate: number, moving: boolean): voi
   } else {
     a.loco = 'none';
     if (f.stateFrame > ANIM.tauntIdleFrames && f.stateFrame < ANIM.tauntIdleFrames + ANIMS.taunt.len) a.run(ANIMS.taunt, rate, 6);
-    else a.run(ANIMS.idle, rate, 5);
+    else { a.run(ANIMS.idle, rate, 5); if (poseBeat && rate > 0) beatIdle(a); }
   }
   a.lastSpeed = speed;
   // Head follows the target a little in idle.

@@ -3,7 +3,7 @@ import { Fighter } from './fighter';
 import type { SimEvents } from './events';
 import { PICKUPS, PLAYER, STYLE, WORLD } from '../data/tuning';
 import type { SwipeEvent } from '../ui/pad';
-import { poseFighter } from '../render/poser';
+import { poseFighter, setPoseBeat } from '../render/poser';
 import { ComboTracker } from './combo';
 import { baseStats, type Stats } from '../data/upgrades';
 import { EnemyAI } from './enemyAI';
@@ -151,6 +151,7 @@ export class World {
   updateVisuals(): void {
     const t = this.frame / 60;
     const p = this.player;
+    setPoseBeat(this.rhythm ? this.rhythm.poseBeat() : null);
     // Look targets: the player looks at its target (or nearest enemy), enemies look at the player.
     let look = p.target && p.target.alive ? p.target : null;
     if (!look) {

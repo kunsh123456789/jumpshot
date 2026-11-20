@@ -25,6 +25,7 @@ import { RhythmDirector } from './rhythm/director';
 import { RhythmHud, drawRhythmWorld } from './rhythm/hud';
 import { RhythmUI, type CalibView } from './rhythm/ui';
 import { RHYTHM } from './data/rhythm';
+import { SONGS } from './data/songs';
 
 type GState = 'title' | 'tutorial' | 'countdown' | 'playing' | 'clear' | 'upgrade' | 'gameover';
 
@@ -146,9 +147,18 @@ export class Game {
     this.menus.showSettings(() => {}, fromTitle ? () => this.startTutorial() : null, () => this.startCalibration(() => this.openSettings(fromTitle)));
   }
 
+  /** Dev/tests: force a mode (null = Classic) and skip the song picker. */
+  forceMode(songId: string | null): void {
+    settings.rhythmMode = !!songId;
+    const s = SONGS.find((x) => x.id === songId);
+    if (s) this.rhythm.selectSong(s);
+    this.skipPicker = true;
+  }
+  private skipPicker = false;
+
   /** Start a run: Classic goes straight in; Rhythm Mode picks a song first. */
   private beginRun(after: (() => void) | null): void {
-    if (!settings.rhythmMode) { this.startRun(); after?.(); return; }
+    if (!settings.rhythmMode || this.skipPicker) { this.startRun(); after?.(); return; }
     this.rui.showPicker({
       current: 'song:' + this.rhythm.song.id,
       onSong: (s) => { this.rhythm.selectSong(s); saveSettings(); this.rui.close('picker'); this.startRun(); after?.(); },
@@ -164,6 +174,7 @@ export class Game {
     this.rhythm.startRun();
     this.world.rhythm = this.rhythm;
     this.time.locked = true;
+    this.fx.pitchFn = (combo) => this.rhythm.hitPitch(combo);
     this.rhud.reset();
   }
 
@@ -171,6 +182,7 @@ export class Game {
     this.rhythm.stop();
     this.world.rhythm = null;
     this.time.locked = false;
+    this.fx.pitchFn = null;
   }
 
   // ------------------------------------------------------------ rhythm latency calibration
@@ -407,6 +419,7 @@ export class Game {
     this.world.camRight = this.cam.viewRight();
     const axis = acceptInput ? clamp(this.pad.moveX + this.keyboard.moveAxis, -1, 1) : 0;
     this.world.step(this.inputs, axis);
+    if (this.world.rhythm) this.rhythm.afterStep(this.world);
     this.pops.log = this.debug.visible;
     this.pops.check(this.world);
     if ((this.state === 'playing' || this.state === 'countdown' || this.state === 'clear') && this.world.gameOver) this.toGameOver();
@@ -440,6 +453,14 @@ export class Game {
       // On each heard beat: a soft count tick while any enemy is winding up.
       if (this.rhud.update(this.rhythm, now, realDt)) {
         for (const e of this.world.enemies) if (e.state === 'windup' && this.rhythm.enemyBeatsLeft(e, now) > 0) { audio.telegraph(); break; }
+        // Groove: the camera breathes on every beat, harder on downbeats and in loud sections.
+        const I = this.rhythm.clock.section(now).intensity;
+        if (settings.shake > 0) this.cam.punchZoom(RHYTHM.beatZoomPulse * I * (this.rhud.downbeat ? 1.6 : 1));
+      }
+      if (this.rhud.sectionChanged && this.rhud.sectionKind === 'drop') {
+        this.cam.shake(9 * settings.shake, 0, 1);
+        this.cam.punchZoom(0.05);
+        if (!settings.reduceFlashes) { effects.screenFlash = Math.max(effects.screenFlash, 0.35); effects.screenFlashColor = '#ff9af0'; }
       }
       this.rhud.draw(ctx, this.rhythm, this.world, now);
     }

@@ -26,6 +26,9 @@ export class RhythmHud {
   /** 1 on every heard beat, decaying (shared with other groove visuals). */
   pulse = 0;
   downbeat = false;
+  /** Set on the frame a new section (e.g. a drop) starts being heard. */
+  sectionChanged = false;
+  sectionKind = '';
 
   judged(j: Judgement, broke: number, now: number): void {
     if (j.grade === MISS && broke >= RHYTHM.streakBreakShowMin) { this.lostT = now; this.lostN = broke; }
@@ -51,7 +54,8 @@ export class RhythmHud {
       }
       this.pulse = Math.exp(-(c.phase(now) * c.beatLen(now)) / 0.11);
       const sec = c.section(now);
-      if (sec.name !== this.sectionName) { this.sectionName = sec.name; this.sectionT = now; }
+      this.sectionChanged = false;
+      if (sec.name !== this.sectionName) { this.sectionChanged = this.sectionName !== ''; this.sectionName = sec.name; this.sectionKind = sec.kind; this.sectionT = now; }
     } else this.pulse = 0;
     this.ring = Math.max(0, this.ring - dt * 5);
     this.streakPop = Math.max(0, this.streakPop - dt * 6);
@@ -68,6 +72,12 @@ export class RhythmHud {
       const I = c.section(now).intensity;
       ctx.fillStyle = `rgba(190,235,255,${(0.25 + 0.35 * I) * this.pulse})`;
       ctx.fillRect(P.x, P.y - 1, P.w, 2 + (this.downbeat ? 1 : 0));
+    }
+    // Groove flash over the arena on beats (stronger on downbeats and in loud sections).
+    if (r.live && !settings.reduceFlashes && this.pulse > 0.05) {
+      const I = c.section(now).intensity;
+      ctx.fillStyle = `rgba(255,240,220,${RHYTHM.beatFlash * I * this.pulse * (this.downbeat ? 1.6 : 1)})`;
+      ctx.fillRect(R.x, R.y, R.w, layout.pad.y - R.y);
     }
     if (!settings.beatHud) return;
     const narrow = R.w < 640;

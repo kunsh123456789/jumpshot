@@ -17,6 +17,8 @@ export interface Popup { text: string; sub: string; color: string; t: number; li
  */
 export class FxDirector {
   /** Centered popups (combo summary, PERFECT PARRY, finisher names). */
+  /** Rhythm Mode: hit pitch from the song's scale (null in Classic = the combo pitch climb). */
+  pitchFn: ((combo: number) => number) | null = null;
   popups: Popup[] = [];
   comboPop = 0;
   rankSlam = 0;
@@ -49,7 +51,7 @@ export class FxDirector {
       const size = 20 + Math.min(26, dmg * 0.9) + (e.crit ? 12 : 0);
       effects.text(e.crit ? dmg + '!' : '' + dmg, e.victim.cx, e.victim.cy - 50 * e.victim.scale, e.crit ? '#ffe14a' : e.kind === 'armor' ? '#c9b6ff' : '#ffffff', size, JUICE.damageNumberLife, e.crit ? '#b8401a' : '#000');
       // audio: pitch climbs with combo
-      const pitch = 1 + JUICE.comboPitchPerHit * Math.min(e.combo, JUICE.comboPitchCap);
+      const pitch = this.pitchFn ? this.pitchFn(e.combo) : 1 + JUICE.comboPitchPerHit * Math.min(e.combo, JUICE.comboPitchCap);
       const kind = m ? (m.sound === 'kick' ? 'kick' : m.sound === 'slash' ? 'slash' : weight > 0.7 ? 'heavy' : 'punch') : 'punch';
       audio.hit(Math.min(1, weight), pitch, kind, e.crit);
       if (e.kind === 'launch') { audio.launch(); effects.dust(e.victim.x, e.victim.y, 0.5); }

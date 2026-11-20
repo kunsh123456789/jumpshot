@@ -15,6 +15,9 @@ W.__layout = layout;
 
 const qs = new URLSearchParams(location.search);
 // Dev/testing: ?wave=N starts a run at wave N (skips the tutorial).
+// ?song=dojo|neon|volcano: Rhythm Mode with that song, no picker. ?classic: Classic Mode (dev/tests).
+if (qs.has('classic')) game.forceMode(null);
+else if (qs.get('song')) game.forceMode(qs.get('song'));
 const startWave = parseInt(qs.get('wave') ?? '', 10);
 if (startWave > 0) game.devStart(startWave);
 if (location.hash === '#lab') game.openLab();
