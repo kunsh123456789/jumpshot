@@ -9,12 +9,6 @@ export interface Settings {
   leftHanded: boolean;
   debug: boolean;
   reduceFlashes: boolean;
-  /** Rhythm: input timing offset in ms (+ = your taps register late). */
-  rhythmOffset: number;
-  /** Last music choice: 'builtin:<id>', 'classic', 'mic' (songs must be re-picked). */
-  musicChoice: string;
-  /** Show the beat track HUD. */
-  beatHud: boolean;
 }
 
 const KEY = 'jumpshot.settings.v1';
@@ -29,9 +23,6 @@ export const settings: Settings = {
   leftHanded: false,
   debug: false,
   reduceFlashes: false,
-  rhythmOffset: 0,
-  musicChoice: 'builtin:neon',
-  beatHud: true,
 };
 
 export function loadSettings(): void {
@@ -45,8 +36,8 @@ export function saveSettings(): void {
 }
 
 const SAVE_KEY = 'jumpshot.save.v1';
-export interface SaveData { highScore: number; tutorialDone: boolean; bestCombo: number; bestWave: number; padHintSeen: boolean; bestStreak: number }
-export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false, bestStreak: 0 };
+export interface SaveData { highScore: number; tutorialDone: boolean; bestCombo: number; bestWave: number; padHintSeen: boolean }
+export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false };
 export function loadSave(): void {
   try {
     const raw = localStorage.getItem(SAVE_KEY);

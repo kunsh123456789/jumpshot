@@ -4,8 +4,6 @@ A 2D stickman combo-fighting game for the browser. You **flick on the bottom hal
 
 You can position yourself by dragging slowly in the bottom half of the screen. Everything is procedural: a skeletal stickman rig with keyframed poses and 2-bone IK, canvas effects, and WebAudio-synthesized sound and music. The game uses no image or audio files.
 
-**It's also a rhythm game.** Fight to a built-in track, to your own song (the game detects its tempo and beats), or to music playing from any app on a speaker (Listen mode, via the microphone). Swipes that land on the beat hit harder and build an on-beat streak, and enemies strike on the beat. See [Music and rhythm](#music-and-rhythm).
-
 ## Run it
 
 ```bash
@@ -74,33 +72,7 @@ The **bottom half of the screen** is the touch area. It is transparent, so you c
 
 **Dev URL flags**
 - `?wave=N` starts a run at wave N.
-- `?music=classic|dojo|neon|volcano` picks the music and skips the picker (used by the tests).
 - `?manual` drives the loop from `window.__advance(ms)`, for deterministic refresh-rate tests.
-
-## Music and rhythm
-
-After the title screen (or the tutorial) you choose what the fight syncs to. You can change it any time from the pause menu (**♪ MUSIC**).
-
-| Choice | What it does |
-|---|---|
-| **Dojo Pulse / Neon Rush / Volcano Breaker** | Built-in synthesized tracks at 100, 124 and 148 BPM. The game is the band, so sync is exact |
-| **Your song** | Pick an MP3, M4A, WAV, OGG or FLAC from your device. It is decoded and analyzed in the browser (about 1–3 s for a 4-minute song), then plays on a loop, synced |
-| **Listen mode** (experimental) | Play music from *any* app (Spotify, Apple Music, YouTube…) out loud. The game listens through the microphone and locks onto the beat in about 5–8 s. The beat track says LISTENING… until it locks |
-| **Classic** | The original game: background music, no beat judging, slow-motion on |
-
-**Why not pick a song straight from Spotify or Apple Music?** Those apps don't let other apps or websites read their audio. It's DRM-protected, and Spotify's track-analysis API is closed to new apps. A song has to be a file on your device, or you play it out loud and use Listen mode.
-
-**Rules in rhythm mode**
-- Every flick and tap is judged against the nearest beat. **PERFECT** is within ±50 ms, **GREAT** within ±85 ms, **GOOD** within ±115 ms, or on the half-beat (8th note) within ±55 ms. Anything else is **OFF**.
-- The move started by that input deals ×1.45, ×1.2, ×1.0 or ×0.7 damage for PERFECT, GREAT, GOOD or OFF. On-beat hits also give bonus style and super meter.
-- Every non-OFF input extends your **ON BEAT streak**, and an OFF breaks it. At 8, 16 and 32 the streak multiplies score by ×1.25, ×1.5 and ×2, and style gain by up to ×1.5.
-- Enemy attacks are timed so the strike lands on a beat. A tap on the beat parries it, and an on-beat parry (GREAT or better) earns an extra bonus.
-- Slow-motion is turned off so the fight never drifts from the music. Hit-stop still happens.
-- The beat track under the score shows beats sliding into the ring as you hear them, and the last few timing errors as ticks (early ← | → late). Idle fighters bob on the beat.
-
-**Timing calibration.** Every device adds some delay: Bluetooth headphones, touch screens. Open **Settings → Calibrate timing** (or **Calibrate** on the music screen). Flick, tap or press Space on 12 metronome clicks. The game measures your average offset and applies it to judging. You can also nudge the offset by hand in Settings.
-
-**How beat detection works.** For songs: an STFT spectral-flux onset envelope feeds an autocorrelation tempo estimate (with a prior around 120 BPM). A dynamic-programming beat tracker then picks the beat positions. If they fit a straight line, they're snapped to a perfect grid. Tempos outside 72–168 BPM are folded by half or double. Listen mode runs the same idea live on the last 8 s of microphone audio, four times a second, with a phase-locked loop smoothing the beat grid. Details are in DECISIONS.md.
 
 ## Animation Lab
 
@@ -124,18 +96,14 @@ src/
   main.ts          bootstrap + fixed 60 Hz timestep loop with interpolated rendering
   game.ts          game state machine (title, tutorial, waves, upgrades, game over), camera framing
   core/            math, seeded RNG, object pools, event bus, camera, slow-mo, audio synth, layout, settings, keyboard
-  sim/rhythm.ts    on-beat streak, grades and the beat oracle the enemy AI times strikes with
   sim/             fighter entity, player controller (buffer/targeting/magnetism/cancels), combat resolver,
                    enemy physics + bowling, token AI, combo/style/super tracker, waves, projectiles/hazards/pickups
-  data/            tuning.ts, moves.ts, enemies.ts, waves.ts, upgrades.ts, rhythm.ts: every tunable lives here
+  data/            tuning.ts, moves.ts, enemies.ts, waves.ts, upgrades.ts: every tunable lives here
   data/anims/      authored key-pose animations (locomotion, player ground/air, reactions, enemies)
   render/          rig (FK + 2-bone IK, per-kind proportions), animPlayer (key evaluation, easing, staggered leads),
                    animator (pose-to-pose playback, interruption crossfades, smears), poser (gameplay -> animation time),
                    stickman renderer, particles/afterimages/floating text, backgrounds, HUD, FX director
-  music/           built-in beat-gridded tracks, offline beat detection (analyze.ts), live mic beat tracking (live.ts),
-                   MusicManager: clock mapping, beat queries and judging (music.ts)
-  ui/              pad (drag-to-move + flick recognizer + trail), menus (DOM, incl. music picker + calibration), tutorial,
-                   debug overlay, pop detector, Animation Lab
+  ui/              pad (drag-to-move + flick recognizer + trail), menus (DOM), tutorial, debug overlay, pop detector, Animation Lab
 ```
 
 See **TUNING.md** for every tunable value and **DECISIONS.md** for the judgment calls.

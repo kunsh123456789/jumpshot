@@ -13,8 +13,6 @@ export interface HitEvent {
   crit: boolean;
   move: MoveDef | null;
   combo: number;
-  /** Rhythm grade of the move that landed this hit (-1 = none). */
-  beat?: number;
   kind: 'normal' | 'launch' | 'spike' | 'finisher' | 'bowl' | 'shock' | 'reflect' | 'armor' | 'enemy';
   shake: number;
   hitstop: number;
@@ -51,6 +49,4 @@ export interface SimEvents {
   spawn: { enemy: Fighter };
   chain: { x1: number; y1: number; x2: number; y2: number };
   text: { text: string; x: number; y: number; color: string; size: number };
-  /** A judged input (rhythm mode). broke = length of the streak an OFF just broke. */
-  beat: { grade: number; streak: number; broke: number; x: number; y: number; tap: boolean };
 }

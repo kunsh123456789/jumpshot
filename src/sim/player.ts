@@ -54,10 +54,6 @@ export class PlayerController {
       }
       b.ev = ev; b.age = 0; b.heavy = ev.heavy; b.used = false;
       this.lastCommitFrame = w.frame;
-      if (ev.beat >= 0) {
-        const broke = w.rhythm.note(ev.beat);
-        w.events.emit('beat', { grade: ev.beat, streak: w.rhythm.streak, broke, x: p.x, y: p.y - 150 * p.scale, tap: ev.kind === 'tap' });
-      }
     }
   }
 
@@ -140,16 +136,12 @@ export class PlayerController {
     if (b.ev.kind === 'tap') {
       if (!this.canAct(p, null, true)) return false;
       this.startDodge(w);
-      p.beatGrade = b.ev.beat;
-      p.beatBonus = false;
       return true;
     }
     const plan = this.resolve(w, b.ev.dir, b.heavy);
     if (!plan) return false;
     if (!this.canAct(p, plan.move.tags, false)) return false;
     this.startMove(w, plan.move, plan.target, b.ev.dir, plan.crossUp, b.ev.segId);
-    p.beatGrade = b.ev.beat;
-    p.beatBonus = b.ev.beat >= 1;
     return true;
   }
 

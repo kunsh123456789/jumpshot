@@ -14,14 +14,7 @@ import { RIGS } from './rig';
  * move's first active frame, and hit-stop (a frozen fighter) holds it.
  * Pure presentation: reads sim state, never writes it.
  */
-/** Rhythm mode: idle loops (two bobs per loop) are phase-locked so each bob lands on a beat. */
-function beatIdle(a: Animator, beat: { beatPhase: number; beatCount: number } | null): void {
-  if (!beat || !a.cur || !a.cur.loop) return;
-  const L = a.cur.len;
-  a.clock = a.t = (L / 4 + ((beat.beatCount & 1) + beat.beatPhase) * (L / 2)) % L;
-}
-
-export function poseFighter(f: Fighter, _time: number, beat: { beatPhase: number; beatCount: number } | null = null): void {
+export function poseFighter(f: Fighter, _time: number): void {
   const a = f.anim;
   if (a.rig === RIGS.player && f.kind !== 'player') a.rig = RIGS[f.kind] ?? RIGS.grunt;
   a.intentSnap = f.impact > 0;
@@ -119,12 +112,12 @@ export function poseFighter(f: Fighter, _time: number, beat: { beatPhase: number
     }
     case 'land': a.run(ANIMS.land, rate, ANIM.fadeLand); return;
     case 'taunt': a.run(getAnim(kind, 'taunt'), rate, 4); return;
-    case 'walk': locomotion(f, a, rate, true, beat); return;
+    case 'walk': locomotion(f, a, rate, true); return;
     case 'idle': default: {
       if (newCue && f.cue === 'parry') { a.run(ANIMS.parry, rate, 1, true); return; }
       // one-shots that finish even though the sim is already idle
       if (a.playing('parry') || a.playing('land') || a.playing('runStop')) { a.run(a.cur!, rate); return; }
-      locomotion(f, a, rate, false, beat);
+      locomotion(f, a, rate, false);
     }
   }
 }
@@ -145,7 +138,7 @@ function tumbleSpin(f: Fighter, a: Animator): void {
 }
 
 /** Idle / run with authored start, stop (skid) and turn animations. */
-function locomotion(f: Fighter, a: Animator, rate: number, moving: boolean, beat: { beatPhase: number; beatCount: number } | null): void {
+function locomotion(f: Fighter, a: Animator, rate: number, moving: boolean): void {
   const kind = f.kind;
   const speed = Math.abs(f.vx);
   if (f.team === 'enemy') {
@@ -155,7 +148,6 @@ function locomotion(f: Fighter, a: Animator, rate: number, moving: boolean, beat
       a.run(walk, rate * clamp(speed / ref, 0.5, 1.6), 5);
     } else {
       a.run(getAnim(kind, 'idle'), rate, 6);
-      if (rate > 0) beatIdle(a, beat);
     }
     a.lastSpeed = speed;
     return;
@@ -180,7 +172,7 @@ function locomotion(f: Fighter, a: Animator, rate: number, moving: boolean, beat
   } else {
     a.loco = 'none';
     if (f.stateFrame > ANIM.tauntIdleFrames && f.stateFrame < ANIM.tauntIdleFrames + ANIMS.taunt.len) a.run(ANIMS.taunt, rate, 6);
-    else { a.run(ANIMS.idle, rate, 5); if (rate > 0) beatIdle(a, beat); }
+    else a.run(ANIMS.idle, rate, 5);
   }
   a.lastSpeed = speed;
   // Head follows the target a little in idle.

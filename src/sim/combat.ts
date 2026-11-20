@@ -5,7 +5,6 @@ import { ANIM, COMBO, JUICE, PHYS, PLAYER, SCORE, SUPER } from '../data/tuning';
 import { settings } from '../core/settings';
 import { simRng } from '../core/rng';
 import type { EnemyAttack } from '../data/enemies';
-import { G_GREAT, RHYTHM } from '../data/rhythm';
 
 function hitstopFrames(base: number): number {
   return Math.max(0, Math.min(JUICE.hitstopMaxFrames, Math.round(base * settings.hitstop)));
@@ -62,14 +61,7 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   let dmg = m.damage * combo.scale() * combo.repeatMult(m.family);
   dmg *= heavy ? s.heavyDamage : m.tags.includes('light') ? s.lightDamage : 1;
   if (crit) dmg *= PLAYER.critMult;
-  dmg *= w.rhythm.damageMult(p.beatGrade);
   dmg = Math.max(1, dmg);
-  // On-beat bonus (once per move): style + super.
-  if (p.beatBonus && w.rhythm.active) {
-    p.beatBonus = false;
-    combo.addStyle(RHYTHM.styleBonus[p.beatGrade]);
-    combo.superMeter = Math.min(SUPER.max, combo.superMeter + RHYTHM.superBonus[p.beatGrade] * s.superGain);
-  }
 
   // ---- Poise / armor ----
   if (v.poise > 0 && !v.inHitState) {
@@ -219,7 +211,7 @@ function emitHit(w: World, p: Fighter, v: Fighter, m: MoveDef | null, dmg: numbe
     attacker: p, victim: v,
     x: (hx + v.cx) / 2, y: (hy + v.cy) / 2,
     dirX, dirY, weight: weight * (crit ? 1.25 : 1), damage: dmg, crit, move: m,
-    combo: w.combo.hits, kind, beat: p === w.player && w.rhythm.active ? p.beatGrade : -1,
+    combo: w.combo.hits, kind,
     shake: m ? m.shake : 4, hitstop: v.hitstop, zoom: m ? m.zoom : 0,
   });
 }
@@ -398,11 +390,6 @@ export function parry(w: World, e: Fighter | null, projectile: boolean): void {
     p.facing = Math.sign(e.x - p.x) || p.facing;
   }
   w.combo.superMeter = Math.min(SUPER.max, w.combo.superMeter);
-  if (w.rhythm.active && p.beatGrade >= G_GREAT) {
-    w.combo.addStyle(RHYTHM.rhythmParryStyle);
-    w.combo.score += RHYTHM.rhythmParryScore;
-    w.events.emit('text', { text: 'ON-BEAT PARRY', x: p.x, y: p.y - 190 * p.scale, color: '#ffe14a', size: 26 });
-  }
   w.events.emit('parry', { x: e ? (e.x + p.x) / 2 : p.x + p.facing * 30, y: p.cy, projectile });
 }
 

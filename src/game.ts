@@ -1,7 +1,7 @@
 import { layout } from './core/layout';
 import { Camera } from './core/camera';
 import { TimeControl } from './core/time';
-import { save, saveSettings, settings, writeSave } from './core/settings';
+import { save, settings, writeSave } from './core/settings';
 import { audio } from './core/audio';
 import { World } from './sim/world';
 import { Renderer } from './render/renderer';
@@ -21,14 +21,8 @@ import { CAMERA, WAVES_T, WORLD, SCORE } from './data/tuning';
 import { UPGRADES, type UpgradeDef } from './data/upgrades';
 import { fxRng } from './core/rng';
 import { clamp } from './core/math';
-import { music } from './music/music';
-import { BeatHud } from './render/beatHud';
-import type { CalibView } from './ui/menus';
-import { G_NONE, TRACKS } from './data/rhythm';
 
-const CALIB_NEED = 12;
-
-type GState = 'title' | 'select' | 'tutorial' | 'countdown' | 'playing' | 'clear' | 'upgrade' | 'gameover';
+type GState = 'title' | 'tutorial' | 'countdown' | 'playing' | 'clear' | 'upgrade' | 'gameover';
 
 /** Top-level game: owns world, renderer, input, UI and the state machine. */
 export class Game {
@@ -45,10 +39,6 @@ export class Game {
   readonly tutorial: Tutorial;
   readonly pops = new PopDetector();
   readonly lab = new AnimLab();
-  readonly beatHud = new BeatHud();
-  /** Perf-time (ms) the current sim step advances to; set by the main loop. */
-  simNow = 0;
-  private calib: { view: CalibView; deltas: number[]; done: boolean; prevDemo: boolean; onDone: () => void } | null = null;
   state: GState = 'title';
   paused = false;
   /** Debug time controls: [ toggles 0.1x, ] freezes and steps one frame, \ resumes. */
@@ -94,9 +84,6 @@ export class Game {
     document.addEventListener('visibilitychange', () => { if (document.hidden && (this.state === 'playing' || this.state === 'tutorial') && !this.paused) this.togglePause(); });
     this.world.events.on('waveClear', () => this.onWaveClear());
     this.publishPadTop();
-    const mc = settings.musicChoice;
-    if (mc === 'classic') music.selectClassic();
-    else { const t = TRACKS.find((x) => 'builtin:' + x.id === mc); if (t) music.selectBuiltin(t); }
     this.toTitle();
   }
 
@@ -121,12 +108,10 @@ export class Game {
     this.pad.hint = -1;
     this.menus.pauseBtn.style.display = 'none';
     this.hud.visible = false;
-    this.menus.showTitle(save.highScore, () => this.openSettings(null));
+    this.menus.showTitle(save.highScore, () => this.menus.showSettings(() => {}, () => this.startTutorial()));
     this.cam.targetX = this.world.player.x;
     this.cam.snap();
-    music.shutdown();
-    this.time.locked = false;
-    this.beatHud.visible = false;
+    audio.stopMusic();
   }
 
   private startFromTitle(): void {
@@ -135,65 +120,7 @@ export class Game {
     this.menus.close('title');
     this.menus.close('settings');
     if (!save.tutorialDone) this.startTutorial();
-    else this.chooseMusic(() => this.startRun(), () => this.toTitle());
-  }
-
-  /** Settings panel (title or pause) with the calibration entry point. */
-  private openSettings(after: (() => void) | null): void {
-    this.menus.showSettings(() => after?.(), after ? null : () => this.startTutorial(), () => this.startCalibration(() => this.openSettings(after)));
-  }
-
-  private musicKey(): string {
-    return music.mode === 'builtin' ? 'builtin:' + music.track.id : music.mode;
-  }
-
-  /** Music select; `then` runs once something playable was chosen. */
-  /** Dev: preselect music and skip the picker. */
-  forceMusic(id: string): void {
-    if (id === 'classic') music.selectClassic();
-    else { const t = TRACKS.find((x) => x.id === id); if (t) music.selectBuiltin(t); }
-    this.skipPicker = true;
-  }
-  private skipPicker = false;
-
-  chooseMusic(then: () => void, back: (() => void) | null): void {
-    if (this.skipPicker) { then(); return; }
-    if (this.state === 'title') this.setState('select');
-    this.pad.demo = false;
-    const close = () => this.menus.close('music');
-    this.menus.showMusic({
-      current: this.musicKey(),
-      songName: music.song?.name ?? null,
-      offsetMs: settings.rhythmOffset,
-      onTrack: (t) => { music.selectBuiltin(t); settings.musicChoice = 'builtin:' + t.id; saveSettings(); close(); then(); },
-      onClassic: () => { music.selectClassic(); settings.musicChoice = 'classic'; saveSettings(); close(); then(); },
-      onLastSong: music.song ? () => { music.selectSong(music.song!); close(); then(); } : null,
-      onFile: (f, st) => {
-        st.busy(true);
-        st.set('Loading…');
-        music.loadFile(f, (fr, label) => { st.progress(fr); st.set(`Finding the beat… ${label} ${Math.round(fr * 100)}%`); })
-          .then((song) => {
-            st.progress(1);
-            st.set(`✓ ${song.name} — ${Math.round(song.map.bpm)} BPM${song.map.grid ? '' : ' (live tempo)'}`);
-            music.selectSong(song);
-            window.setTimeout(() => { if (this.menus.isOpen('music')) { close(); then(); } }, 700);
-          })
-          .catch((e: unknown) => { st.progress(-1); st.set(e instanceof Error ? e.message : String(e), true); })
-          .finally(() => st.busy(false));
-      },
-      onMic: (st) => {
-        st.busy(true);
-        st.set('Asking for the microphone…');
-        music.selectMic().then((ok) => {
-          st.busy(false);
-          if (!ok) { st.set(music.live.error || 'Microphone unavailable', true); return; }
-          settings.musicChoice = 'mic'; saveSettings();
-          close(); then();
-        });
-      },
-      onCalibrate: () => { close(); this.startCalibration(() => this.chooseMusic(then, back)); },
-      onBack: back ? () => { close(); back(); } : null,
-    });
+    else this.startRun();
   }
 
   startTutorial(): void {
@@ -213,8 +140,8 @@ export class Game {
   private endTutorial(): void {
     save.tutorialDone = true;
     writeSave();
-    this.tutorial.active = false;
-    this.chooseMusic(() => { this.startRun(); this.menus.banner('READY?', 'the real fight starts now', 1400); }, null);
+    this.startRun();
+    this.menus.banner('READY?', 'the real fight starts now', 1400);
   }
 
   /** Dev helper: jump straight into a run at a given wave. */
@@ -235,10 +162,7 @@ export class Game {
     this.hud.visible = true;
     this.menus.pauseBtn.style.display = '';
     this.effectsReset();
-    music.start();
-    this.time.locked = music.rhythmMode;
-    this.beatHud.visible = music.rhythmMode;
-    this.beatHud.reset();
+    audio.startMusic();
     this.pops.reset();
     if (!save.padHintSeen) { this.pad.labelAlpha = 1; this.labelTime = 7; }
     this.beginCountdown();
@@ -258,8 +182,7 @@ export class Game {
     if (arena !== this.renderer.bg.current) this.renderer.bg.set(arena);
     this.setState('countdown');
     const boss = wave % 10 === 0, elite = !boss && wave % 5 === 0;
-    const tune = wave === 1 && music.rhythmMode ? (music.mode === 'mic' ? '♪ play music out loud · hit on the beat' : `♪ ${music.label()} · hit on the beat`) : '';
-    this.menus.banner(`WAVE ${wave}`, boss ? '⚠ BOSS INCOMING ⚠' : elite ? 'ELITE INCOMING' : tune, 1400);
+    this.menus.banner(`WAVE ${wave}`, boss ? '⚠ BOSS INCOMING ⚠' : elite ? 'ELITE INCOMING' : '', 1400);
     this.hud.waveLabel = `WAVE ${wave}`;
     audio.ui('wave');
   }
@@ -314,8 +237,7 @@ export class Game {
     this.setState('gameover');
     this.overTimer = 0;
     audio.ui('gameover');
-    music.stop();
-    this.time.locked = false;
+    audio.stopMusic();
     this.time.slowmo(0.3, 1.0);
   }
 
@@ -332,98 +254,26 @@ export class Game {
     this.menus.showResults({
       score, high: save.highScore, newHigh, wave: this.nextWave, bestHits: c.bestHits, bestDamage: c.bestDamage,
       bestRank: c.bestRank, kos: c.totalKOs, parries: c.parries, finishers: c.finishers, maxRank: c.maxRankRun,
-      rhythm: music.rhythmMode && this.world.rhythm.total() > 0 ? {
-        label: music.label(), counts: this.world.rhythm.counts, bestStreak: this.world.rhythm.bestStreak, accuracy: this.world.rhythm.accuracy(),
-      } : null,
     }, () => this.startRun(), () => this.toTitle());
-    save.bestStreak = Math.max(save.bestStreak, this.world.rhythm.bestStreak);
-    writeSave();
   }
 
   togglePause(): void {
-    if (this.state === 'title' || this.state === 'select' || this.state === 'gameover') return;
+    if (this.state === 'title' || this.state === 'gameover') return;
     if (this.menus.isOpen('upgrades')) return;
-    if (this.calib) return;
     this.paused = !this.paused;
     if (this.paused) {
-      this.showPauseMenu();
-      music.pause();
+      this.menus.showPause(
+        () => this.togglePause(),
+        () => this.menus.showSettings(() => {}, null),
+        () => { this.paused = false; this.tutorial.active = false; this.startRun(); },
+        () => { this.paused = false; this.tutorial.active = false; this.toTitle(); },
+      );
+      audio.stopMusic();
     } else {
       this.menus.close('pause');
       this.menus.close('settings');
-      this.menus.close('music');
-      music.resume();
+      if (this.state !== 'tutorial') audio.startMusic();
     }
-  }
-
-  private showPauseMenu(): void {
-    const inRun = this.state !== 'tutorial';
-    this.menus.showPause(
-      () => this.togglePause(),
-      () => this.openSettings(() => {}),
-      () => { this.paused = false; this.tutorial.active = false; this.startRun(); },
-      () => { this.paused = false; this.tutorial.active = false; this.toTitle(); },
-      inRun ? () => {
-        this.menus.close('pause');
-        this.chooseMusic(() => {
-          // New music mid-run: start it and resume the fight.
-          music.start();
-          this.time.locked = music.rhythmMode;
-          this.beatHud.visible = music.rhythmMode;
-          this.paused = false;
-          this.menus.close('pause');
-        }, () => this.showPauseMenu());
-      } : null,
-      music.label(),
-    );
-  }
-
-  // ------------------------------------------------------------ calibration
-  startCalibration(onDone: () => void): void {
-    this.menus.close('settings');
-    const view = this.menus.showCalibration(() => this.endCalibration());
-    this.calib = { view, deltas: [], done: false, prevDemo: this.pad.demo, onDone };
-    this.pad.demo = false;
-    music.pause();
-    music.startCalibration();
-    view.onRetry = () => {
-      music.stopCalibration(); music.startCalibration();
-      if (this.calib) { this.calib.deltas = []; this.calib.done = false; }
-      view.reset();
-    };
-  }
-
-  private endCalibration(): void {
-    const c = this.calib;
-    if (!c) return;
-    music.stopCalibration();
-    this.menus.close('calib');
-    this.pad.demo = c.prevDemo;
-    this.calib = null;
-    c.onDone();
-  }
-
-  /** Route pad input to the calibration (instead of the game). */
-  private calibInput(): void {
-    const c = this.calib!;
-    const ev = this.pad.events;
-    for (const e of ev) {
-      if (c.done || (e.kind !== 'swipe' && e.kind !== 'tap')) continue;
-      const d = music.calibDelta(e.time);
-      if (d.index < 4 || Math.abs(d.delta) > 250) continue; // count-in / wild
-      c.deltas.push(d.delta);
-      const med = median(c.deltas);
-      c.view.value(med, c.deltas.length, CALIB_NEED);
-      if (c.deltas.length >= CALIB_NEED) {
-        c.done = true;
-        const ms = clamp(Math.round(med / 5) * 5, -200, 200);
-        c.view.done(ms, (v) => { settings.rhythmOffset = v; saveSettings(); this.endCalibration(); });
-      }
-    }
-    ev.length = 0;
-    const now = performance.now();
-    const k = music.calibDelta(now);
-    if (k.index >= 0) c.view.beat(k.delta >= 0 ? k.index : k.index - 1);
   }
 
   // ------------------------------------------------------------ loop
@@ -431,7 +281,6 @@ export class Game {
   step(): void {
     this.inputs.length = 0;
     this.keyboard.poll(performance.now());
-    if (this.calib) { this.calibInput(); return; }
     const ev = this.pad.events;
     if (this.state === 'title') {
       for (const e of ev) {
@@ -439,30 +288,7 @@ export class Game {
       }
     }
     const acceptInput = this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'clear';
-    // Rhythm: the sim's clock and beat oracle, then judge this tick's inputs.
-    const r = this.world.rhythm;
-    const inFight = this.state === 'playing' || this.state === 'countdown' || this.state === 'clear';
-    r.active = inFight && music.rhythmMode && music.active;
-    r.now = this.simNow || performance.now();
-    r.beatMs = music.beatMs;
-    r.beatAfter = this.beatAfter;
-    if (r.active) {
-      const pb = music.prevBeat(r.now);
-      r.beatPhase = isFinite(pb) ? clamp((r.now - pb) / r.beatMs, 0, 0.999) : -1;
-      r.beatCount = isFinite(pb) ? music.beatIndex(pb + 1) : 0;
-    } else r.beatPhase = -1;
-    if (acceptInput) {
-      for (let i = 0; i < ev.length; i++) {
-        const e = ev[i];
-        e.beat = G_NONE;
-        if (r.active && (e.kind === 'swipe' || e.kind === 'tap')) {
-          const j = music.judge(e.time);
-          e.beat = j.grade;
-          this.beatHud.judged(j.grade, j.delta, performance.now());
-        }
-        this.inputs.push(e);
-      }
-    }
+    if (acceptInput) for (let i = 0; i < ev.length; i++) this.inputs.push(ev[i]);
     ev.length = 0;
     this.world.camLeft = this.cam.viewLeft();
     this.world.camRight = this.cam.viewRight();
@@ -473,11 +299,7 @@ export class Game {
     if ((this.state === 'playing' || this.state === 'countdown' || this.state === 'clear') && this.world.gameOver) this.toGameOver();
   }
 
-  private readonly beatAfter = (t: number): number => music.nextBeat(t);
-
   render(alpha: number, realDt: number, simSteps = 0, frameDt = realDt): void {
-    if (this.calib) this.calibInput();
-    music.update(performance.now());
     const dt = realDt * this.time.scale;
     this.lastAlpha = alpha;
     this.renderTime += dt;
@@ -493,13 +315,11 @@ export class Game {
     this.fx.update(realDt);
     this.updateCamera(alpha);
     this.cam.update(realDt);
+    audio.updateMusic();
     this.renderer.render(this.world, this.cam, alpha, this.renderTime, dt);
     const ctx = this.renderer.ctx;
     this.renderer.cssTransform();
     this.hud.draw(ctx, this.world, this.fx, realDt, this.renderTime);
-    const showBeat = this.hud.visible && this.state !== 'tutorial' && this.state !== 'gameover';
-    this.beatHud.visible = showBeat && music.rhythmMode;
-    this.pad.beatPulse = this.beatHud.draw(ctx, music, this.world, performance.now(), realDt) * (music.rhythmMode && showBeat ? 1 : 0);
     if (this.state !== 'gameover') this.pad.draw(ctx, performance.now(), realDt);
     if (this.debug.visible) {
       const p = this.world.player;
@@ -583,10 +403,4 @@ export class Game {
     }
     if (this.state === 'title') { this.cam.targetZoom = 1.25; this.cam.targetY = WORLD.groundY; }
   }
-}
-
-function median(a: number[]): number {
-  const s = [...a].sort((x, y) => x - y);
-  const n = s.length;
-  return n === 0 ? NaN : n % 2 ? s[(n - 1) >> 1] : (s[n / 2 - 1] + s[n / 2]) / 2;
 }

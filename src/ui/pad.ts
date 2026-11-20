@@ -15,8 +15,6 @@ export interface SwipeEvent {
   segId: number;
   time: number;
   source: 'pad' | 'key';
-  /** Rhythm grade stamped by the Game (-1 = not judged). */
-  beat: number;
 }
 export type PadMode = 'idle' | 'moving' | 'attacking';
 
@@ -293,14 +291,14 @@ export class DrawPad {
   }
 
   private emit(kind: SwipeKind, dir: number, heavy: boolean, len: number, speed: number, t: number): void {
-    this.events.push({ kind, dir, heavy, len, speed, segId: this.curSegId, time: t, source: 'pad', beat: -1 });
+    this.events.push({ kind, dir, heavy, len, speed, segId: this.curSegId, time: t, source: 'pad' });
     this.lastDir = dir; this.lastLen = len; this.lastSpeed = speed; this.lastKind = kind;
   }
 
   /** Inject a keyboard-generated event. */
-  inject(kind: SwipeKind, dir: number, heavy: boolean, time = performance.now()): void {
+  inject(kind: SwipeKind, dir: number, heavy: boolean): void {
     const segId = ++this.segId;
-    this.events.push({ kind, dir, heavy, len: 0, speed: 0, segId, time, source: 'key', beat: -1 });
+    this.events.push({ kind, dir, heavy, len: 0, speed: 0, segId, time: performance.now(), source: 'key' });
     this.lastDir = dir; this.lastKind = kind; this.lastLen = 0; this.lastSpeed = 0;
     const p = layout.pad;
     this.flash(p.x + p.w / 2, p.y + p.h / 2, kind === 'tap' ? -1 : dir, kind === 'tap' ? 4 : heavy ? 2 : dir === 2 ? 3 : 1);
@@ -335,9 +333,6 @@ export class DrawPad {
   isTouching(): boolean { return this.pointerId !== -1; }
 
   // ---------------- Rendering (css px space) ----------------
-  /** Rhythm mode: 1 on a beat, decaying (set by the Game every frame). */
-  beatPulse = 0;
-
   draw(ctx: CanvasRenderingContext2D, now: number, dt: number): void {
     const p = layout.pad;
     this.pulse = Math.max(0, this.pulse - dt * 3.2);
@@ -351,11 +346,11 @@ export class DrawPad {
       g.addColorStop(1, 'rgba(160,220,255,0)');
       this.edgeGrad = g; this.edgeKey = key;
     }
-    ctx.globalAlpha = Math.min(2.5, 0.8 + this.pulse * 0.9 + this.beatPulse * 1.2);
+    ctx.globalAlpha = 0.8 + this.pulse * 0.9;
     ctx.fillStyle = this.edgeGrad;
     ctx.fillRect(p.x, p.y, p.w, edge);
     ctx.globalAlpha = 1;
-    ctx.fillStyle = `rgba(190,235,255,${0.14 + this.pulse * 0.3 + this.beatPulse * 0.35})`;
+    ctx.fillStyle = `rgba(190,235,255,${0.14 + this.pulse * 0.3})`;
     ctx.fillRect(p.x, p.y, p.w, 1);
 
     if (this.labelAlpha > 0.01) {
