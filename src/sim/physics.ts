@@ -167,7 +167,7 @@ export function bowling(w: World): void {
   const es = w.enemies;
   for (let i = 0; i < es.length; i++) {
     const a = es[i];
-    if (!(a.state === 'air' || a.state === 'ko' || a.state === 'hitstun')) { a.bowlCount = 0; continue; }
+    if (!(a.state === 'air' || a.state === 'ko' || a.state === 'hitstun' || a.state === 'pulled')) { a.bowlCount = 0; continue; }
     if (a.hitstop > 0) continue;
     const sp2 = a.vx * a.vx + a.vy * a.vy;
     if (sp2 < PHYS.bowlMinSpeed * PHYS.bowlMinSpeed) continue;

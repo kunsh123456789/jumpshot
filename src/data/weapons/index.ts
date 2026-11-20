@@ -4,12 +4,14 @@ import { SMEAR_BY_ANIM } from '../smears';
 import { fists } from './fists';
 import { staff } from './staff';
 import { laser } from './laser';
+import { throwGloves } from './throw';
+import { hook } from './hook';
 import { reactionAnims } from './reactions';
 
 /** Every weapon, in loadout order. All are unlocked from the start. */
-export const WEAPON_ORDER: WeaponId[] = ['fists', 'staff', 'laser'];
+export const WEAPON_ORDER: WeaponId[] = ['fists', 'hook', 'throw', 'staff', 'laser'];
 export const WEAPONS: Record<WeaponId, WeaponDef> = {} as Record<WeaponId, WeaponDef>;
-for (const w of [fists, staff, laser]) {
+for (const w of [fists, hook, throwGloves, staff, laser]) {
   WEAPONS[w.id] = w;
   registerAnims(w.anims, `weapon: ${w.name}`);
   Object.assign(SMEAR_BY_ANIM, w.smears);

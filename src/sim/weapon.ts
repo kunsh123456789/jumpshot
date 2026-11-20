@@ -358,8 +358,11 @@ export class WeaponSim {
         const e = 1 - (1 - k) * (1 - k);
         const tx = p.x + p.facing * WEAPON_T.pullStop * p.scale;
         const ty = Math.min(WORLD.groundY, p.grounded ? WORLD.groundY : p.y);
-        t.x = clamp(this.pullFromX + (tx - this.pullFromX) * e, WORLD.wallMargin, WORLD.arenaW - WORLD.wallMargin);
-        t.y = this.pullFromY + (ty - this.pullFromY) * e;
+        const nx = clamp(this.pullFromX + (tx - this.pullFromX) * e, WORLD.wallMargin, WORLD.arenaW - WORLD.wallMargin);
+        const ny = this.pullFromY + (ty - this.pullFromY) * e;
+        // Velocity of the reel (bowling: dragging a body through others knocks them over).
+        t.vx = (nx - t.x) * 60; t.vy = (ny - t.y) * 60;
+        t.x = nx; t.y = ny;
         this.anchorX = t.cx; this.anchorY = t.cy;
         if (k >= 1) {
           this.tetherMode = ''; this.tied = null; this.hookOut = 3;
