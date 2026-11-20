@@ -11,6 +11,7 @@ The player can also change these in-game settings: **Flick sensitivity** (divide
 | `data/enemies.ts` | Enemy stats, attacks (telegraph/active/recovery), boss phases, projectiles |
 | `data/waves.ts` | Authored waves 1–10, the budget generator, and HP scaling |
 | `data/upgrades.ts` | The 22 roguelite upgrades and the `Stats` they modify |
+| `data/rhythm.ts` | Rhythm mode: judgement windows, grade rewards, streak tiers, enemy beat-sync limits, built-in tracks |
 
 ## WORLD
 | Key | Purpose |
@@ -209,3 +210,29 @@ The proportions of each fighter kind are in `RIGS` in `render/rig.ts`. The easie
 ## waves.ts / upgrades.ts
 - **`WAVE_GEN`:** budget growth, enemy cap, and HP scaling after wave 10.
 - **Upgrades:** each has `maxStacks`, a pick `weight`, and an `apply(stats)` function. The `Stats` fields are documented inline in `upgrades.ts`.
+
+## RHYTHM (`data/rhythm.ts`)
+All times are in ms, measured between the moment a beat is **heard** (output latency compensated) and the moment the pad recognized the input (pointer-event timestamp). The player's calibration offset (`settings.rhythmOffset`, −200..+200) is subtracted from the input time first.
+
+| Key | Purpose |
+|---|---|
+| perfectMs, greatMs, goodMs | ± window to the nearest beat for PERFECT, GREAT and GOOD (50 / 85 / 115) |
+| halfBeatMs, halfBeatMaxFrac | Off-beat (8th-note) inputs within ±55 ms of the half-beat, capped at 12% of the beat length, also count as GOOD. This keeps fast juggles viable |
+| damageMult | Damage multiplier for the move an input started: [OFF, GOOD, GREAT, PERFECT] = [0.7, 1, 1.2, 1.45] |
+| superBonus, styleBonus | Extra super meter and style, paid once per move when it first connects |
+| streakTiers, streakScoreMult, streakStyleMult | Streak lengths 0/8/16/32 → score ×1/1.25/1.5/2 and style gain ×1/1.15/1.3/1.5 |
+| streakBreakMin | An OFF only shows "STREAK LOST" if the streak was at least this long |
+| rhythmParryStyle, rhythmParryScore | Bonus for a parry whose tap was GREAT or better |
+| enemyWindMinFrac, enemyWindMaxExtra | Enemy wind-ups are stretched so the strike lands on a beat: never shorter than 75% of the authored wind-up, never more than 40 frames longer (otherwise the wind-up is left unsynced) |
+| minBpm, maxBpm | Detected tempos are folded into 72–168 BPM by halving or doubling |
+| hudLookaheadMs | How far ahead the beat track shows beats |
+| calibrateBpm, offsetMin, offsetMax | Calibration metronome tempo and offset limits. A calibration needs 12 inputs after a 4-click count-in |
+| TRACKS | Built-in tracks: id, name, BPM and style (dojo / neon / volcano patterns in `music/tracks.ts`) |
+
+Beat-detection constants live next to the code:
+
+| Where | Constants |
+|---|---|
+| `music/analyze.ts` | 22.05 kHz mono, 1024-pt FFT, 256 hop (11.6 ms); 0.4 s detrend; tempo prior centered at 120 BPM with σ = 0.9 octaves; DP tightness 100; grid snap when the robust line fit has RMS < 15 ms and ≥ 90% inliers; BIAS_SEC alignment +8 ms |
+| `music/live.ts` | 1024-pt analyser, flux ≤ 6 kHz; 8 s window at 100 Hz bins, estimated every 250 ms; tempo PLL gain 0.15, phase gain 0.35; a new tempo must repeat 4× (≈1 s) before the grid jumps; locks after 1.5 s stable at confidence > 0.08 |
+

@@ -9,14 +9,12 @@ class Audio {
   ctx: AudioContext | null = null;
   private master!: GainNode;
   private sfx!: GainNode;
-  private music!: GainNode;
+  /** Music bus (built-in tracks and loaded songs play through it). */
+  music!: GainNode;
   private comp!: DynamicsCompressorNode;
   private noise!: AudioBuffer;
   private lastPlay: Record<string, number> = {};
-  private musicTimer = 0;
-  private musicStep = 0;
-  private musicNext = 0;
-  musicOn = false;
+  /** 0..1 fight intensity; built-in tracks add layers as it rises. */
   intensity = 0;
 
   /** Must be called from a user gesture. */
@@ -45,10 +43,13 @@ class Audio {
     if (this.ctx.state === 'suspended') void this.ctx.resume();
   }
 
+  /** Loaded songs are mastered much louder than the synth; trim them down. */
+  musicTrim = 1;
+
   applyVolume(): void {
     if (!this.ctx) return;
     this.master.gain.value = settings.masterVolume;
-    this.music.gain.value = settings.musicVolume * 0.5;
+    this.music.gain.value = settings.musicVolume * 0.5 * this.musicTrim;
     this.sfx.gain.value = 0.9;
   }
 
@@ -60,7 +61,7 @@ class Audio {
     return true;
   }
 
-  private noiseBurst(t: number, dur: number, gain: number, type: BiquadFilterType, freq: number, q = 1, freqEnd = 0, dest?: AudioNode): void {
+  noiseBurst(t: number, dur: number, gain: number, type: BiquadFilterType, freq: number, q = 1, freqEnd = 0, dest?: AudioNode): void {
     const ctx = this.ctx!;
     const src = ctx.createBufferSource();
     src.buffer = this.noise;
@@ -76,7 +77,7 @@ class Audio {
     src.start(t, fxRng.next() * 0.5); src.stop(t + dur + 0.02);
   }
 
-  private tone(t: number, type: OscillatorType, f0: number, f1: number, dur: number, gain: number, dest?: AudioNode, attack = 0.003): void {
+  tone(t: number, type: OscillatorType, f0: number, f1: number, dur: number, gain: number, dest?: AudioNode, attack = 0.003): void {
     const ctx = this.ctx!;
     const o = ctx.createOscillator();
     o.type = type;
@@ -229,56 +230,11 @@ class Audio {
     }
   }
 
-  // ---------------- Procedural music: a driving minor groove ----------------
-  startMusic(): void { this.musicOn = true; if (this.ctx) this.musicNext = this.ctx.currentTime + 0.05; }
-  stopMusic(): void { this.musicOn = false; }
-
-  /** Call every frame; schedules ahead with a lookahead window. */
-  updateMusic(): void {
-    if (!this.ctx || !this.musicOn || this.ctx.state !== 'running') return;
-    const bpm = 124;
-    const step = 60 / bpm / 4;
-    const ctx = this.ctx;
-    if (this.musicNext < ctx.currentTime - 0.2) this.musicNext = ctx.currentTime + 0.05;
-    while (this.musicNext < ctx.currentTime + 0.12) {
-      this.scheduleStep(this.musicStep, this.musicNext);
-      this.musicNext += step;
-      this.musicStep = (this.musicStep + 1) % 64;
-    }
-    this.musicTimer++;
-  }
-
-  private scheduleStep(s: number, t: number): void {
-    const m = this.music;
-    const bar = Math.floor(s / 16) % 4;
-    const st = s % 16;
-    const roots = [55, 55, 43.65, 49];
-    const root = roots[bar];
-    const hype = this.intensity;
-    // kick
-    if (st % 4 === 0) {
-      const o = this.ctx!.createOscillator(); const g = this.ctx!.createGain();
-      o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.12);
-      g.gain.setValueAtTime(0.7, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-      o.connect(g); g.connect(m); o.start(t); o.stop(t + 0.2);
-    }
-    // snare/clap on 2 and 4
-    if (st === 4 || st === 12) this.noiseBurst(t, 0.14, 0.35, 'bandpass', 1800, 0.8, 900, m);
-    // hats
-    if (st % 2 === 1 || hype > 0.5) this.noiseBurst(t, 0.03, st % 2 === 1 ? 0.12 : 0.06, 'highpass', 8000, 0.7, 0, m);
-    // bass
-    const pat = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0];
-    if (pat[st]) {
-      const f = root * (st === 13 ? 1.5 : st === 11 ? 1.189 : 1);
-      this.tone(t, 'sawtooth', f, f, 0.16, 0.16, m);
-      this.tone(t, 'sine', f / 2, f / 2, 0.2, 0.25, m);
-    }
-    // arp when intense
-    if (hype > 0.3 && st % 2 === 0) {
-      const arp = [4, 3, 2, 1.5, 2, 3, 4, 6];
-      const f = root * arp[(st / 2) % 8] * 2;
-      this.tone(t, 'square', f, f, 0.07, 0.035 + hype * 0.03, m);
-    }
+  /** Metronome click on the music bus at context time t (calibration, count-ins). */
+  click(t: number, accent = false): void {
+    if (!this.ctx) return;
+    this.tone(t, 'square', accent ? 1760 : 1320, accent ? 1760 : 1320, 0.04, accent ? 0.22 : 0.15, this.music, 0.001);
+    this.noiseBurst(t, 0.02, 0.2, 'highpass', 6000, 0.7, 0, this.music);
   }
 }
 

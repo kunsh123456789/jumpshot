@@ -50,6 +50,10 @@ export class ComboTracker {
   private multiThisFrame = 0;
   private frame = 0;
 
+  /** Rhythm on-beat streak multipliers (set by the world each tick). */
+  rhythmStyle = 1;
+  rhythmScore = 1;
+
   constructor(private bus: EventBus<SimEvents>, private stats: Stats) {}
 
   setStats(s: Stats): void { this.stats = s; }
@@ -94,11 +98,11 @@ export class ComboTracker {
     this.lastFamily = family;
     this.lastHitFrame = this.frame;
     this.superMeter = Math.min(SUPER.max, this.superMeter + SUPER.perHitBase * SUPER.rankMult[this.rank] * this.stats.superGain);
-    this.score += Math.round(damage * SCORE.perDamage * STYLE.scoreMult[this.rank]);
+    this.score += Math.round(damage * SCORE.perDamage * STYLE.scoreMult[this.rank] * this.rhythmScore);
   }
 
   addStyle(v: number): void {
-    this.style = Math.min(STYLE.max, this.style + v * this.stats.styleGain);
+    this.style = Math.min(STYLE.max, this.style + v * this.stats.styleGain * this.rhythmStyle);
     this.updateRank();
   }
 

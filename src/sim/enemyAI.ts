@@ -5,6 +5,9 @@ import { BOSS, type EnemyAttack } from '../data/enemies';
 import { simRng } from '../core/rng';
 import { enemyStrike } from './combat';
 import { clamp } from '../core/math';
+import { RHYTHM } from '../data/rhythm';
+
+const FRAME_MS = 1000 / 60;
 
 /**
  * Enemy brains with a token system: only N enemies may attack at once; the
@@ -143,6 +146,18 @@ export class EnemyAI {
     let wind = atk.windup;
     if (e.kind === 'boss' && e.ai.phase >= 3) wind = Math.round(wind * BOSS.p3Speed);
     if (w.wave >= 8 && e.kind !== 'boss') wind = Math.max(14, wind - Math.min(6, w.wave - 7));
+    // Rhythm mode: stretch the wind-up so the strike's first active frame lands on a beat.
+    e.ai.beatTarget = 0;
+    const r = w.rhythm;
+    if (r.active) {
+      const minF = Math.round(wind * RHYTHM.enemyWindMinFrac);
+      const target = r.beatAfter(r.now + minF * FRAME_MS);
+      const frames = Math.round((target - r.now) / FRAME_MS);
+      if (isFinite(target) && frames >= minF && frames <= wind + RHYTHM.enemyWindMaxExtra) {
+        wind = Math.max(1, frames);
+        e.ai.beatTarget = target;
+      }
+    }
     e.setState('windup', wind);
     e.telegraph = wind;
     e.vx = 0;
@@ -154,7 +169,12 @@ export class EnemyAI {
     const atk = e.attack;
     if (!atk) { e.setState('idle'); return; }
     e.x += (e.facing * atk.stepIn) / 60;
-    if (e.telegraph > 0) e.telegraph--;
+    if (e.ai.beatTarget > 0 && _w.rhythm.active) {
+      // Re-derive the remaining wind-up from the clock (hit-stop freezes would otherwise drift it off the beat).
+      const left = Math.round((e.ai.beatTarget - _w.rhythm.now) / FRAME_MS);
+      e.timer = Math.max(1, left + 1);
+      e.telegraph = e.timer;
+    } else if (e.telegraph > 0) e.telegraph--;
     if (--e.timer <= 0) {
       e.setState('attack', atk.active);
       e.vx = e.facing * atk.lunge;

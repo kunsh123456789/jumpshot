@@ -13,6 +13,7 @@ import { PlayerController } from './player';
 import { bowling, enemyPhysics, separate } from './physics';
 import { BOSS, ENEMIES, PROJECTILE, type EnemyAttack, type EnemyKind } from '../data/enemies';
 import { simRng } from '../core/rng';
+import { RhythmState } from './rhythm';
 
 /** The simulation container. Advanced only in fixed 60 Hz steps. */
 export class World {
@@ -26,6 +27,7 @@ export class World {
   readonly waves = new WaveDirector();
   readonly ents = new Entities();
   readonly ctrl = new PlayerController();
+  readonly rhythm = new RhythmState();
   gameOver = false;
   /** Tutorial: whether the training dummy attacks. */
   dummyAttacks = false;
@@ -59,6 +61,7 @@ export class World {
     this.ai.reset();
     this.ents.clear();
     this.ctrl.reset();
+    this.rhythm.reset();
     this.gameOver = false;
     this.wave = 0;
     this.waves.wave = 0;
@@ -91,6 +94,8 @@ export class World {
     p.px = p.x; p.py = p.y;
     for (const e of this.enemies) { e.px = e.x; e.py = e.y; }
 
+    this.combo.rhythmStyle = this.rhythm.styleMult();
+    this.combo.rhythmScore = this.rhythm.scoreMult();
     this.ctrl.ingest(this, inputs);
     if (p.alive) this.ctrl.update(this);
     else this.deadPlayerPhysics();
@@ -156,12 +161,13 @@ export class World {
     }
     p.hasLook = !!look;
     if (look) { p.lookX = look.cx; p.lookY = look.cy - 30 * look.scale; }
-    poseFighter(p, t);
+    const beat = this.rhythm.active && this.rhythm.beatPhase >= 0 ? this.rhythm : null;
+    poseFighter(p, t, beat);
     p.anim.step(p.x, p.y, p.facing, p.scale, p.vx, p.vy, p.hitstop > 0, p.state === 'move');
     for (const e of this.enemies) {
       e.hasLook = p.alive && e.alive;
       e.lookX = p.cx; e.lookY = p.cy - 30;
-      poseFighter(e, t);
+      poseFighter(e, t, beat);
       e.anim.step(e.x, e.y, e.facing, e.scale, e.vx, e.vy, e.hitstop > 0, e.state === 'attack' || e.state === 'windup');
     }
   }

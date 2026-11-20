@@ -1,3 +1,4 @@
+import { music } from './music/music';
 import { Game } from './game';
 import { layout } from './core/layout';
 import { audio } from './core/audio';
@@ -12,9 +13,13 @@ const game = new Game(canvas);
 const W = window as unknown as Record<string, unknown>;
 W.__jumpshot = game;
 W.__layout = layout;
+W.__music = music;
 
 const qs = new URLSearchParams(location.search);
 // Dev/testing: ?wave=N starts a run at wave N (skips the tutorial).
+// ?music=classic|dojo|neon|volcano picks the music and skips the picker (dev/tests).
+const qMusic = qs.get('music');
+if (qMusic) game.forceMusic(qMusic);
 const startWave = parseInt(qs.get('wave') ?? '', 10);
 if (startWave > 0) game.devStart(startWave);
 if (location.hash === '#lab') game.openLab();
@@ -36,6 +41,7 @@ document.addEventListener('dblclick', stop);
  * clamped (tab switches). Slow-mo scales how fast the accumulator fills.
  */
 const MAX_STEPS = 6;
+const manual = qs.has('manual');
 let acc = 0;
 let last = -1;
 
@@ -54,7 +60,10 @@ function frame(now: number): void {
       acc = 0;
     } else {
       acc += real * dbg * game.time.scale;
+      const pnow = manual ? performance.now() : now;
       while (acc >= SIM_DT && steps < MAX_STEPS) {
+        // Perf-time this step advances the sim to (rhythm sync).
+        game.simNow = pnow - ((acc - SIM_DT) * 1000) / Math.max(1e-6, dbg * game.time.scale);
         game.step();
         acc -= SIM_DT;
         steps++;

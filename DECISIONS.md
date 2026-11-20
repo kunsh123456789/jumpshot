@@ -98,3 +98,38 @@ These are the judgment calls made where the brief was silent or where two requir
 - **Facing.** The eased facing turn from revision 1 stays at 4 frames (3 when attacking). Without it, every magnetism dash would start with a full-body mirror pop.
 - **Backgrounds.** Parallax layers draw at 50% opacity and ambient particles are dimmer, for a calmer, higher-contrast backdrop. Fighters get a faint ground reflection.
 - **Footsteps.** Run and land keys carry sfx flags, which play soft footstep and landing sounds for the player only.
+
+## Revision pass 3: sync to music (rhythm mode)
+
+**Music apps can't be the source.** The request was "sync to music you choose from a music app". Spotify, Apple Music and YouTube Music don't expose their audio to other apps or web pages (DRM), and Spotify closed its audio-analysis API to new apps in 2024. So I offer the three sources that can actually work: built-in tracks (exact sync), the player's own audio file (detected beats), and Listen mode, which hears any app through the microphone. Listen mode is the only route for streaming apps, and it's labelled experimental because room acoustics and phone mics vary.
+
+**One clock: performance.now().** Pointer events are stamped in that clock, so every beat is converted into it. AudioContext time maps to perf time via `getOutputTimestamp()`, which includes output latency (Bluetooth headphones can add 150+ ms), falling back to `baseLatency + outputLatency`. The mapping is smoothed with a slow EMA and snaps if it jumps more than 30 ms. Judging is then just `input.time − offset − nearestBeat`.
+
+**Judge the input, not the hit.** A flick is judged when the pad recognizes it, not when the fist lands. Moves have 4–20 frames of startup plus a magnetism dash, so judging the hit would make rhythm depend on distance to the target. Judging the input makes "swipe on the beat" literal. The grade rides on the `SwipeEvent` into the sim and on to the move it starts.
+
+**Half-beats count as GOOD.** Juggles need inputs faster than one per beat (124 BPM = 29 frames per beat). An 8th-note input within ±55 ms of the half-beat counts as GOOD, so fast strings keep the streak alive but only quarter-note hits earn PERFECT. Random mashing still lands OFF about 30% of the time, which breaks the streak quickly, so timing matters.
+
+**Rewards are multiplicative but bounded.** On-beat damage tops out at ×1.45 and score at ×2 (streak 32+). OFF still deals 70%, so a player who ignores the beat isn't locked out, just weaker. Classic mode exists for anyone who wants the original game.
+
+**Enemies strike on the beat.** When an enemy starts its wind-up, the AI finds the first beat at least 75% of the authored wind-up away and stretches the wind-up to land the first active frame on it. The remaining wind-up is recomputed from the clock every tick, so hit-stop freezes don't drift it off the beat. Measured: strikes land within 0–8 ms of the beat. Wind-ups that would need more than 40 extra frames (very slow songs) stay unsynced instead of feeling sluggish. The telegraph animation already stretches over the wind-up, so it reads correctly. A tap on the beat now parries naturally, which ties the defense into the rhythm.
+
+**Slow-mo is off in rhythm mode.** Slow-motion slows the sim, but the music keeps playing, so every finisher would desync the fight. Hit-stop is per-fighter and short, so it stays. Finishers keep the camera focus and impact frames. Slow-mo returns for the game-over moment.
+
+**Sim time per step.** The main loop now hands each fixed step the perf-time it advances to (`now − remaining accumulator`), so wind-up timing and the idle bob are sub-frame accurate even when the browser runs several steps in one frame.
+
+**Song analysis: DP tracker, then snap to a grid when it fits.** The onset envelope comes from log-magnitude spectral flux at 11.6 ms hops. Tempo comes from a prior-weighted autocorrelation, then an Ellis/librosa-style dynamic-programming beat tracker. Most pop and electronic music is quantized, so a robust line fit (drop outliers > 35 ms, refit, need 90% inliers and RMS < 15 ms) replaces the DP beats with a perfect grid. That removes ±1-hop jitter and single-beat slips (one synthetic 100 BPM test had a DP slip of half a beat; the robust fit fixed it). Songs that drift (live drummers) keep the DP beats. Synthetic tests at 64, 92 (12 ms human jitter), 100, 128 and 174 BPM all land with mean error under 1 ms after a measured +8 ms alignment constant. 174 BPM folds to 87, and 64 doubles to 128.
+
+**Fold the tempo into 72–168 BPM.** Above about 170 BPM a PERFECT window covers a third of the beat and fighting becomes mashing. Below about 70, inputs feel too sparse. Halving keeps the stronger of the two beat parities, and doubling inserts midpoints.
+
+**Listen mode is tracking, not detection.** Every animation frame a spectral-flux sample is stamped with `now − analyser half-window − input latency` (from `track.getSettings().latency`, else 30 ms). Four times a second the last 8 s are binned to 100 Hz, and an autocorrelation gives the tempo. A recency-weighted comb filter at 2 ms resolution gives the phase. A PLL smooths both (tempo gain 0.15, phase gain 0.35). One subtle bug: when the kick and snare are equally strong (or the tempo was folded), the comb flips between two equally valid beat parities, and the PLL averaged them to a phase a third of a beat off. The fix detects the strong half-period alternative and follows whichever candidate is nearest the prediction. Unit tests now hold phase within 11 ms at 92–174 BPM, and the fake-mic browser test locks to a 128 BPM song at 128.3 BPM in about 6 s. Echo cancellation, noise suppression and auto-gain are disabled, because they treat music as noise.
+
+**Built-in tracks put a transient on every quarter note.** Kick or snare always lands on the beat, so the beat is audible even before the beat track is learned. Each track keeps its intensity layers (hats, arps, leads come in as the style rank rises). The original 124 BPM loop became Neon Rush.
+
+**Calibration uses the real input path.** The overlay leaves the pad live, so you calibrate with the same flicks (and the same recognition delay) you fight with, not with a separate button. It takes the median of 12 inputs after a 4-click count-in and ignores anything more than 250 ms off. In tests, a simulated player 40 ms late measured +40 ms, and the judged grades after saving were PERFECT.
+
+**Pause keeps the grid.** Built-in tracks resume at the next bar boundary on a re-anchored grid. Songs restart from the paused position with a new anchor. A test pausing mid-run and then hitting on-beat inputs scored 6/6 PERFECT.
+
+**Visual sync.** The beat track slides markers into a ring that pulses on the beat. Bar downbeats are taller, and half-beat dots show the GOOD 8th-note window. Timing ticks show early/late at a glance, which helps self-calibration. The pad's top edge glows on each beat. Idle loops are phase-locked so both bobs of the two-bob idle land on beats, for the player and every enemy type. Pop detector: 0 pops over a full rhythm-mode bot run.
+
+**Things I chose not to do.** Downbeat detection for songs: the bar accent counts from the first detected beat, which can be off by 1–3 beats in a song, and it's cosmetic only. Saving loaded songs between sessions: re-picking the file is simple and avoids storing user audio. Rhythm judging in the tutorial: it teaches the moves first, and the music screen follows it.
+

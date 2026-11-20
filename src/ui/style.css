@@ -79,3 +79,28 @@ canvas#game { position: absolute; inset: 0; display: block; touch-action: none; 
 }
 .tut small { display: block; font-weight: 700; font-style: normal; font-size: 0.6em; opacity: 0.8; margin-top: 4px; }
 .hint { font-size: 13px; opacity: 0.7; margin-top: 10px; line-height: 1.5; }
+
+/* ---- Music select ---- */
+.music-panel { max-width: min(94vw, 620px); }
+.music-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 6px 0 4px; }
+.mtile {
+  pointer-events: auto; cursor: pointer; text-align: left; border-radius: 14px; padding: 12px 14px; font-family: inherit; color: #fff;
+  background: linear-gradient(170deg, rgba(30, 40, 80, 0.95), rgba(12, 14, 30, 0.95)); border: 2px solid rgba(160, 220, 255, 0.3);
+  transition: transform 0.08s, border-color 0.15s; position: relative;
+}
+.mtile:hover, .mtile:focus-visible { transform: scale(1.03); border-color: #ffe14a; outline: none; }
+.mtile.sel { border-color: #ffe14a; box-shadow: 0 0 0 2px rgba(255, 225, 74, 0.25); }
+.mtile .nm { font-weight: 900; font-style: italic; font-size: 16px; color: #ffe96a; letter-spacing: 0.03em; }
+.mtile .ds { font-size: 12.5px; opacity: 0.8; margin-top: 4px; line-height: 1.35; }
+.mtile .ic { float: right; font-size: 20px; opacity: 0.9; }
+.mtile.wide { grid-column: 1 / -1; }
+.mstatus { min-height: 20px; font-size: 13px; font-weight: 800; margin-top: 8px; color: #9fe8ff; }
+.mstatus.err { color: #ff7a7a; }
+.mbar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; margin-top: 6px; }
+.mbar > i { display: block; height: 100%; width: 0; background: #ffe14a; transition: width 0.1s; }
+.sec { font-size: 11px; letter-spacing: 0.16em; font-weight: 900; opacity: 0.55; text-align: left; margin: 12px 2px 2px; }
+.calib-top { position: absolute; left: 50%; transform: translateX(-50%); top: 9vh; width: min(92vw, 520px); }
+.calib-num { font-size: clamp(30px, 8vmin, 54px); font-weight: 900; font-style: italic; color: #ffe96a; }
+.beat-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,0.2); margin: 0 4px; transition: background 0.05s; }
+.beat-dot.on { background: #ffe14a; }
+@media (max-width: 480px) { .mtile { padding: 10px 11px; } .mtile .nm { font-size: 14px; } .mtile .ds { font-size: 11.5px; } .music-panel { padding: 16px 14px; } }

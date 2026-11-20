@@ -109,6 +109,10 @@ export class Fighter {
   // ---- Player extras ----
   parryWindow = 0;
   critTimer = 0;
+  /** Rhythm grade of the input that started the current move/dodge (-1 = none). */
+  beatGrade = -1;
+  /** The on-beat style/super bonus of the current move hasn't been paid yet. */
+  beatBonus = false;
   stallCount = 0;
   followTarget: Fighter | null = null;
   dodgeFromX = 0; dodgeToX = 0;
@@ -127,6 +131,8 @@ export class Fighter {
     phase: 1,
     spawnWalk: 0,
     stagger: 0,
+    /** Rhythm mode: perf-ms beat this wind-up is timed to land on (0 = unsynced). */
+    beatTarget: 0,
   };
 
   anim: Animator;
