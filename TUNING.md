@@ -11,6 +11,8 @@ The player can also change these in-game settings: **Flick sensitivity** (divide
 | `data/enemies.ts` | Enemy stats, attacks (telegraph/active/recovery), boss phases, projectiles |
 | `data/waves.ts` | Authored waves 1–10, the budget generator, and HP scaling |
 | `data/upgrades.ts` | The 22 roguelite upgrades and the `Stats` they modify |
+| `data/rhythm.ts` | Rhythm Mode: judgement windows, rewards, streaks, attack snapping, enemy beat sync, section intensity, groove, scheduler, calibration |
+| `data/songs.ts` | Built-in songs: sections (bars, BPM, time signature, intensity, chords), key and scale |
 
 ## WORLD
 | Key | Purpose |
@@ -209,3 +211,35 @@ The proportions of each fighter kind are in `RIGS` in `render/rig.ts`. The easie
 ## waves.ts / upgrades.ts
 - **`WAVE_GEN`:** budget growth, enemy cap, and HP scaling after wave 10.
 - **Upgrades:** each has `maxStacks`, a pick `weight`, and an `apply(stats)` function. The `Stats` fields are documented inline in `upgrades.ts`.
+
+## RHYTHM (`data/rhythm.ts`)
+Times are in ms on the heard audio timeline, after the player's latency offset. "Beat" means a quarter note.
+
+| Key | Purpose |
+|---|---|
+| perfectMs, greatMs, goodMs | ± window to the nearest beat for PERFECT / GREAT / GOOD (45 / 90 / 140) |
+| eighthGoodMs | Inputs within ±60 ms of the off-beat 8th also count as GOOD, so fast strings keep the streak |
+| damageMult | Damage for the move an input started: [MISS, GOOD, GREAT, PERFECT] = [1, 1.1, 1.3, 1.6]. MISS is the baseline, never a penalty |
+| scoreBonus, styleBonus, superBonus | Paid once per move when it first connects (whiffs can't farm them) |
+| streakTiers, streakMult | Streak 0/8/16/32 multiplies bonus score by 1/1.5/2/3 |
+| streakBreakShowMin | "STREAK LOST" only shows for streaks at least this long |
+| beatParryStyle, beatParryScore | Bonus for a parry whose tap was GREAT or better |
+| snapDiv | Grid the contact frame snaps to (4 = 16th notes) |
+| snapMaxDelayMs | The longest a strike may be delayed to reach the grid (slower grids fall back to a finer one) |
+| snapMinStartupFrac, snapMinStartupFrames | How far startup may be compressed to reach an earlier grid point |
+| enemyMinBeats, enemyMaxBeats | Enemy wind-ups last a whole number of beats in this range (nearest to the authored wind-up) |
+| enemyMaxWaitFrames | The longest an attack-ready enemy waits for a beat before starting anyway (the strike still lands on a beat) |
+| intensityTokenBonus | Extra attack tokens at section intensity 1 |
+| cooldownAtLow, cooldownAtHigh | Enemy cooldown multiplier at intensity 0 → 1 |
+| beatZoomPulse, beatFlash | Camera zoom pulse and arena flash per beat, scaled by intensity (downbeats ×1.6) |
+| hudLookaheadMs | How far ahead the beat track shows beats |
+| schedulerTickMs, scheduleAheadSec | Lookahead scheduler timer period and horizon |
+| startDelaySec | Gap between starting a run and beat 0 |
+| calibrateBpm, calibrateCountIn, calibrateTaps, offsetMin/Max | Calibration metronome and limits |
+| minBpm, maxBpm | Imported and heard tempos are folded into this range |
+
+## Songs (`data/songs.ts`)
+A song has a `keyHz`, a `scale` (semitones, used for tuned hits and melody), a list of sections and `loopFrom` (the section the song loops back to). Each section has `name`, `kind` (intro / verse / build / drop / break / bridge: drives patterns, builds and drop impacts), `bars`, `bpm`, `beatsPerBar` (time signature), `intensity` (0..1: layers, aggression, groove) and `chords` (bar roots in semitones, cycled). The patterns themselves live in `rhythm/synth.ts`.
+
+Beat-detection constants live in `rhythm/analyze.ts` and `rhythm/live.ts`. They are the same as in the first attempt and are documented in DECISIONS.md.
+

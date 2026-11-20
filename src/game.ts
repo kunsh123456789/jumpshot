@@ -393,6 +393,8 @@ export class Game {
     this.menus.showResults({
       score, high: save.highScore, newHigh, wave: this.nextWave, bestHits: c.bestHits, bestDamage: c.bestDamage,
       bestRank: c.bestRank, kos: c.totalKOs, parries: c.parries, finishers: c.finishers, maxRank: c.maxRankRun,
+      rhythm: settings.rhythmMode && this.rhythm.stats.judged > 0
+        ? { label: this.rhythm.label(), counts: this.rhythm.stats.counts, bestStreak: this.rhythm.stats.bestStreak, accuracy: this.rhythm.accuracy() } : null,
     }, () => this.startRun(), () => this.toTitle());
   }
 

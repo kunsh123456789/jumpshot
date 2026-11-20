@@ -98,3 +98,66 @@ These are the judgment calls made where the brief was silent or where two requir
 - **Facing.** The eased facing turn from revision 1 stays at 4 frames (3 when attacking). Without it, every magnetism dash would start with a full-body mirror pop.
 - **Backgrounds.** Parallax layers draw at 50% opacity and ambient particles are dimmer, for a calmer, higher-contrast backdrop. Fighters get a faint ground reflection.
 - **Footsteps.** Run and land keys carry sfx flags, which play soft footstep and landing sounds for the player only.
+
+## Revision pass 3: Rhythm Mode
+
+**The brief arrived truncated.** It ends mid-sentence at "The sim and rendering consume the beat clock by…", so the milestone list it refers to never arrived. I followed everything up to that point and set this milestone order, verifying each one in the running game and re-running the Classic fingerprint after each:
+1. The mode flag, the AudioContext beat clock, the lookahead conductor and the built-in sectioned songs.
+2. Input judging, rewards, the beat HUD and latency calibration.
+3. Snapping player attacks onto the grid.
+4. Enemies attacking on the beat, and on-beat parry.
+5. Musical juice: tuned hits, notes on the grid, the groove pulse, sections driving intensity, beat-locked idles.
+6. Song import and Listen mode on the new clock.
+7. Docs, regressions and publishing.
+
+**Git: `pre-rhythm` and `rhythm-attempt-1`.** The repo already held a first rhythm attempt (commit c159ba5), which edited core systems directly. That is the attempt that "went badly". Tagging the current state as `pre-rhythm` would have pointed the tag at a rhythm build. So `pre-rhythm` marks c147f01, the last game with no rhythm code, and `rhythm-attempt-1` marks c159ba5. The working tree was then restored to `pre-rhythm`, and Rhythm Mode was rebuilt on top as an additive layer. The two pieces of the first attempt that had been tested well, song beat detection (`analyze.ts`) and the mic tracker (`live.ts`), were moved into `src/rhythm/` unchanged, apart from adding per-beat loudness. Note: the remote git proxy rejects tag pushes, so the tags exist in the local repo. Their commits are on the pushed branch.
+
+**Isolation.** Rhythm logic lives in `src/rhythm/`, tunables in `data/rhythm.ts` and `data/songs.ts`. The simulation sees only the `RhythmSim` interface through `world.rhythm`, which is `null` in Classic, and every call site is `if (w.rhythm)`. Core files changed only where a hook has to sit:
+- one guarded call each in `player.ts`, `combat.ts` and `enemyAI.ts`;
+- a `snapBase` field on Fighter (0 in Classic) that the poser uses to stretch the anticipation;
+- a `locked` flag on TimeControl;
+- a `pitchFn` slot on FxDirector;
+- a pose-beat setter in the poser;
+- keyboard events now stamped with their keydown time (the sim never reads `ev.time`);
+- the title toggle and settings rows.
+
+**Proof that Classic is unchanged.** `t_classic_fp` drives 3,600 sim frames in `?manual` mode with a scripted input sequence and hashes player, enemy and score state every frame. The golden hash was recorded on the restored `pre-rhythm` source before any rhythm code existed. After every milestone it reported IDENTICAL. The classic play, parry, waves (0 pops) and tutorial tests pass too.
+
+**The beat clock is the AudioContext.**
+- Song time is `ctx time − songStart`. A tempo map of constant-tempo segments converts song time to beats and back. That gives tempo changes and time-signature changes for free, and the same structure holds a detected beat list (one segment per beat) or a live grid.
+- Gameplay uses *heard* time: the context time the listener hears now. That is `ctx.currentTime` minus output latency, measured through `getOutputTimestamp()`, so visuals, judging and enemy strikes line up with the ears, not with the scheduler. Pointer timestamps are mapped onto that same heard timeline, and the calibration offset is subtracted.
+- Each fixed sim step receives the perf time it advances to (from the main loop's accumulator), which maps to its heard time. No rhythm decision uses the frame count or `performance.now()` as a clock.
+
+**Scheduler.** This is the classic two-clocks pattern: `setInterval(25 ms)` schedules every 16th-note step whose time falls within 120 ms of `currentTime`. Measured: every scheduled note's start sits exactly on the grid (0.0000 ms error). The tempo map is built lazily a few seconds ahead, section by section, and loops back to `loopFrom` forever.
+
+**Snapping attacks.**
+- When a move starts, its natural contact time is `now + effStartup` frames. It snaps to the nearest 16th-note grid point by compressing the startup (to no less than 60%) or delaying it (by no more than 135 ms; slower tempos fall back to 32nds).
+- The magnetism dash and any air hangs are re-timed proportionally, and every startup tick re-derives the contact frame from the clock.
+- The authored anticipation is played stretched or compressed over the snapped startup, so a delayed strike reads as a deliberate wind-up "waiting for the beat", not a stall.
+- Measured: first contact lands within one sim frame (≤ 8.3 ms) of the grid on all three songs. Startup changes range from −4 to +7 frames, with most within ±3.
+- Multi-hit moves keep their authored hit spacing after the first contact. Snapping each sub-hit would distort moves like the flurry.
+
+**Judging is separate from snapping.** The swipe's own timing against the nearest beat decides the grade, as the brief says. Snapping just makes every hit musical. Off-beat 8ths count as GOOD (±60 ms) so fast juggles keep the streak. **MISS has no penalty**: same damage as Classic, just no bonus. The only thing it costs is the streak. This keeps the game fun without rhythm experience while on-beat play clearly pays more (up to ×1.6 damage plus bonus score up to ×3).
+
+**Enemies on the beat.**
+- An attack-ready enemy squares up and waits for the next beat, at most 40 frames. Its wind-up is a whole number of beats (1–3, nearest the authored length), so the strike lands on a beat.
+- If it started mid-beat after a long wait, the wind-up is pushed to at least 75% of that many beats so it stays readable.
+- The remaining wind-up is re-derived from the clock each tick, so hit-stop can't push the strike off the beat.
+- Pips above the enemy count the beats down, with a red pip for "strikes on the next beat", and a soft tick sounds on each heard beat.
+- Measured: strikes land within 7.6 ms of the beat, and scripted on-beat taps parried 3 out of 3, each earning ON-BEAT PARRY.
+
+**Sections drive the fight.** Intensity per section adds an attack token (from about 0.6 intensity up, so builds and drops get +1), scales cooldowns from ×1.35 (calm) to ×0.75 (drop), adds synth layers, and scales the groove pulse. Builds roll the snare into a crash, and drops land with a camera shake and a magenta flash. For imported and heard music, loudness bands (smoothed per-beat RMS, normalized between percentiles, with hysteresis) stand in as CALM, GROOVE and PEAK sections.
+
+**Hits are notes.**
+- Hit pitch walks the song's scale over the current bar's chord, one octave of range, so a long combo plays a phrase in key.
+- Each targeted strike also gets a short chord-tone pluck scheduled on the audio clock at its exact grid time, ahead of time, which beats the output latency. If the move is interrupted before contact the pluck is cancelled.
+- The impact sound itself plays when the sim lands the hit, so it reaches the ear one output latency late (about 35 ms measured). That is inherent unless visuals are delayed too, so the pre-scheduled pluck carries the "on the grid" feel.
+- The pluck is disabled for imported and heard music, because their key is unknown and plucks could clash.
+
+**Slow-motion is locked off in Rhythm Mode**, because it would desync the sim from the music. Hit-stop is per-fighter and short, so it stays. Finishers keep their camera focus and impact frames. Slow-mo returns at game over.
+
+**Calibration uses the real pad** with its own metronome conductor, so calibrating from the pause menu doesn't disturb the paused run's song. It takes the median of 12 inputs after a 4-click count-in, ignoring anything more than 250 ms off. In tests, a simulated player 40 ms late measured +40 ms, and their inputs then judged PERFECT.
+
+**Tutorial stays Classic.** It teaches the moves without a beat. After it, Rhythm Mode shows the song picker.
+
+**What I'd do next.** Beat-snap the sub-hits of multi-hit moves to 16ths where it doesn't distort them. Add a "practice" song with a slower 90 BPM and wider windows. Add downbeat detection for imported songs, whose bar accents currently count from the first detected beat.

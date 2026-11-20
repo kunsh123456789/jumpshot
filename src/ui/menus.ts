@@ -80,7 +80,7 @@ export class Menus {
       tg.setAttribute('aria-label', 'Game mode');
       const mk = (label: string, rhythm: boolean) => {
         const b = document.createElement('button');
-        b.textContent = label;
+        b.innerHTML = label.replace(' MODE', '<span class="mt-full"> MODE</span>');
         b.id = rhythm ? 'mode-rhythm' : 'mode-classic';
         b.className = mode.rhythm === rhythm ? 'on' : '';
         b.setAttribute('aria-pressed', String(mode.rhythm === rhythm));
@@ -228,6 +228,8 @@ export class Menus {
   showResults(r: {
     score: number; high: number; newHigh: boolean; wave: number; bestHits: number; bestDamage: number; bestRank: number;
     kos: number; parries: number; finishers: number; maxRank: number;
+    /** Rhythm Mode only. */
+    rhythm?: { label: string; counts: number[]; bestStreak: number; accuracy: number } | null;
   }, onRetry: () => void, onTitle: () => void): void {
     const el = this.layer('results', 'layer dim');
     const p = document.createElement('div');
@@ -243,6 +245,17 @@ export class Menus {
         <span>Perfect parries</span><span class="v">${r.parries}</span>
         <span>Finishers</span><span class="v">${r.finishers}</span>
       </div>`;
+    if (r.rhythm) {
+      const c = r.rhythm.counts;
+      const d = document.createElement('div');
+      d.className = 'stats';
+      d.style.marginTop = '8px';
+      d.innerHTML = `<span>Song</span><span class="v">${r.rhythm.label}</span>
+        <span>Beat accuracy</span><span class="v">${Math.round(r.rhythm.accuracy * 100)}%</span>
+        <span>Best streak</span><span class="v">${r.rhythm.bestStreak}</span>
+        <span>Judgements</span><span class="v">${c[3]} perfect · ${c[2]} great · ${c[1]} good · ${c[0]} miss</span>`;
+      p.appendChild(d);
+    }
     this.btn(p, 'FIGHT AGAIN', onRetry, 'btn primary');
     this.btn(p, 'TITLE', onTitle);
     el.appendChild(p);

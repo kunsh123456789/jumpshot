@@ -4,6 +4,10 @@ A 2D stickman combo-fighting game for the browser. You **flick on the bottom hal
 
 You can position yourself by dragging slowly in the bottom half of the screen. Everything is procedural: a skeletal stickman rig with keyframed poses and 2-bone IK, canvas effects, and WebAudio-synthesized sound and music. The game uses no image or audio files.
 
+There are two modes, switched on the title screen or in Settings:
+- **Rhythm Mode** (default): the music is the clock. You swipe whenever you like, and every attack **snaps onto the beat grid**, so each hit is part of the song. Swiping *on* the beat makes hits land harder and builds a streak. Enemies attack on the beat too. See [Rhythm Mode](#rhythm-mode).
+- **Classic Mode**: the original game, unchanged.
+
 ## Run it
 
 ```bash
@@ -72,7 +76,43 @@ The **bottom half of the screen** is the touch area. It is transparent, so you c
 
 **Dev URL flags**
 - `?wave=N` starts a run at wave N.
+- `?song=dojo|neon|volcano` forces Rhythm Mode with that song (no picker); `?classic` forces Classic Mode.
 - `?manual` drives the loop from `window.__advance(ms)`, for deterministic refresh-rate tests.
+
+## Rhythm Mode
+
+**The idea.** The song is the clock of the whole fight.
+- You can swipe at any time. The game re-times the attack so its contact frame lands on the nearest 16th note.
+- Each swipe is also judged against the nearest beat: **PERFECT** (±45 ms), **GREAT** (±90), **GOOD** (±140, or within ±60 of the off-beat 8th), or **MISS**.
+- A MISS still attacks normally. It just earns no bonus.
+- On-beat attacks deal up to ×1.6 damage and pay style, super meter and bonus score. Your **streak** multiplies the bonus score: ×1.5 at 8, ×2 at 16, ×3 at 32.
+
+**The enemies dance too.** An enemy that is ready to attack squares up and waits for a beat. Its wind-up lasts a whole number of beats, so the strike lands on a beat. Red pips above its head count the beats down, and a soft tick sounds on each one. A tap on the strike's beat parries it, and an on-beat parry earns a bonus.
+
+**The music drives the fight.**
+- Each built-in song has sections: intro, verse, build, drop and breakdown, plus a 3/4 bridge in Dojo Pulse and a 140→150 BPM tempo change in Volcano Breaker.
+- A section's intensity sets the band's layers, the number of enemies allowed to attack at once, their cooldowns, and the groove pulse.
+- The camera breathes on every beat and the drop lands with a shake.
+- Hit sounds climb the song's scale over the current chord, so a long combo plays a melody. Each targeted strike also plucks a chord tone, scheduled on the audio clock at the exact grid point it will land on.
+- Idle fighters bob on the beat.
+
+**Songs.**
+
+| Pick | What it does |
+|---|---|
+| Dojo Pulse · Neon Rush · Volcano Breaker | Built-in sectioned songs, 100 / 124 / 140→150 BPM |
+| Your song | An MP3, M4A, WAV, OGG or FLAC from your device. The game detects tempo and beats in the browser. The song's loud and quiet parts act as sections (CALM / GROOVE / PEAK) |
+| Listen mode (experimental) | Play music from any app out loud. The game hears it through the microphone and locks onto the beat in about 6 s. Judging and enemy sync switch on once it has locked |
+
+Streaming apps (Spotify, Apple Music…) don't share their audio with other apps, so a song has to be a file on your device, or you use Listen mode.
+
+**Latency calibration.** Use Settings → *Calibrate rhythm latency*, or *Calibrate* on the song picker. Flick or tap on 12 metronome clicks, using the real pad. The median offset is saved and subtracted from every input. You can fine-tune it with the slider in Settings.
+
+**Under the hood.**
+- All rhythm timing comes from the WebAudio clock. A `BeatClock` built on a tempo map of constant-tempo segments answers beat, subdivision, phase, bar and section queries on the AudioContext timeline.
+- A lookahead scheduler (a 25 ms timer, 120 ms horizon) places every note at exact audio times.
+- Pointer timestamps are mapped onto the heard timeline with `getOutputTimestamp()`.
+- Everything lives in `src/rhythm/`, behind the mode flag. In Classic Mode the simulation's `world.rhythm` hook is `null` and every call site is guarded. A deterministic fingerprint test confirms Classic is unchanged frame for frame.
 
 ## Animation Lab
 
@@ -98,11 +138,14 @@ src/
   core/            math, seeded RNG, object pools, event bus, camera, slow-mo, audio synth, layout, settings, keyboard
   sim/             fighter entity, player controller (buffer/targeting/magnetism/cancels), combat resolver,
                    enemy physics + bowling, token AI, combo/style/super tracker, waves, projectiles/hazards/pickups
-  data/            tuning.ts, moves.ts, enemies.ts, waves.ts, upgrades.ts: every tunable lives here
+  data/            tuning.ts, moves.ts, enemies.ts, waves.ts, upgrades.ts, rhythm.ts, songs.ts: every tunable lives here
   data/anims/      authored key-pose animations (locomotion, player ground/air, reactions, enemies)
   render/          rig (FK + 2-bone IK, per-kind proportions), animPlayer (key evaluation, easing, staggered leads),
                    animator (pose-to-pose playback, interruption crossfades, smears), poser (gameplay -> animation time),
                    stickman renderer, particles/afterimages/floating text, backgrounds, HUD, FX director
+  rhythm/          Rhythm Mode (isolated): beatClock (tempo map + audio-clock queries), conductor (lookahead scheduler,
+                   song/file/mic sources), synth (song patterns), judge, director (rules + sim hooks), hud, ui (picker,
+                   calibration), analyze (song beat detection), live (mic beat tracking), simHooks (the sim-facing interface)
   ui/              pad (drag-to-move + flick recognizer + trail), menus (DOM), tutorial, debug overlay, pop detector, Animation Lab
 ```
 

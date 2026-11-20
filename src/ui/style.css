@@ -107,3 +107,4 @@ canvas#game { position: absolute; inset: 0; display: block; touch-action: none; 
 .mode-toggle button { font-family: inherit; font-weight: 900; font-style: italic; letter-spacing: 0.05em; font-size: 13px; padding: 8px 12px; border: 0; cursor: pointer; background: rgba(20, 28, 54, 0.85); color: rgba(255,255,255,0.55); }
 .mode-toggle button.on { background: #ffe14a; color: #141826; }
 @media (max-width: 480px) { .mtile { padding: 10px 11px; } .mtile .nm { font-size: 14px; } .mtile .ds { font-size: 11.5px; } .music-panel { padding: 16px 14px; } }
+@media (max-width: 480px) { .mode-toggle button { font-size: 11px; padding: 6px 8px; } .mode-toggle .mt-full { display: none; } }
