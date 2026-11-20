@@ -5,7 +5,7 @@ import { TAU } from '../core/math';
 import { WORLD } from '../data/tuning';
 
 /** Particle kinds. */
-export const PK = { spark: 0, dot: 1, ring: 2, star: 3, dust: 4, debris: 5, ember: 6, flash: 7, shock: 8, bolt: 9 } as const;
+export const PK = { spark: 0, dot: 1, ring: 2, star: 3, dust: 4, debris: 5, ember: 6, flash: 7, shock: 8 } as const;
 
 class Particle {
   kind = 0;
@@ -16,8 +16,6 @@ class Particle {
   color = '#fff';
   grav = 0; drag = 1;
   additive = true;
-  // bolt endpoints
-  x2 = 0; y2 = 0;
 }
 
 class Afterimage {
@@ -152,11 +150,6 @@ export class Effects {
     r.size2 = radius;
     const r2 = this.spawn(PK.ring, x, y - 40, 0, 0, 0.35, 20, '#ffffff');
     r2.size2 = radius * 0.8;
-  }
-
-  bolt(x1: number, y1: number, x2: number, y2: number, color: string): void {
-    const p = this.spawn(PK.bolt, x1, y1, 0, 0, 0.22, 3, color);
-    p.x2 = x2; p.y2 = y2; p.rot = fxRng.next() * 1000;
   }
 
   embers(x: number, y: number, n: number, color: string): void {
@@ -317,23 +310,6 @@ export class Effects {
           ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
           ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
           ctx.restore();
-          break;
-        }
-        case PK.bolt: {
-          ctx.globalAlpha = inv;
-          ctx.strokeStyle = p.color;
-          ctx.lineWidth = 2 + 3 * inv;
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          const segs = 7;
-          for (let s = 1; s < segs; s++) {
-            const t = s / segs;
-            const jit = Math.sin(p.rot + s * 12.9 + p.life * 90) * 18;
-            const mx = p.x + (p.x2 - p.x) * t, my = p.y + (p.y2 - p.y) * t;
-            ctx.lineTo(mx + jit * 0.5, my + jit);
-          }
-          ctx.lineTo(p.x2, p.y2);
-          ctx.stroke();
           break;
         }
       }

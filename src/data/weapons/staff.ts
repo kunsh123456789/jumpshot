@@ -16,11 +16,11 @@ const tr = (w = 14) => ({ limb: 'handA' as const, color: C, width: w });
 // ------------------------------------------------------------------ moves
 const twirl1 = addMove({ id: 'st_twirl1', family: 'st_twirl', name: 'Twirl', tags: ['light', 'string'],
   startup: 5, active: 4, recovery: 14, damage: 7, hitstun: 22, kbX: 190, kbY: 0, hitstop: 3, shake: 3,
-  hitbox: { x: 92, y: 92, r: 50 }, reach: 104, maxTargets: 3, cancelInto: CANCEL.light, next: 'st_twirl2',
+  hitbox: { x: 92, y: 92, r: 50 }, reach: 104, maxTargets: 2, cancelInto: CANCEL.light, next: 'st_twirl2',
   sound: 'slash', weight: 0.3, trail: tr() });
 const twirl2 = addMove({ id: 'st_twirl2', family: 'st_twirl', name: 'Twirl', tags: ['light', 'string'],
   startup: 5, active: 4, recovery: 14, damage: 7, hitstun: 22, kbX: 200, kbY: -60, hitstop: 3, shake: 3,
-  hitbox: { x: 90, y: 66, r: 54 }, reach: 104, maxTargets: 3, cancelInto: CANCEL.light, next: 'st_twirl3',
+  hitbox: { x: 90, y: 66, r: 54 }, reach: 104, maxTargets: 2, cancelInto: CANCEL.light, next: 'st_twirl3',
   sound: 'slash', weight: 0.3, trail: tr() });
 const twirl3 = addMove({ id: 'st_twirl3', family: 'st_twirl', name: 'Twirl Finish', tags: ['light', 'string'],
   startup: 6, active: 5, recovery: 18, damage: 11, hitstun: 28, kbX: 440, kbY: -140, hitstop: 5, shake: 6, zoom: 0.15,
@@ -33,19 +33,19 @@ const spin = addMove({ id: 'st_spin', name: 'Spinning Sweep', tags: ['heavy', 's
 const vault = addMove({ id: 'st_vault', family: 'st_vault', name: 'Pole Vault', tags: ['launcher'],
   startup: 8, active: 4, recovery: 16, damage: 11, hitstun: 40, kbX: 40, kbY: 0, hitstop: 6, shake: 7, zoom: 0.3, poise: 1.6,
   hitbox: { x: 66, y: 96, r: 52 }, reach: 80, launch: -1260, follow: true, cancelFrom: 2, cancelInto: ['air', 'dodge', 'special'],
-  sound: 'launch', weight: 0.65, afterimage: true, trail: tr(16), slowmo: { scale: 0.35, sec: 0.25 } });
+  sound: 'launch', weight: 0.65, afterimage: true, trail: tr(16), slowmo: { scale: 0.35, sec: 0.3, at: 'apex' } });
 const vaultH = addMove({ id: 'st_vaultH', family: 'st_vault', name: 'Pole Vault+', tags: ['launcher', 'heavy'],
   startup: 11, active: 4, recovery: 18, damage: 14, hitstun: 44, kbX: 40, kbY: 0, hitstop: 8, shake: 10, zoom: 0.5, poise: 2.5,
   hitbox: { x: 66, y: 96, r: 54 }, reach: 80, launch: -1470, follow: true, cancelFrom: 2, cancelInto: ['air', 'dodge', 'special'],
-  sound: 'launch', weight: 0.9, afterimage: true, trail: tr(18), slowmo: { scale: 0.3, sec: 0.35 } });
+  sound: 'launch', weight: 0.9, afterimage: true, trail: tr(18), slowmo: { scale: 0.3, sec: 0.4, at: 'apex' } });
 const heli = addMove({ id: 'st_heli', family: 'st_heli', name: 'Helicopter', tags: ['light'],
-  startup: 6, active: 16, recovery: 12, damage: 4, hitstun: 24, kbX: 140, kbY: -260, hitstop: 2, shake: 3, poise: 1.2,
-  hitbox: { x: 0, y: 116, r: 118 }, reach: 60, maxTargets: 8, multiHit: { interval: 4, count: 4 }, deflect: true,
-  cancelFrom: 16, cancelInto: CANCEL.light, sound: 'slash', weight: 0.35, trail: tr(14) });
+  startup: 7, active: 12, recovery: 14, damage: 3, hitstun: 24, kbX: 140, kbY: -260, hitstop: 2, shake: 3, poise: 1.2,
+  hitbox: { x: 0, y: 116, r: 112 }, reach: 60, maxTargets: 6, multiHit: { interval: 4, count: 3 }, deflect: true,
+  cancelFrom: 12, cancelInto: CANCEL.light, sound: 'slash', weight: 0.35, trail: tr(14) });
 const heliH = addMove({ id: 'st_heliH', family: 'st_heli', name: 'Helicopter+', tags: ['heavy'],
-  startup: 8, active: 24, recovery: 14, damage: 5, hitstun: 26, kbX: 220, kbY: -340, hitstop: 2, shake: 4, poise: 1.6,
-  hitbox: { x: 0, y: 116, r: 138 }, reach: 60, maxTargets: 10, multiHit: { interval: 4, count: 6 }, deflect: true,
-  cancelFrom: 24, cancelInto: CANCEL.heavy, sound: 'slash', weight: 0.5, afterimage: true, trail: tr(16) });
+  startup: 9, active: 20, recovery: 16, damage: 4, hitstun: 26, kbX: 220, kbY: -340, hitstop: 2, shake: 4, poise: 1.6,
+  hitbox: { x: 0, y: 116, r: 130 }, reach: 60, maxTargets: 8, multiHit: { interval: 4, count: 5 }, deflect: true,
+  cancelFrom: 20, cancelInto: CANCEL.heavy, sound: 'slash', weight: 0.5, afterimage: true, trail: tr(16) });
 const plant = addMove({ id: 'st_plant', family: 'st_plant', name: 'Plant Slam', tags: ['light', 'down'],
   startup: 9, active: 3, recovery: 18, damage: 10, hitstun: 30, kbX: 280, kbY: -430, hitstop: 6, shake: 9, zoom: 0.2, poise: 1.5,
   hitbox: { x: 0, y: 30, r: 0 }, aoe: 200, reach: 84, maxTargets: 8, knockdown: true, plant: { radius: 220, damage: 0, x: 70 },
@@ -72,9 +72,9 @@ const arise = addMove({ id: 'st_arise', name: 'Rising Spin', tags: ['air', 'ligh
   hitbox: { x: 30, y: 110, r: 70 }, reach: 50, maxTargets: 4, selfVY: -820, cancelInto: CANCEL.air,
   sound: 'launch', weight: 0.55, afterimage: true, trail: tr(16) });
 const aheli = addMove({ id: 'st_aheli', name: 'Air Helicopter', tags: ['air', 'light'],
-  startup: 5, active: 16, recovery: 12, damage: 4, hitstun: 30, kbX: 120, kbY: -380, hitstop: 2, shake: 3,
-  hitbox: { x: 0, y: 80, r: 112 }, reach: 50, maxTargets: 8, multiHit: { interval: 4, count: 4 }, deflect: true, selfVY: -260,
-  cancelFrom: 16, cancelInto: CANCEL.air, sound: 'slash', weight: 0.35, trail: tr() });
+  startup: 6, active: 12, recovery: 14, damage: 3, hitstun: 30, kbX: 120, kbY: -380, hitstop: 2, shake: 3,
+  hitbox: { x: 0, y: 80, r: 106 }, reach: 50, maxTargets: 6, multiHit: { interval: 4, count: 3 }, deflect: true, selfVY: -260,
+  cancelFrom: 12, cancelInto: CANCEL.air, sound: 'slash', weight: 0.35, trail: tr() });
 const plunge = addMove({ id: 'st_plunge', family: 'spike', name: 'Staff Plunge', tags: ['air', 'down', 'light'],
   startup: 6, active: 3, recovery: 18, damage: 12, hitstun: 40, kbX: 260, kbY: 1750, hitstop: 8, shake: 12, zoom: 0.45, poise: 2,
   hitbox: { x: 60, y: 50, r: 56 }, reach: 64, spike: true, selfVY: -380, cancelInto: ['dodge', 'special'],

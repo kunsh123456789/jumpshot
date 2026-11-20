@@ -78,8 +78,8 @@ export interface MoveDef {
   plant?: { radius: number; damage: number; x: number };
   /** Blocks enemy projectiles while active. */
   deflect?: boolean;
-  /** Weapon slow-mo moment at contact (time scale, seconds). */
-  slowmo?: { scale: number; sec: number };
+  /** Weapon slow-mo moment (time scale, seconds): at contact, or at the apex of the follow leap. */
+  slowmo?: { scale: number; sec: number; at?: 'apex' };
   /** Rhythm Mode: the coarsest grid (divisions per beat) the contact snaps to; default RHYTHM.snapDiv. */
   grid?: number;
   /** Laser heat added when the move fires. */

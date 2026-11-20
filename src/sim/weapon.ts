@@ -42,6 +42,8 @@ export class WeaponSim {
   private pullFromX = 0; private pullFromY = 0; private pullFrames = 1;
   /** Swing: arc centre, radius, start angle and sweep. */
   private swCx = 0; private swCy = 0; private swR = 0; private swA0 = 0; private swSweep = 0; private swFrames = 1;
+  /** Slow-mo waiting for the apex of the follow leap (staff vault). */
+  apexMoment: { scale: number; sec: number } | null = null;
   /** The player is driven by the weapon (swing): the controller skips its physics. */
   ownsPlayer = false;
   /** Rope anchor for drawing (the hook end) and a short verlet rope. */
@@ -60,7 +62,7 @@ export class WeaponSim {
   reset(): void {
     this.heat = 0; this.overheat = 0;
     this.drop(null);
-    this.tied = null; this.tetherMode = ''; this.ownsPlayer = false; this.hookOut = 0; this.beamT = 0;
+    this.tied = null; this.tetherMode = ''; this.ownsPlayer = false; this.hookOut = 0; this.beamT = 0; this.apexMoment = null;
   }
 
   // ------------------------------------------------------------------ aiming

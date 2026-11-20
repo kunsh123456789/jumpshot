@@ -1,5 +1,7 @@
 /** Shared weapon-system tunables (revision pass 7). Per-move numbers live in each weapon file. */
 export const WEAPON_T = {
+  /** Highest the hero can get above the floor (world units): chained air grabs and zips stop here. */
+  heroMaxHeight: 520,
   /** Verlet points in the grappling-hook rope. */
   ropePoints: 10,
   /** How long a fired hook that missed stays out (frames). */

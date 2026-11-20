@@ -6,6 +6,7 @@ import type { SwipeEvent } from '../ui/pad';
 import { clamp, ease } from '../core/math';
 import { overlaps, playerHit } from './combat';
 import { airGravity } from './physics';
+import { WEAPON_T } from '../data/weapons/tuning';
 
 interface Buffered { ev: SwipeEvent; age: number; heavy: boolean; used: boolean }
 
@@ -92,6 +93,11 @@ export class PlayerController {
         if (--p.timer <= 0) p.setState('idle');
         break;
       case 'jumpFollow':
+        // Weapon slow-mo at the apex of the follow leap (staff vault).
+        if (w.wpn.apexMoment && p.vy > -120) {
+          const s = w.wpn.apexMoment; w.wpn.apexMoment = null;
+          w.events.emit('weaponMoment', { scale: s.scale, sec: s.sec, x: p.x, y: p.cy });
+        }
         if (p.vy > 0) p.setState('fall');
         break;
     }
@@ -295,7 +301,7 @@ export class PlayerController {
         if (fin) target.vx = 0;
       }
     }
-    if (isAir || !p.grounded) { p.stall = Math.max(p.stall, p.effStartup + m.active); }
+    if ((isAir || !p.grounded) && !(m.grab && !target)) { p.stall = Math.max(p.stall, p.effStartup + m.active); }
     else p.vx = 0;
     if (w.rhythm) {
       w.rhythm.onMoveStart(w, p, this.curEv, false);
@@ -350,6 +356,8 @@ export class PlayerController {
     // Launcher follow: leap after the launched enemy as soon as hit-stop ends.
     if (m.follow && p.moveHit && p.followTarget && fr >= S + 1) {
       const t = p.followTarget;
+      w.wpn.endMove(p);
+      w.wpn.apexMoment = m.slowmo && m.slowmo.at === 'apex' ? m.slowmo : null;
       p.move = null;
       p.setState('jumpFollow');
       p.grounded = false;
@@ -518,7 +526,9 @@ export class PlayerController {
   private physics(w: World): void {
     const p = w.player;
     const dashing = (p.state === 'move' && p.dashFrames > 0 && p.moveFrame <= p.dashFrames) || w.wpn.ownsPlayer;
-    const hanging = p.state === 'move' && p.move !== null && !p.grounded && p.moveFrame < p.effStartup;
+    // A grab that caught nothing doesn't hang in the air (no floating on whiffed air throws).
+    const whiffGrab = p.move !== null && !!p.move.grab && !w.wpn.held && p.moveFrame >= p.dashFrames;
+    const hanging = p.state === 'move' && p.move !== null && !p.grounded && p.moveFrame < p.effStartup && !whiffGrab;
     if (!p.grounded) {
       if (!dashing && !hanging) {
         const g = PHYS.gravity * airGravity(p);
@@ -558,5 +568,7 @@ export class PlayerController {
       p.y = WORLD.groundY;
     }
     p.x = clamp(p.x, WORLD.wallMargin, WORLD.arenaW - WORLD.wallMargin);
+    // Hard ceiling: chained air re-grabs/zips can't carry the hero (or what it holds) off the page.
+    if (WORLD.groundY - p.y > WEAPON_T.heroMaxHeight) { p.y = WORLD.groundY - WEAPON_T.heroMaxHeight; if (p.vy < 0) p.vy = 0; }
   }
 }

@@ -26,14 +26,14 @@ const air = (id: string, src: string, o: Partial<MoveInput> = {}) => {
   add({ ...s, id, tags: [...s.tags.filter((t) => t !== 'air'), 'air'], selfVY: -160, cancelInto: CANCEL.air, ...o } as MoveInput);
 };
 
-add({ ...ranged, id: 'hk_pull', family: 'hk_pull', name: 'Yank', tags: ['light'], startup: 7, active: 3, recovery: 20,
-  damage: 5, hitstun: 40, kbX: 0, kbY: 0, hitstop: 4, shake: 4, tether: { mode: 'pull', frames: 14 }, then: 'hk_pullHit', grid: 2,
+add({ ...ranged, id: 'hk_pull', family: 'hk_pull', name: 'Yank', tags: ['light'], startup: 6, active: 3, recovery: 20,
+  damage: 6, hitstun: 40, kbX: 0, kbY: 0, hitstop: 4, shake: 4, tether: { mode: 'pull', frames: 14 }, then: 'hk_pullHit', grid: 2,
   slowmo: { scale: 0.45, sec: 0.18 }, cancelFrom: 99, cancelInto: [], weight: 0.4, trail: tr() });
 add({ id: 'hk_pullHit', family: 'hk_pullHit', name: 'Reel-In Punch', tags: ['light'], startup: 3, active: 3, recovery: 14,
-  damage: 9, hitstun: 26, kbX: 420, kbY: -180, hitstop: 5, shake: 5, zoom: 0.15, hitbox: { x: 58, y: 92, r: 42 }, reach: 66,
+  damage: 11, hitstun: 26, kbX: 420, kbY: -180, hitstop: 5, shake: 5, zoom: 0.15, hitbox: { x: 58, y: 92, r: 42 }, reach: 66,
   cancelInto: CANCEL.light, sound: 'punch', weight: 0.5, trail: tr() });
 add({ id: 'hk_zip', family: 'hk_zip', name: 'Zip Kick', tags: ['heavy'], startup: 10, active: 4, recovery: 18,
-  damage: 14, hitstun: 34, kbX: 860, kbY: -260, hitstop: 8, shake: 10, zoom: 0.4, poise: 2.2, hitbox: { x: 56, y: 80, r: 50 }, reach: 54,
+  damage: 16, hitstun: 34, kbX: 860, kbY: -260, hitstop: 8, shake: 10, zoom: 0.4, poise: 2.2, hitbox: { x: 56, y: 80, r: 50 }, reach: 54,
   tether: { mode: 'zip', frames: 0 }, aimCone: 50, grid: 1, cancelInto: CANCEL.heavy, sound: 'kick', weight: 0.9, afterimage: true, trail: tr('footA', 16) });
 add({ ...ranged, id: 'hk_air', family: 'hk_air', name: 'Air Hook', tags: ['launcher'], startup: 8, active: 3, recovery: 16,
   damage: 9, hitstun: 40, kbX: 30, kbY: 0, hitstop: 6, shake: 7, zoom: 0.3, launch: -1250, follow: true, aimCone: 118,
@@ -48,10 +48,10 @@ add({ ...ranged, id: 'hk_slamH', family: 'hk_slam', name: 'Crater Yank', tags: [
   damage: 14, hitstun: 44, kbX: 120, kbY: 2100, spike: true, impactShock: { radius: 220, damage: 9 }, hitstop: 8, shake: 14, zoom: 0.5, poise: 2.4, aimCone: 118,
   tether: { mode: 'slam', frames: 12 }, grid: 1, slowmo: { scale: 0.35, sec: 0.25 }, cancelInto: CANCEL.heavy, sound: 'spike', weight: 0.95, afterimage: true, trail: tr() });
 add({ ...ranged, id: 'hk_swing', family: 'hk_swing', name: 'Swing', tags: ['light'], startup: 7, active: 16, recovery: 12,
-  damage: 8, hitstun: 32, kbX: 520, kbY: -380, hitstop: 4, shake: 5, hitbox: { x: 20, y: 60, r: 72 }, reach: 60, maxTargets: 6,
+  damage: 10, hitstun: 32, kbX: 520, kbY: -380, hitstop: 4, shake: 5, hitbox: { x: 20, y: 60, r: 76 }, reach: 60, maxTargets: 6,
   aimCone: undefined, tether: { mode: 'swing', frames: 16 }, grid: 2, cancelFrom: 16, cancelInto: CANCEL.light, sound: 'kick', weight: 0.55, afterimage: true, trail: tr('footA', 14) });
 add({ ...ranged, id: 'hk_swingH', family: 'hk_swing', name: 'Pendulum', tags: ['heavy'], startup: 9, active: 22, recovery: 14,
-  damage: 11, hitstun: 36, kbX: 760, kbY: -460, hitstop: 6, shake: 8, zoom: 0.3, hitbox: { x: 20, y: 60, r: 84 }, reach: 60, maxTargets: 8,
+  damage: 13, hitstun: 36, kbX: 760, kbY: -460, hitstop: 6, shake: 8, zoom: 0.3, hitbox: { x: 20, y: 60, r: 84 }, reach: 60, maxTargets: 8,
   aimCone: undefined, tether: { mode: 'swing', frames: 22 }, grid: 1, cancelFrom: 22, cancelInto: CANCEL.heavy, sound: 'kick', weight: 0.85, afterimage: true, trail: tr('footA', 16) });
 // air
 air('hk_apull', 'hk_pull');
