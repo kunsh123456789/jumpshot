@@ -27,6 +27,12 @@ export class Camera {
 
   // Outputs (logical px / radians).
   ox = 0; oy = 0; rot = 0;
+  /** Where the floor sits on screen (logical px from the top). The ink look's locked shot puts it lower. */
+  groundScreen: number = WORLD.groundScreenY;
+  /** Follow stiffness override (rad/s; 0 = CAMERA.followOmega). The ink look drifts gently. */
+  followOmega = 0;
+  /** Punch-in scale (the ink look keeps punch-ins small). */
+  punchScale = 1;
 
   shake(amount: number, dirX = 0, dirY = 0, rotational = 0): void {
     const m = settings.shake;
@@ -40,7 +46,7 @@ export class Camera {
   }
 
   punchZoom(a: number): void {
-    this.punchTarget = Math.min(JUICE.punchZoomMax, this.punchTarget + a * JUICE.punchZoomMax);
+    this.punchTarget = Math.min(JUICE.punchZoomMax * this.punchScale, this.punchTarget + a * JUICE.punchZoomMax * this.punchScale);
   }
 
   focus(amount: number, seconds: number): void {
@@ -58,8 +64,8 @@ export class Camera {
     if (this.focusRemain > 0) { this.focusRemain -= dt; if (this.focusRemain <= 0) this.focusTarget = 0; }
     // Critically damped springs: inertia on start, no overshoot, never a snap-cut.
     [this.focusZoom, this.vFocus] = spring(this.focusZoom, this.vFocus, this.focusTarget, this.focusTarget > this.focusZoom ? 14 : 6, dt);
-    [this.x, this.vx] = spring(this.x, this.vx, this.targetX, CAMERA.followOmega, dt);
-    [this.y, this.vy] = spring(this.y, this.vy, this.targetY, CAMERA.followOmega * 0.85, dt);
+    [this.x, this.vx] = spring(this.x, this.vx, this.targetX, this.followOmega || CAMERA.followOmega, dt);
+    [this.y, this.vy] = spring(this.y, this.vy, this.targetY, (this.followOmega || CAMERA.followOmega) * 0.85, dt);
     [this.zoom, this.vz] = spring(this.zoom, this.vz, this.targetZoom, this.targetZoom < this.zoom ? CAMERA.zoomOutOmega : CAMERA.zoomOmega, dt);
     // Punch-in: the target spikes and decays; the zoom springs toward it (eased in AND out).
     this.punchTarget *= Math.exp(-CAMERA.punchDecay * dt);
@@ -99,7 +105,7 @@ export class Camera {
 
   /** World -> logical view coordinates (before world rect scaling). */
   toViewX(wx: number): number { return (wx - this.x) * this.effectiveZoom() + WORLD.viewW / 2; }
-  toViewY(wy: number): number { return (wy - this.y) * this.effectiveZoom() + WORLD.groundScreenY; }
+  toViewY(wy: number): number { return (wy - this.y) * this.effectiveZoom() + this.groundScreen; }
   /** Visible world-space x range. */
   viewLeft(): number { return this.x - layout.viewW / 2 / this.effectiveZoom(); }
   viewRight(): number { return this.x + layout.viewW / 2 / this.effectiveZoom(); }

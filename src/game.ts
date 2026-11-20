@@ -25,6 +25,7 @@ import { RhythmDirector } from './rhythm/director';
 import { RhythmHud, drawRhythmWorld } from './rhythm/hud';
 import { RhythmUI, type CalibView } from './rhythm/ui';
 import { DRAW, syncDrawStyle } from './render/drawStyle';
+import { INKLOOK } from './data/inkLook';
 import { RHYTHM } from './data/rhythm';
 import { SONGS } from './data/songs';
 
@@ -206,6 +207,27 @@ export class Game {
     this.world.rhythm = null;
     this.time.locked = false;
     this.fx.pitchFn = null;
+  }
+
+  /**
+   * Ink look camera: a locked wide shot. Fixed zoom (small figures), floor at
+   * ~79 % of the view height, and a slow drift only when the player leaves the
+   * central dead zone. Punch-ins stay small; finishers may still focus.
+   */
+  private inkCamera(alpha: number): void {
+    const cam = this.cam, p = this.world.player;
+    const px = p.px + (p.x - p.px) * alpha;
+    cam.groundScreen = layout.viewY0 + INKLOOK.groundScreenFrac * layout.viewH;
+    cam.followOmega = INKLOOK.driftOmega;
+    cam.punchScale = INKLOOK.punchScale;
+    cam.targetZoom = INKLOOK.zoom;
+    cam.targetY = WORLD.groundY;
+    const half = layout.viewW / 2 / INKLOOK.zoom;
+    const dz = half * INKLOOK.deadzoneFrac;
+    if (px > cam.targetX + dz) cam.targetX = px - dz;
+    else if (px < cam.targetX - dz) cam.targetX = px + dz;
+    if (cam.focusZoom > 0.01) cam.targetX += (px - cam.targetX) * Math.min(1, cam.focusZoom / 0.25);
+    if (this.state === 'title') { cam.targetX = p.x; }
   }
 
   // ------------------------------------------------------------ rhythm latency calibration
@@ -539,6 +561,11 @@ export class Game {
   }
 
   private updateCamera(alpha: number): void {
+    syncDrawStyle();
+    if (DRAW.ink) { this.inkCamera(alpha); return; }
+    this.cam.groundScreen = WORLD.groundScreenY;
+    this.cam.followOmega = 0;
+    this.cam.punchScale = 1;
     const w = this.world;
     const p = w.player;
     const px = p.px + (p.x - p.px) * alpha;
