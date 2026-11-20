@@ -167,6 +167,15 @@ export class FxDirector {
     ev.on('pullArrive', () => audio.weapon('reel'));
     ev.on('deflect', (e) => { audio.weapon('deflect'); effects.text('DEFLECT', e.x, e.y - 60, '#9fd8ff', 16, 0.6); });
     ev.on('weaponSwap', () => audio.weapon('swap'));
+    ev.on('nuke', (e) => {
+      // Cheat nuke: white-out, crescent, thunder from every side, a big shockwave.
+      if (!settings.reduceFlashes) { effects.invert = ANIM.invertSec * 3; crescentFlash(e.x, e.y - 60, 1); }
+      for (let i = 0; i < 5; i++) lightning(e.x + (i - 2) * 260, WORLD.groundY - 40, i * 131 + 7);
+      effects.shockwave(e.x, WORLD.groundY - 20, 900, '#e22424');
+      this.cam.shake(JUICE.shakeMax, 0, 1, 1);
+      this.popup('NUKE!', 'cheat', '#e22424', true);
+      audio.boom(); audio.weapon('thunder');
+    });
     // Each weapon's signature moment gets the slow-mo treatment (TimeControl; locked off in Rhythm Mode).
     ev.on('weaponMoment', (e) => { this.time.slowmo(e.scale, e.sec); this.cam.focus(0.2, 0.5); if (!settings.reduceFlashes) { crescentFlash(e.x, e.y, 1); effects.invert = Math.max(effects.invert, ANIM.invertSec * 1.5); } });
     ev.on('burst', (e) => {

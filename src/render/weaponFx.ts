@@ -107,12 +107,13 @@ export function drawWeaponFx(ctx: CanvasRenderingContext2D, w: World, alpha: num
     const wd = ws.beamW * (0.35 + 0.65 * k);
     seed = step * 977 + 3;
     // core
-    ctx.strokeStyle = red; ctx.lineWidth = Math.max(2, wd * 0.45);
+    const bc = ws.beamColor === '#e22424' ? red : ws.beamColor;
+    ctx.strokeStyle = bc; ctx.lineWidth = Math.max(2, wd * 0.45);
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     if (DRAW.ink) { ctx.strokeStyle = INK.paper; ctx.lineWidth = Math.max(1, wd * 0.14); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
     // Cursive loops along the beam (reference 76-82): a prolate cycloid, "eeee" written along the line,
     // with the phase advancing per drawing step so the loops crawl forward.
-    ctx.strokeStyle = red; ctx.lineWidth = 1.8 * wpp + 0.6;
+    ctx.strokeStyle = bc; ctx.lineWidth = 1.8 * wpp + 0.6;
     ctx.beginPath();
     const pitch = Math.max(16, wd * 1.1), rad = wd * 0.62;
     const nPts = Math.min(900, Math.ceil((L / pitch) * 14));

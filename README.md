@@ -104,6 +104,17 @@ You carry **one weapon** at a time. All five are unlocked from the start. Pick o
 - Each weapon has a slow-motion moment: the hook yank, the big throws, the charged beam, the staff vault apex.
 - The biggest hits get a white-crescent impact frame; Nova and Crater Yank call down lightning; the helicopter spins a whirlwind.
 
+## Sound
+
+Sound effects are recorded CC0 samples from Freesound (credits in `SOUND_CREDITS.md`), bundled with the build (~105 KB). Every effect still has its synthesized version: it plays until the samples load, and **Settings → Sound effects → Synthesized** switches back to the original set.
+
+## Cheats
+
+All off by default (Settings → Cheats), and a run with any cheat on never sets a high score or record. Turn them off to go back to the normal game.
+- **Never die**: you take no damage.
+- **Ray gun in the loadout**: a 6th weapon (key 6) whose every swipe fires an arena-wide piercing ray; heavy fires a fan of three. Clears a wave in about a second.
+- **Nuke button** (☢ next to pause, or the **N** key): KOs everything on the page and cancels the rest of the wave.
+
 ## Look and animation (Hand-Drawn ink page)
 
 The default look follows a hand-drawn stick-fight reference (see REFERENCE_NOTES.md).

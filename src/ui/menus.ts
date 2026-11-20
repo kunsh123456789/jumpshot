@@ -1,6 +1,6 @@
 import { settings, saveSettings } from '../core/settings';
 import { audio } from '../core/audio';
-import { WEAPONS, WEAPON_ORDER, type WeaponDef, type WeaponId } from '../data/weapons';
+import { WEAPONS, availableWeapons, type WeaponDef, type WeaponId } from '../data/weapons';
 import { MOVES } from '../data/moves';
 import { MovePreview } from './preview';
 import { STYLE } from '../data/tuning';
@@ -10,7 +10,10 @@ export class Menus {
   private root: HTMLElement;
   private layers = new Map<string, HTMLElement>();
   pauseBtn: HTMLButtonElement;
+  /** Cheat: in-game nuke button (only shown with Settings -> Cheats -> Nuke on). */
+  nukeBtn: HTMLButtonElement;
   onPause: () => void = () => {};
+  onNuke: () => void = () => {};
 
   constructor() {
     this.root = document.getElementById('ui')!;
@@ -21,8 +24,22 @@ export class Menus {
     this.pauseBtn.style.display = 'none';
     this.pauseBtn.addEventListener('click', () => { audio.ui('click'); this.onPause(); });
     this.root.appendChild(this.pauseBtn);
+    this.nukeBtn = document.createElement('button');
+    this.nukeBtn.className = 'icon-btn nuke-btn';
+    this.nukeBtn.textContent = '☢';
+    this.nukeBtn.title = 'Nuke (N)';
+    this.nukeBtn.setAttribute('aria-label', 'Nuke');
+    this.nukeBtn.style.display = 'none';
+    this.nukeBtn.addEventListener('click', (e) => { e.stopPropagation(); this.onNuke(); });
+    this.root.appendChild(this.nukeBtn);
     this.placePause();
     window.addEventListener('resize', () => this.placePause());
+  }
+
+  /** Show/hide the in-play buttons (pause, and the nuke when its cheat is on). */
+  setPlayButtons(on: boolean): void {
+    this.pauseBtn.style.display = on ? '' : 'none';
+    this.nukeBtn.style.display = on && settings.cheatNuke ? '' : 'none';
   }
 
   placePause(): void {
@@ -158,7 +175,7 @@ export class Menus {
       row.appendChild(span); row.appendChild(inp);
       p.appendChild(row);
     };
-    const check = (label: string, key: 'leftHanded' | 'debug' | 'reduceFlashes' | 'rhythmMode' | 'beatHud' | 'boil' | 'highContrast', after?: () => void) => {
+    const check = (label: string, key: 'leftHanded' | 'debug' | 'reduceFlashes' | 'rhythmMode' | 'beatHud' | 'boil' | 'highContrast' | 'cheatGod' | 'cheatRayGun' | 'cheatNuke', after?: () => void) => {
       const row = document.createElement('label');
       row.className = 'row';
       const span = document.createElement('span');
@@ -223,6 +240,14 @@ export class Menus {
     check('Reduce flashes', 'reduceFlashes');
     check('Line boil (doodles re-drawn ~7 fps)', 'boil');
     check('High contrast (plain page, bolder lines)', 'highContrast', () => window.dispatchEvent(new Event('jumpshot-look')));
+    // Cheats: all off by default; a run with any of them on doesn't set high scores.
+    const cheats = document.createElement('div');
+    cheats.className = 'sec';
+    cheats.textContent = 'CHEATS (runs with cheats don\'t count for high scores)';
+    p.appendChild(cheats);
+    check('Never die (god mode)', 'cheatGod');
+    check('Ray gun in the loadout (wipes a wave in seconds)', 'cheatRayGun');
+    check('Nuke button in play (also the N key)', 'cheatNuke');
     check('Rhythm Mode (off = Classic; applies to the next run)', 'rhythmMode', () => window.dispatchEvent(new Event('jumpshot-mode')));
     check('Beat-track HUD (Rhythm Mode)', 'beatHud');
     {
@@ -275,7 +300,7 @@ export class Menus {
       sheet.innerHTML = cheatSheet(WEAPONS[id]);
       onPick(id);
     };
-    WEAPON_ORDER.forEach((id, i) => {
+    availableWeapons().forEach((id, i) => {
       const w = WEAPONS[id];
       const c = document.createElement('button');
       c.className = 'card';
@@ -306,7 +331,7 @@ export class Menus {
     const el = this.layers.get('loadout');
     if (!el) return false;
     const n = code.startsWith('Digit') ? parseInt(code.slice(5), 10) : NaN;
-    if (n >= 1 && n <= WEAPON_ORDER.length) { (el.querySelectorAll<HTMLButtonElement>('.card')[n - 1])?.click(); return true; }
+    if (n >= 1 && n <= availableWeapons().length) { (el.querySelectorAll<HTMLButtonElement>('.card')[n - 1])?.click(); return true; }
     if (code === 'Enter' || code === 'Escape') { el.querySelector<HTMLButtonElement>('.sticky-foot .btn')?.click(); return true; }
     return false;
   }
@@ -321,7 +346,7 @@ export class Menus {
     lab.className = 'swap-label';
     lab.textContent = 'Swap weapon';
     bar.appendChild(lab);
-    WEAPON_ORDER.forEach((id, i) => {
+    availableWeapons().forEach((id, i) => {
       const w = WEAPONS[id];
       const b = document.createElement('button');
       b.className = 'btn small swap-btn' + (id === current ? ' sel' : '');
@@ -349,7 +374,7 @@ export class Menus {
     const el = this.layers.get('swap');
     if (!el) return false;
     const n = code.startsWith('Digit') ? parseInt(code.slice(5), 10) : NaN;
-    if (n >= 1 && n <= WEAPON_ORDER.length) { el.querySelectorAll<HTMLButtonElement>('.swap-btn')[n - 1]?.click(); return true; }
+    if (n >= 1 && n <= availableWeapons().length) { el.querySelectorAll<HTMLButtonElement>('.swap-btn')[n - 1]?.click(); return true; }
     return false;
   }
 

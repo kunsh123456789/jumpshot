@@ -59,4 +59,6 @@ export interface SimEvents {
   /** A weapon's signature slow-mo moment (hook yank, big throw, charged beam, vault apex). */
   weaponMoment: { scale: number; sec: number; x: number; y: number };
   weaponSwap: { id: string };
+  /** Cheat: everything on the page was KO'd. */
+  nuke: { x: number; y: number };
 }

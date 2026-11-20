@@ -258,3 +258,5 @@ html, body { background: var(--paper); color: var(--ink); font-family: var(--han
 .swap-btn small { font-size: 10px; }
 .swap-btn.sel { outline: 3px solid var(--pen-red); }
 .wtip { top: 30%; }
+/* Cheat nuke button, next to pause. TODO(ui-pass) */
+.nuke-btn { right: calc(max(10px, env(safe-area-inset-right)) + 58px) !important; color: var(--pen-red); }

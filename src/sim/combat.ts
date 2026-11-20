@@ -365,6 +365,7 @@ export function parry(w: World, e: Fighter | null, projectile: boolean): void {
 export function hurtPlayer(w: World, dmg: number, dirX: number, kbX: number, kbY: number, _src: Fighter | null): void {
   const p = w.player;
   if (p.invuln > 0 || !p.alive) return;
+  if (settings.cheatGod) return; // cheat: never take damage
   dmg *= dmgScale(w.wave);
   p.hp -= dmg;
   p.impact = ANIM.impactSnapFrames;

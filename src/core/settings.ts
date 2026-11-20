@@ -31,6 +31,10 @@ export interface Settings {
   fistAnims: 'v2' | 'legacy';
   /** Sound effects: recorded samples (CC0, Freesound) or the original synthesized set. */
   sfxStyle: 'recorded' | 'synth';
+  /** Cheats (all off by default; runs with any cheat on don't set high scores). */
+  cheatGod: boolean;
+  cheatRayGun: boolean;
+  cheatNuke: boolean;
   /** Paper page: 'auto' rotates by wave (kraft on boss waves). */
   page: 'auto' | 'blank' | 'lined' | 'graph' | 'sketch' | 'kraft';
   /** Doodle / UI line boil (re-drawn at ~7 fps). */
@@ -62,6 +66,9 @@ export const settings: Settings = {
   attackSmooth: 'low',
   fistAnims: 'v2',
   sfxStyle: 'recorded',
+  cheatGod: false,
+  cheatRayGun: false,
+  cheatNuke: false,
   page: 'auto',
   boil: true,
   highContrast: false,

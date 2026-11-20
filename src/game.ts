@@ -73,6 +73,8 @@ export class Game {
   private overTimer = 0;
   /** Rhythm Mode: the bar the next wave starts on (-1 = not chosen yet). */
   private waitBar = -1;
+  /** Any cheat used this run (no high score / records). */
+  private cheated = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas);
@@ -85,7 +87,8 @@ export class Game {
     this.keyboard = new Keyboard(this.pad);
     this.keyboard.onToggleDebug = () => { this.debug.visible = !this.debug.visible; settings.debug = this.debug.visible; };
     this.keyboard.onPause = () => this.togglePause();
-    this.keyboard.onKey = (code) => this.menus.loadoutKey(code) || this.menus.swapKey(code);
+    this.keyboard.onKey = (code) => this.menus.loadoutKey(code) || this.menus.swapKey(code) || (code === 'KeyN' && this.nuke());
+    this.menus.onNuke = () => this.nuke();
     this.keyboard.onDebugSlow = () => { this.debugScale = this.debugScale < 1 ? 1 : 0.1; this.debugFrozen = false; };
     this.keyboard.onDebugStep = () => { this.debugFrozen = true; this.stepRequests++; };
     this.keyboard.onDebugResume = () => { this.debugFrozen = false; this.debugScale = 1; };
@@ -136,7 +139,7 @@ export class Game {
     this.setState('title');
     this.pad.demo = true;
     this.pad.hint = -1;
-    this.menus.pauseBtn.style.display = 'none';
+    this.menus.setPlayButtons(false);
     this.hud.visible = false;
     this.menus.showTitle(save.highScore, () => this.openSettings(true),
       { rhythm: settings.rhythmMode, onToggle: (r) => { settings.rhythmMode = r; saveSettings(); } },
@@ -151,6 +154,14 @@ export class Game {
     paper.setPage(this.pageFor(1));
   }
 
+  /** Cheat: KO every enemy and end the wave's spawns (Settings -> Cheats -> Nuke). */
+  private nuke(): boolean {
+    if (!settings.cheatNuke || this.state !== 'playing' || this.paused) return false;
+    this.cheated = true;
+    this.world.nuke();
+    return true;
+  }
+
   /** Pre-run loadout (from the title). */
   private openLoadout(): void {
     this.menus.close('title');
@@ -160,6 +171,7 @@ export class Game {
   /** Equip a weapon for this run (loadout choice or a between-wave swap); first time: show its tooltip. */
   private equip(id: string, swap: boolean): void {
     this.world.setWeapon(id);
+    if (this.world.weapon.id === 'raygun') this.cheated = true;
     save.weapon = this.world.weapon.id;
     const p = this.world.player;
     if (swap) { p.cue = 'draw'; p.cueSerial++; }
@@ -328,7 +340,7 @@ export class Game {
     this.hud.visible = true;
     this.hud.waveLabel = 'TRAINING';
     this.setState('tutorial');
-    this.menus.pauseBtn.style.display = '';
+    this.menus.setPlayButtons(true);
     this.tutorial.start(this.world);
     this.world.combo.superMeter = 100;
   }
@@ -354,9 +366,10 @@ export class Game {
     this.pad.hint = -1;
     this.pad.hintLabel = '';
     this.hud.visible = true;
-    this.menus.pauseBtn.style.display = '';
+    this.menus.setPlayButtons(true);
     this.effectsReset();
     this.equip(save.weapon, false);
+    this.cheated = settings.cheatGod || settings.cheatNuke || this.world.weapon.id === 'raygun';
     if (settings.rhythmMode) this.startRhythm();
     else { this.endRhythm(); audio.startMusic(); }
     this.pops.reset();
@@ -435,12 +448,12 @@ export class Game {
     const c = this.world.combo;
     c.end(true);
     const score = c.score;
-    const newHigh = score > save.highScore;
+    // Cheated runs never set records.
+    const newHigh = !this.cheated && score > save.highScore;
     if (newHigh) save.highScore = score;
-    save.bestCombo = Math.max(save.bestCombo, c.bestHits);
-    save.bestWave = Math.max(save.bestWave, this.world.wave);
+    if (!this.cheated) { save.bestCombo = Math.max(save.bestCombo, c.bestHits); save.bestWave = Math.max(save.bestWave, this.world.wave); }
     writeSave();
-    this.menus.pauseBtn.style.display = 'none';
+    this.menus.setPlayButtons(false);
     this.menus.showResults({
       score, high: save.highScore, newHigh, wave: Math.max(1, this.world.wave), bestHits: c.bestHits, bestDamage: c.bestDamage,
       bestRank: c.bestRank, kos: c.totalKOs, parries: c.parries, finishers: c.finishers, maxRank: c.maxRankRun,

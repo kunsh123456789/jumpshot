@@ -14,6 +14,7 @@ import { BOSS, ENEMIES, PROJECTILE, type EnemyAttack, type EnemyKind } from '../
 import { simRng } from '../core/rng';
 import type { RhythmSim } from '../rhythm/simHooks';
 import { WeaponSim } from './weapon';
+import { ko } from './combat';
 import { WEAPONS, weaponById, type WeaponDef } from '../data/weapons';
 
 /** The simulation container. Advanced only in fixed 60 Hz steps. */
@@ -71,6 +72,14 @@ export class World {
     this.waves.active = false;
     this.waves.cleared = false;
     simRng.seed(1234567);
+  }
+
+  /** Cheat: KO everything on the page and cancel the wave's remaining spawns. */
+  nuke(): void {
+    this.waves.clearQueue();
+    const p = this.player;
+    for (const e of this.enemies) if (e.alive && e.kind !== 'dummy') ko(this, e, Math.sign(e.x - p.x) || 1);
+    this.events.emit('nuke', { x: p.x, y: p.cy });
   }
 
   /** Equip a weapon (between waves or before a run). Drops anything the old one was holding. */

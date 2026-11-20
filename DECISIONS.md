@@ -292,3 +292,9 @@ See `REFERENCE_NOTES.md` ("Second upload"). The biggest change is a **weapon-swe
 **Over-the-shoulder throw.** `grab.behind` releases the body behind the hero; the Long Arm drags the enemy in (the hook's pull, drawn as a stretched arm via `ropeStyle: 'arm'`) and auto-chains into the over-the-shoulder slam (spike + shockwave + ground bounce).
 
 **FX.** Lightning (jagged bolts with a branch, from the top of the page to each victim) on the laser Nova, the Crater Yank and the JUMPSHOT finisher (v2). A whirlwind ball (rotating hatched spiral) around the hero during the helicopters and the Flurry (v2). The white-crescent impact frame: drawn in ink on the world layer during the inverted frame, so it reads white on black; triggered by finishers, every weapon slow-mo moment and moves flagged `fx.crescent`. All are presentation-only (`MoveDef.fx`), respect Reduce flashes, and are pooled.
+
+## Sound effects and cheats
+
+**Freesound.** Searching uses the Freesound API with the user's key (injected by the environment's network proxy, never stored in the repo). The files are the HQ MP3 previews, which need no key. Only **CC0** sounds were picked, then trimmed, made mono and loudness-normalized (`ffmpeg loudnorm`, 22 kHz, 48 kbps: 29 files, ~105 KB). They are bundled with the build instead of fetched at runtime, so the game needs no network and the key never ships. The synthesized set stays as the fallback and as a setting. Picked without listening, by rating and duration: some choices (thunder, staff swap) are stand-ins worth replacing by ear.
+
+**Cheats (user request, reversible).** God mode, the Ray Gun weapon and the Nuke are settings, all off by default; with them off the game is unchanged (Classic fingerprint identical). They are also isolated in one commit, so `git revert` removes them cleanly. Any cheat marks the run, and cheated runs never save a high score, best combo or best wave.

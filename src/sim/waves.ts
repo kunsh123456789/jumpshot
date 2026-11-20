@@ -32,6 +32,8 @@ export class WaveDirector {
   }
 
   remainingToSpawn(): number { return this.queue.length; }
+  /** Cheat (nuke): drop the rest of this wave's spawns. */
+  clearQueue(): void { this.queue.length = 0; }
 
   update(w: World): void {
     if (!this.active) return;
