@@ -77,7 +77,34 @@ The **bottom half of the screen** is the touch area. It is transparent, so you c
 **Dev URL flags**
 - `?wave=N` starts a run at wave N.
 - `?song=dojo|neon|volcano` forces Rhythm Mode with that song (no picker); `?classic` forces Classic Mode.
+- Look and animation style come from Settings (stored in `localStorage` as `jumpshot.settings.v1`: `look`, `animStyle`, `stepRate`, `pixelRes`).
 - `?manual` drives the loop from `window.__advance(ms)`, for deterministic refresh-rate tests.
+
+## Look and animation (Hand-Drawn ink page)
+
+The default look follows a hand-drawn stick-fight reference (see REFERENCE_NOTES.md).
+- The world is a white page with a thick black floor line at about 79% of the screen height. Every figure and prop has a stippled gray reflection below it.
+- The hero has a hollow head and thin black limbs. Enemies have solid heads and chunkier limbs in team colors: Grunt blue, Rusher black, Brute/Elite/Boss red.
+- The camera is a locked wide shot that only drifts gently.
+
+Animation is **stepped drawings with holds**, not interpolation.
+- Each animation is a list of drawings. Each drawing stays on screen for its hold length, about 10–12 fps.
+- The drawn pose *and* the drawn position jump from drawing to drawing, while hitboxes, physics and frame data still run at 60 Hz underneath.
+- The drawing that shows a hit appears on the exact tick the hit resolves and holds through hit-stop.
+- Fast swings get scribble-hatch smears. Dashes and launches leave 2–3 echo copies.
+- Impacts scatter specks and splatter in the victim's color, and crack the floor; the cracks stay until the next wave.
+- Finishers, shockwaves and meteors burst into red scribble energy.
+
+**Settings → Look & animation**
+
+| Setting | Options |
+|---|---|
+| Animation style | **Hand-Drawn** (stepped drawings, default) / Smooth (the previous interpolated pose-to-pose system) |
+| Hand-Drawn step rate | 8–20 fps (default 12). It paces looping drawings (idle, run, tumbles) and the stepped root travel. Attack and reaction drawings always change on their authored frames |
+| Look | **Pixel** (low-res 1-bit ink page, default) / Crisp (the same ink page at full resolution) / Smooth (the previous neon look and follow camera) |
+| Pixel Look resolution | 30–55% of the 1280×720 logical view (default 40%) |
+
+In Rhythm Mode, Hand-Drawn steps fall on the musical subdivision nearest the step rate, so drawings change on the grid the hits already land on.
 
 ## Rhythm Mode
 
@@ -127,7 +154,7 @@ Open the lab with **`#lab`** at the end of the URL, or press **F2** in game. In 
 
 Click a key marker on the timeline to edit that key. Every joint has a slider, and each key has an easing selector. Edits apply live. **Export** copies the animation to the clipboard and logs it to the console, in the exact format of `src/data/anims/*.ts`, ready to paste back in.
 
-All animation data lives in `src/data/anims/`. See ANIMATION_DIAGNOSIS.md for why the animation system was rebuilt pose-to-pose, and `reference/README.md` for how to drop in reference GIF frames.
+All animation data lives in `src/data/anims/`. The Hand-Drawn set is `handDrawn.ts`: drawings with holds, in the `drawn()` format. Animations without a hand-authored version get an automatic "dramatize" pass of their Smooth keys. In Hand-Drawn style the Lab shows each drawing as a block as wide as its hold, lets you edit the hold, and exports in the drawings format. See ANIMATION_DIAGNOSIS.md for why the animation system was rebuilt pose-to-pose, and `reference/README.md` for how to drop in reference GIF frames.
 
 ## Project layout
 
@@ -138,11 +165,13 @@ src/
   core/            math, seeded RNG, object pools, event bus, camera, slow-mo, audio synth, layout, settings, keyboard
   sim/             fighter entity, player controller (buffer/targeting/magnetism/cancels), combat resolver,
                    enemy physics + bowling, token AI, combo/style/super tracker, waves, projectiles/hazards/pickups
-  data/            tuning.ts, moves.ts, enemies.ts, waves.ts, upgrades.ts, rhythm.ts, songs.ts: every tunable lives here
+  data/            tuning.ts, moves.ts, enemies.ts, waves.ts, upgrades.ts, rhythm.ts, songs.ts, inkLook.ts: every tunable lives here
   data/anims/      authored key-pose animations (locomotion, player ground/air, reactions, enemies)
   render/          rig (FK + 2-bone IK, per-kind proportions), animPlayer (key evaluation, easing, staggered leads),
                    animator (pose-to-pose playback, interruption crossfades, smears), poser (gameplay -> animation time),
-                   stickman renderer, particles/afterimages/floating text, backgrounds, HUD, FX director
+                   stickman renderer, particles/afterimages/floating text, backgrounds, HUD, FX director,
+                   drawStyle (Hand-Drawn state), ink (ink page look, palette quantizer, ink figures), inkFx (hatch smears,
+                   specks/splatter, floor damage, scribble energy, ink entities)
   rhythm/          Rhythm Mode (isolated): beatClock (tempo map + audio-clock queries), conductor (lookahead scheduler,
                    song/file/mic sources), synth (song patterns), judge, director (rules + sim hooks), hud, ui (picker,
                    calibration), analyze (song beat detection), live (mic beat tracking), simHooks (the sim-facing interface)

@@ -12,6 +12,8 @@ The player can also change these in-game settings: **Flick sensitivity** (divide
 | `data/waves.ts` | Authored waves 1–10, the budget generator, and HP scaling |
 | `data/upgrades.ts` | The 22 roguelite upgrades and the `Stats` they modify |
 | `data/rhythm.ts` | Rhythm Mode: judgement windows, rewards, streaks, attack snapping, enemy beat sync, section intensity, groove, scheduler, calibration |
+| `data/inkLook.ts` | Ink page look: line weights, floor, reflection, locked camera (INKLOOK) and hand-drawn FX (INKFX) |
+| `data/anims/handDrawn.ts` | The Hand-Drawn animation set: drawings + holds |
 | `data/songs.ts` | Built-in songs: sections (bars, BPM, time signature, intensity, chords), key and scale |
 
 ## WORLD
@@ -242,4 +244,39 @@ Times are in ms on the heard audio timeline, after the player's latency offset. 
 A song has a `keyHz`, a `scale` (semitones, used for tuned hits and melody), a list of sections and `loopFrom` (the section the song loops back to). Each section has `name`, `kind` (intro / verse / build / drop / break / bridge: drives patterns, builds and drop impacts), `bars`, `bpm`, `beatsPerBar` (time signature), `intensity` (0..1: layers, aggression, groove) and `chords` (bar roots in semitones, cycled). The patterns themselves live in `rhythm/synth.ts`.
 
 Beat-detection constants live in `rhythm/analyze.ts` and `rhythm/live.ts`. They are the same as in the first attempt and are documented in DECISIONS.md.
+
+## Hand-Drawn animation and ink look
+
+**Settings:** `animStyle` ('drawn' | 'smooth'), `stepRate` (8–20 fps, default 12, so a step is 60 / rate ticks, clamped to 3–8), `look` ('pixel' | 'crisp' | 'smooth'), `pixelRes` (0.3–0.55 of the logical view).
+
+**Drawings.** `drawn({ id, base, drawings: [{ hold, p, smear?, impact?, sfx?, ones?, inbetween? }] })`:
+- `hold`: ticks on screen. Attack drawings sum to the move's length, and the contact drawing starts exactly on the move's startup frame.
+- `ones: true`: the segment after this drawing plays interpolated at full rate.
+- `inbetween: n` (0–2): generated in-between drawings on that segment.
+
+**Display latch** (`render/animator.ts`): the drawn pose and root change only on:
+- a step tick (loops and root travel), or
+- a sacred event: an animation starts, the contact drawing, or any authored drawing change in a one-shot (attacks, reactions). These always show on their exact tick and hold through hit-stop.
+
+In Rhythm Mode the step falls on the subdivision (2/3/4/6/8 per beat) nearest the step rate.
+
+**INKLOOK** (`data/inkLook.ts`)
+
+| Key | Purpose |
+|---|---|
+| heroLimbPx, heroHeadPx, enemyLimbPx | Line weights in low-res pixels (Brute/Boss limbs ×1.35) |
+| headScale | Head size multiplier |
+| refRes | Resolution the px weights are authored at (Crisp keeps the same world widths) |
+| floorPx, reflectSquash, floorDoodles | Floor line thickness, reflection vertical scale, fixed doodles on the Blank Page |
+| zoom, groundScreenFrac | Locked camera zoom (figures ≈ 13–14% of screen height) and floor position (0.79) |
+| deadzoneFrac, driftOmega, punchScale | Camera drifts only when the player leaves the central dead zone; the drift spring; punch-ins scaled down |
+
+**INKFX**
+
+| Key | Purpose |
+|---|---|
+| smearMin, smearMax | Hatch strokes per smear (scaled by the sweep length) |
+| scribbleSec, scribbleLoops, fragments | Scribble-energy lifetime before it breaks apart, loop count, fragment count |
+
+**Palette** (`render/ink.ts`): paper white, ink black, blue #2436e6, red #e22424, and the reflection's dither-key gray #b0a8c8, which the Pixel post-pass turns into a checkerboard stipple. Anti-aliased edges snap to the nearest palette color through a 4096-entry lookup table.
 

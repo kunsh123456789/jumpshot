@@ -161,3 +161,62 @@ These are the judgment calls made where the brief was silent or where two requir
 **Tutorial stays Classic.** It teaches the moves without a beat. After it, Rhythm Mode shows the song picker.
 
 **What I'd do next.** Beat-snap the sub-hits of multi-hit moves to 16ths where it doesn't distort them. Add a "practice" song with a slower 90 BPM and wider windows. Add downbeat detection for imported songs, whose bar accents currently count from the first detected beat.
+
+## Revision pass 5: match the reference animation style
+
+**Source material.** `reference/` held only a README: no GIF, no `sheet0-3.png`. I used the five contact sheets that came with the brief (frames 25–99 and 360–466), saved into `reference/`. Frames 0–24 were never seen, so for those I worked from the brief's description. REFERENCE_NOTES.md maps every technique to its frames and its implementation.
+
+**Missing systems.** The brief mentions a TimeDirector, the Jackpot Core and a weapon system. None exists in this codebase; the passes that would have added them never happened here. Slow-mo is the existing TimeControl: it slows the sim, so drawing holds stretch naturally, and Rhythm Mode still locks it off. The dropped-weapon prop and per-drawing held weapons are skipped, as the brief allows. The only thin-line prop is the Shield enemy's outline shield.
+
+**Two styles, one data path.** Animation Style is a setting.
+- **Hand-Drawn** (default): stepped drawings.
+- **Smooth**: the previous interpolated system, unchanged, with its own original key data.
+
+The registry swaps between the two sets, so Smooth keeps the poses it was tuned with.
+
+**How stepping works.**
+- `evalAnimStepped` holds each key as a drawing: no easing, no staggered leads, no crossfades.
+- A display latch per animator decides when the screen shows a new drawing. The drawn root position is latched with it, so dashes and jumps jump across the screen like the reference.
+- The sim (hitboxes, physics, frame data, input buffer) still runs at 60 Hz. The Classic fingerprint test with the previous camera is identical in Hand-Drawn mode, so the animator change touches no gameplay.
+
+**When a drawing changes.**
+- **Step ticks** govern loops (idle, run, tumble) and root travel. The Step Rate slider controls them.
+- **Sacred events** always latch on their exact tick: an animation starting, the contact drawing, and any authored drawing change in a one-shot (attacks, reactions).
+
+I first had every drawing change wait for the step grid. That fights the brief's "every drawing change lines up with the move's frame data": a 4-tick jab cannot show 2–3 anticipation drawings on a 5-tick grid. So authored holds rule one-shots, and the grid paces everything else.
+
+**Contact on the exact tick.** The poser used the post-increment frame counter, which showed the contact drawing one tick before the hit resolved. In Hand-Drawn mode it now maps the frame just processed. Verified 14/14 and 15/15: the contact drawing latches on the same tick as the hit. An attack's first drawing appears on the tick the attack starts. No input lag is added, because drawings never delay the sim.
+
+**Rhythm Mode.** Steps follow the musical subdivision (2/3/4/6/8 per beat) closest to the step rate, so drawings change on the same grid the strikes are snapped to. Measured after this pass: strikes still land within 8.2 ms of the 16th grid, enemy strikes within 8.2 ms of the beat, and on-beat parries 3/3.
+
+**Re-authoring.**
+- **By hand (30 animations, `handDrawn.ts`):** idle crouch, run, run start/stop/turn, the dash and air-dash flat lunges, leap, fall, land, dodge, jab, jab 2, cross, spinning backfist, hook, launcher (light and heavy), the three air kicks, air heavy, spike, light and heavy hurt, launched, tumble, knockdown, lying, get-up. Each attack has 2–3 anticipation drawings into a fully committed contact pose. Lengths and contact frames are identical to the originals (checked 30/30).
+- **Automatic pass (the rest):** enemy idles, walks, taunts and every enemy attack; the finishers (jumpshotFinisher, flurry, flurryEnd); knee, sweep, slide, stomp, aslash, arise; hurtBehind, groundBounce, wallSplat, stunned, guardbreak, burst; parry. These get `dramatize()`: the original keys held as drawings, angles pushed 25% further from the base pose, deeper crouches, wider stances, more stretch on contact. **That is not hand re-authoring.** They are the obvious next work, especially the finishers and enemy attacks. Enemy wind-ups were already stretched over the attack's wind-up, so in Hand-Drawn mode the wind-up drawing becomes one big held telegraph pose. That turned out readable even before hand work.
+
+**The scarf** became a stepped 2-segment red headband line that changes only with the drawing (reference frame 46), instead of the verlet ribbon.
+
+**Pixel Look.**
+- The world is drawn into a low-res canvas (0.4× the logical view) and every pixel is snapped to the palette through a 4096-entry lookup table. Canvas 2D can't turn anti-aliasing off, so post-quantization is the reliable way to get hard 1-bit edges.
+- Plain gray was removed from the palette. Otherwise anti-aliased edges turned the floor line gray. The reflection's gray comes from a reserved key color the pass turns into a checkerboard stipple.
+- The result is upscaled with nearest-neighbor. Text, HUD, pad and menus stay on the full-resolution layer.
+- **Performance, honestly:** in headless (software-rendered) Chrome the Pixel path costs about 4.4 ms per frame, against about 0.9 ms for Crisp. 1.2 ms of that is the `getImageData` readback; the rest is the quantize loop and low-res drawing. It runs at a steady 60 fps with 16 enemies, but it is *not* cheaper than Crisp, contrary to the brief's expectation. A WebGL palette shader would remove the readback if it becomes a problem on low-end phones.
+
+**Camera.** In the ink looks it's a locked wide shot: zoom 0.82, so figures are about 13–14% of the screen height, with the floor at 79%. It drifts gently only when the player leaves the central half, and punch-ins are scaled to 40%. One side effect: enemy spawns are placed relative to the visible range, and the view is now wider, so enemies spawn in slightly different places than in the Smooth look. The fight rules are unchanged; the fingerprint with the old camera is identical. Smooth look keeps the previous follow camera.
+
+**The floor sits inside the touch pad.** At 79% of the screen height, the fighters stand in the lower part of the screen, which is the transparent pad. That's what the brief asks for and matches the reference. The pad stays transparent, so the fight shows through, but thumbs will cover more of the action than before. Smooth look keeps the old framing for anyone who prefers it.
+
+**Telegraphs at this size.** A winding-up enemy alternates between red and its own color on every other drawing (red enemies flash black) and gets a small red pixel starburst above its head. In Rhythm Mode the beat-count pips are still there. Hit flash is the reference's hollow figure: white with a black outline. Fades are impossible in 1-bit, so dying and invulnerable figures blink on alternate drawings instead.
+
+**FX.** Everything is pooled and allocation-free per frame.
+- Specks, starbursts and splatter in the victim's color.
+- Floor marks that persist until the next wave starts.
+- Scribble energy: a red fill, looping ink lines and a spiky rim that re-boil every step, then break into fragments.
+- Projectiles as tapered flame scribbles.
+
+Particles advance on the drawing step in Hand-Drawn mode, so FX move in the same held rhythm as the figures. The old additive glow particles still run, but are not drawn in the ink looks.
+
+**What still needs work.**
+- Hand re-authoring of the dramatized set: finishers, enemy attacks, enemy walk cycles (the dramatized walks are still a bit stiff), and the remaining player moves.
+- The radial burst and inverted night frames of the reference's big moments (410–422) only appear as the existing black/white impact invert.
+- HUD styling for the white page: the dark HP and super bars read fine, but they were designed for the dark arenas.
+

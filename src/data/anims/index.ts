@@ -1,4 +1,4 @@
-import type { AnimDef } from './types';
+import { dramatize, type AnimDef } from './types';
 import * as loco from './locomotion';
 import * as ground from './playerGround';
 import * as air from './playerAir';
@@ -22,7 +22,10 @@ for (const v of Object.values(hand as Record<string, unknown>)) {
   const d = v as AnimDef;
   if (d && typeof d === 'object' && 'keys' in d && 'id' in d && Array.isArray(d.keys)) HAND[d.id] = d;
 }
-/** Ids that have a Hand-Drawn version. */
+/** Ids re-authored by hand as drawings (the rest get the automatic dramatize pass). */
+export const HAND_AUTHORED = Object.keys(HAND);
+for (const id of Object.keys(ORIGINAL)) if (!HAND[id]) HAND[id] = dramatize(ORIGINAL[id]);
+/** Ids that have a Hand-Drawn version (all of them). */
 export const HAND_IDS = Object.keys(HAND);
 let handActive = false;
 /** Swap the registry between the Hand-Drawn drawings and the Smooth originals. */
@@ -45,4 +48,4 @@ export const ANIM_FILE: Record<string, string> = {};
 for (const [file, mod] of [['locomotion', loco], ['playerGround', ground], ['playerAir', air], ['reactions', react], ['enemies', enemy]] as [string, Record<string, unknown>][]) {
   for (const v of Object.values(mod)) { const d = v as AnimDef; if (d && 'keys' in d && 'id' in d) ANIM_FILE[d.id] = file; }
 }
-for (const id of Object.keys(HAND)) ANIM_FILE[id] = 'handDrawn (Hand-Drawn) / ' + (ANIM_FILE[id] ?? '?') + ' (Smooth)';
+for (const id of HAND_AUTHORED) ANIM_FILE[id] = 'handDrawn (Hand-Drawn) / ' + (ANIM_FILE[id] ?? '?') + ' (Smooth)';

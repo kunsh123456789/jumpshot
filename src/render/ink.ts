@@ -55,15 +55,29 @@ packed[PAL.length] = (255 << 24) | (STIPPLE[2] << 16) | (STIPPLE[1] << 8) | STIP
 export function quantize(ctx: CanvasRenderingContext2D, w: number, h: number): void {
   const img = ctx.getImageData(0, 0, w, h);
   const px = new Uint32Array(img.data.buffer);
-  for (let y = 0, i = 0; y < h; y++) {
-    for (let x = 0; x < w; x++, i++) {
-      const v = px[i];
-      const k = LUT[((v & 0xf0) << 4) | ((v >> 8) & 0xf0) | ((v >> 20) & 0x0f)];
-      px[i] = k === DITHER_IDX ? ((x + y) & 1 ? packed[0] : packed[PAL.length]) : packed[k];
+  const L = LUT32, D = DITHER32;
+  let i = 0;
+  for (let y = 0; y < h; y++) {
+    // Checkerboard phase alternates per row: even/odd dither colours swap.
+    const a = (y & 1) ? D[1] : D[0], b = (y & 1) ? D[0] : D[1];
+    for (let x = 0; x < w; x += 2, i += 2) {
+      let v = px[i];
+      let o = L[((v & 0xf0) << 4) | ((v >> 8) & 0xf0) | ((v >> 20) & 0x0f)];
+      px[i] = o === 0 ? a : o;
+      if (x + 1 < w) {
+        v = px[i + 1];
+        o = L[((v & 0xf0) << 4) | ((v >> 8) & 0xf0) | ((v >> 20) & 0x0f)];
+        px[i + 1] = o === 0 ? b : o;
+      } else i--;
     }
   }
   ctx.putImageData(img, 0, 0);
 }
+/** LUT straight to packed output colours; 0 marks the dither key. */
+const LUT32 = new Uint32Array(4096);
+for (let i = 0; i < 4096; i++) LUT32[i] = LUT[i] === DITHER_IDX ? 0 : packed[LUT[i]];
+/** Dither output for even/odd checkerboard cells: stipple grey / paper. */
+const DITHER32 = [packed[PAL.length], packed[0]];
 
 // ------------------------------------------------------------ fighters
 const TEAM: Record<string, string> = {

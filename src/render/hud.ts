@@ -4,6 +4,7 @@ import { FxDirector } from './fx';
 import { STYLE, SUPER } from '../data/tuning';
 import { effects } from './effects';
 import { roundRect } from '../ui/pad';
+import { DRAW } from './drawStyle';
 
 /** Heads-up display drawn in CSS-pixel space. */
 export class Hud {
@@ -67,7 +68,7 @@ export class Hud {
     if (Math.abs(c.score - this.shownScore) < 1) this.shownScore = c.score;
     ctx.textAlign = 'center';
     ctx.font = `900 italic ${Math.round(13 * u)}px system-ui, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillStyle = DRAW.ink ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.75)';
     ctx.fillText(this.waveLabel, cx, top + 6 * u);
     ctx.font = `900 italic ${Math.round(24 * u)}px system-ui, sans-serif`;
     outlineText(ctx, Math.round(this.shownScore).toLocaleString(), cx, top + 26 * u, '#ffffff', 4 * u);

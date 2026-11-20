@@ -161,6 +161,38 @@ export function drawn(spec: DrawnSpec): AnimDef {
   return def;
 }
 
+/**
+ * Hand-Drawn fallback for animations that have not been re-authored by hand:
+ * the original key poses become held drawings, pushed toward the reference's
+ * pose language (deeper crouches, angles pushed further from the base pose,
+ * wider stances, more stretch on contact). Timing and contact are unchanged.
+ */
+export function dramatize(def: AnimDef, k = 1.25): AnimDef {
+  const base = BASES[def.base];
+  const ANG: (keyof PoseSpec)[] = ['lean', 'head', 'aU', 'aL', 'bU', 'bL', 'laU', 'laL', 'lbU', 'lbL', 'spin'];
+  const keys = def.spec.keys.map((key) => {
+    const p: PoseSpec = { ...key.p };
+    for (const ch of ANG) {
+      const v = p[ch];
+      if (v === undefined) continue;
+      const b = ch === 'spin' ? 0 : base[ch] ?? 0;
+      p[ch] = b + (v - b) * k;
+    }
+    if (def.base === 'ground') {
+      const ry = p.rootY ?? base.rootY ?? 0;
+      p.rootY = ry < 0 ? ry * 1.45 - 6 : ry;
+      if ((p.plant ?? base.plant ?? 1) > 0.5) {
+        p.footA = (p.footA ?? base.footA ?? 20) * 1.18;
+        p.footB = (p.footB ?? base.footB ?? -20) * 1.18;
+      }
+      if (p.lean === undefined) p.lean = (base.lean ?? 0) + 0.18;
+    }
+    if (key.impact && p.stretch !== undefined) p.stretch = 1 + (p.stretch - 1) * 1.5;
+    return { ...key, p };
+  });
+  return anim({ ...def.spec, keys });
+}
+
 /** Rebuild an AnimDef in place after the lab edits its spec. */
 export function rebuild(def: AnimDef): void {
   const fresh = anim(def.spec);
