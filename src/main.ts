@@ -54,7 +54,10 @@ function frame(now: number): void {
       acc = 0;
     } else {
       acc += real * dbg * game.time.scale;
+      const pnow = qs.has('manual') ? performance.now() : now;
       while (acc >= SIM_DT && steps < MAX_STEPS) {
+        // performance.now()-domain time this step advances the sim to (Rhythm Mode maps it onto the audio clock).
+        game.simNow = pnow - ((acc - SIM_DT) * 1000) / Math.max(1e-6, dbg * game.time.scale);
         game.step();
         acc -= SIM_DT;
         steps++;

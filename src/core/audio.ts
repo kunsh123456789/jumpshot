@@ -9,7 +9,8 @@ class Audio {
   ctx: AudioContext | null = null;
   private master!: GainNode;
   private sfx!: GainNode;
-  private music!: GainNode;
+  /** Music bus (classic loop and Rhythm Mode songs both play through it). */
+  music!: GainNode;
   private comp!: DynamicsCompressorNode;
   private noise!: AudioBuffer;
   private lastPlay: Record<string, number> = {};
@@ -60,7 +61,7 @@ class Audio {
     return true;
   }
 
-  private noiseBurst(t: number, dur: number, gain: number, type: BiquadFilterType, freq: number, q = 1, freqEnd = 0, dest?: AudioNode): void {
+  noiseBurst(t: number, dur: number, gain: number, type: BiquadFilterType, freq: number, q = 1, freqEnd = 0, dest?: AudioNode): void {
     const ctx = this.ctx!;
     const src = ctx.createBufferSource();
     src.buffer = this.noise;
@@ -76,7 +77,7 @@ class Audio {
     src.start(t, fxRng.next() * 0.5); src.stop(t + dur + 0.02);
   }
 
-  private tone(t: number, type: OscillatorType, f0: number, f1: number, dur: number, gain: number, dest?: AudioNode, attack = 0.003): void {
+  tone(t: number, type: OscillatorType, f0: number, f1: number, dur: number, gain: number, dest?: AudioNode, attack = 0.003): void {
     const ctx = this.ctx!;
     const o = ctx.createOscillator();
     o.type = type;
@@ -227,6 +228,13 @@ class Audio {
       case 'clear': for (const [i, f] of [523, 659, 784, 1046].entries()) this.tone(t + i * 0.08, 'triangle', f, f, 0.4, 0.14); break;
       case 'gameover': for (const [i, f] of [392, 330, 262, 196].entries()) this.tone(t + i * 0.18, 'triangle', f, f * 0.98, 0.5, 0.16); break;
     }
+  }
+
+  /** Metronome click on the music bus at context time t (Rhythm Mode calibration / count-in). */
+  click(t: number, accent = false): void {
+    if (!this.ctx) return;
+    this.tone(t, 'square', accent ? 1760 : 1320, accent ? 1760 : 1320, 0.04, accent ? 0.22 : 0.15, this.music, 0.001);
+    this.noiseBurst(t, 0.02, 0.2, 'highpass', 6000, 0.7, 0, this.music);
   }
 
   // ---------------- Procedural music: a driving minor groove ----------------

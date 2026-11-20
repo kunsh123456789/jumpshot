@@ -9,6 +9,14 @@ export interface Settings {
   leftHanded: boolean;
   debug: boolean;
   reduceFlashes: boolean;
+  /** Rhythm Mode (true) or Classic Mode (false). */
+  rhythmMode: boolean;
+  /** Rhythm Mode input latency calibration (ms, + = inputs register late). */
+  rhythmOffset: number;
+  /** Last built-in song picked in Rhythm Mode. */
+  songId: string;
+  /** Show the beat-track HUD in Rhythm Mode. */
+  beatHud: boolean;
 }
 
 const KEY = 'jumpshot.settings.v1';
@@ -23,6 +31,10 @@ export const settings: Settings = {
   leftHanded: false,
   debug: false,
   reduceFlashes: false,
+  rhythmMode: true,
+  rhythmOffset: 0,
+  songId: 'neon',
+  beatHud: true,
 };
 
 export function loadSettings(): void {

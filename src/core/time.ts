@@ -12,7 +12,11 @@ export class TimeControl {
   /** Real seconds since start (unscaled). */
   real = 0;
 
+  /** Rhythm Mode: the sim must run in lock-step with the music, so slow-mo is disabled. Always false in Classic. */
+  locked = false;
+
   slowmo(scale: number, seconds: number): void {
+    if (this.locked) return;
     if (scale < this.target || this.remain <= 0) this.target = scale;
     this.remain = Math.max(this.remain, seconds);
     this.scale = Math.min(this.scale, scale + 0.15);

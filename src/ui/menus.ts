@@ -55,7 +55,7 @@ export class Menus {
   }
 
   // ---------------- Title ----------------
-  showTitle(high: number, onSettings: () => void): void {
+  showTitle(high: number, onSettings: () => void, mode: { rhythm: boolean; onToggle: (rhythm: boolean) => void } | null = null): void {
     const el = this.layer('title', 'layer passthrough');
     el.style.justifyContent = 'flex-start';
     el.style.paddingTop = '7vh';
@@ -72,6 +72,30 @@ export class Menus {
     row.style.position = 'absolute'; row.style.top = '12px'; row.style.left = '12px';
     row.style.display = 'flex'; row.style.alignItems = 'center'; row.style.gap = '10px';
     this.btn(row, '⚙ SETTINGS', onSettings, 'btn small');
+    if (mode) {
+      // Rhythm / Classic switch.
+      const tg = document.createElement('div');
+      tg.className = 'mode-toggle';
+      tg.setAttribute('role', 'group');
+      tg.setAttribute('aria-label', 'Game mode');
+      const mk = (label: string, rhythm: boolean) => {
+        const b = document.createElement('button');
+        b.textContent = label;
+        b.id = rhythm ? 'mode-rhythm' : 'mode-classic';
+        b.className = mode.rhythm === rhythm ? 'on' : '';
+        b.setAttribute('aria-pressed', String(mode.rhythm === rhythm));
+        b.addEventListener('click', (e) => {
+          e.stopPropagation(); audio.unlock(); audio.ui('click');
+          mode.rhythm = rhythm;
+          for (const x of tg.querySelectorAll('button')) { const on = x === b; x.className = on ? 'on' : ''; x.setAttribute('aria-pressed', String(on)); }
+          mode.onToggle(rhythm);
+        });
+        tg.appendChild(b);
+      };
+      mk('♪ RHYTHM MODE', true);
+      mk('⚔ CLASSIC MODE', false);
+      row.appendChild(tg);
+    }
     if (high > 0) {
       const hs = document.createElement('div');
       hs.style.fontWeight = '900'; hs.style.fontStyle = 'italic'; hs.style.opacity = '0.8';
@@ -105,7 +129,7 @@ export class Menus {
   }
 
   // ---------------- Settings ----------------
-  showSettings(onClose: () => void, onTutorial: (() => void) | null): void {
+  showSettings(onClose: () => void, onTutorial: (() => void) | null, onCalibrate: (() => void) | null = null): void {
     const el = this.layer('settings', 'layer dim');
     const p = document.createElement('div');
     p.className = 'panel';
@@ -124,7 +148,7 @@ export class Menus {
       row.appendChild(span); row.appendChild(inp);
       p.appendChild(row);
     };
-    const check = (label: string, key: 'leftHanded' | 'debug' | 'reduceFlashes', after?: () => void) => {
+    const check = (label: string, key: 'leftHanded' | 'debug' | 'reduceFlashes' | 'rhythmMode' | 'beatHud', after?: () => void) => {
       const row = document.createElement('label');
       row.className = 'row';
       const span = document.createElement('span');
@@ -144,6 +168,21 @@ export class Menus {
     slider('Touch area (screen height)', 'padRegion', 0.35, 0.6, 0.01, () => window.dispatchEvent(new Event('resize')));
     check('Left-handed pad', 'leftHanded', () => { window.dispatchEvent(new Event('resize')); this.placePause(); });
     check('Reduce flashes', 'reduceFlashes');
+    check('Rhythm Mode (off = Classic; applies to the next run)', 'rhythmMode', () => window.dispatchEvent(new Event('jumpshot-mode')));
+    check('Beat-track HUD (Rhythm Mode)', 'beatHud');
+    {
+      const row = document.createElement('label');
+      row.className = 'row';
+      const span = document.createElement('span');
+      const fmt = () => `Rhythm latency offset: ${settings.rhythmOffset >= 0 ? '+' : ''}${Math.round(settings.rhythmOffset)} ms`;
+      span.textContent = fmt();
+      const inp = document.createElement('input');
+      inp.type = 'range'; inp.min = '-250'; inp.max = '250'; inp.step = '5'; inp.value = String(settings.rhythmOffset); inp.id = 'set-rhythmOffset';
+      inp.addEventListener('input', () => { settings.rhythmOffset = parseFloat(inp.value); span.textContent = fmt(); saveSettings(); window.dispatchEvent(new Event('jumpshot-mode')); });
+      row.appendChild(span); row.appendChild(inp);
+      p.appendChild(row);
+    }
+    if (onCalibrate) this.btn(p, 'CALIBRATE RHYTHM LATENCY', () => { this.close('settings'); onCalibrate(); });
     check('Show debug overlay', 'debug', () => window.dispatchEvent(new Event('jumpshot-debug')));
     if (onTutorial) this.btn(p, 'REPLAY TUTORIAL', () => { this.close('settings'); onTutorial(); });
     this.btn(p, 'DONE', () => { this.close('settings'); onClose(); }, 'btn primary');

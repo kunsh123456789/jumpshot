@@ -13,6 +13,7 @@ import { PlayerController } from './player';
 import { bowling, enemyPhysics, separate } from './physics';
 import { BOSS, ENEMIES, PROJECTILE, type EnemyAttack, type EnemyKind } from '../data/enemies';
 import { simRng } from '../core/rng';
+import type { RhythmSim } from '../rhythm/simHooks';
 
 /** The simulation container. Advanced only in fixed 60 Hz steps. */
 export class World {
@@ -33,6 +34,8 @@ export class World {
   camLeft = 0;
   camRight: number = WORLD.viewW;
   wave = 0;
+  /** Rhythm Mode hooks; null in Classic Mode (every use is guarded). */
+  rhythm: RhythmSim | null = null;
   /** Horizontal movement input this tick (-1..1), from the pad stick or keyboard. */
   moveAxis = 0;
 
