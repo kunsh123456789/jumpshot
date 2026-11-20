@@ -28,7 +28,10 @@ export function poseFighter(f: Fighter, _time: number): void {
     const def = ANIMS[m.id] ?? ANIMS.jab1;
     const restart = a.moveSerial !== f.moveSerial;
     if (restart) a.moveSerial = f.moveSerial;
-    const t = moveTime(def, f.effStartup, f.moveFrame);
+    // Rhythm Mode snapping re-times the startup; play the authored anticipation stretched/compressed over it.
+    const t = f.snapBase > 0 && f.moveFrame < f.effStartup
+      ? moveTime(def, f.snapBase, (f.moveFrame * f.snapBase) / f.effStartup)
+      : moveTime(def, f.effStartup, f.moveFrame);
     if (t < 0) {
       // Magnetism dash: authored dash pose; the strike's anticipation starts straight out of it.
       a.run(f.grounded ? ANIMS.dash : ANIMS.airDash, rate, ANIM.fadeCancel, restart);

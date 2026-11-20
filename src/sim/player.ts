@@ -335,6 +335,7 @@ export class PlayerController {
 
   private updateMove(w: World): void {
     const p = w.player;
+    if (w.rhythm && p.moveFrame < p.effStartup) w.rhythm.onMoveTick(w, p);
     const m = p.move!;
     const fr = p.moveFrame;
     const S = p.effStartup;

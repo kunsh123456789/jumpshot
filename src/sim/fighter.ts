@@ -54,6 +54,8 @@ export class Fighter {
   moveSerial = 0;
   moveFrame = 0;
   effStartup = 0;
+  /** Rhythm Mode: the move's startup before it was snapped to the beat grid (0 = not snapped; always 0 in Classic). */
+  snapBase = 0;
   target: Fighter | null = null;
   dashFrames = 0;
   dashFromX = 0; dashFromY = 0; dashToX = 0; dashToY = 0;

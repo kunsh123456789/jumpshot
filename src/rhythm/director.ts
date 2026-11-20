@@ -1,14 +1,13 @@
 import { audio } from '../core/audio';
 import { settings } from '../core/settings';
 import { SONGS, METRONOME_SONG, type SongDef } from '../data/songs';
-import { GOOD, GREAT, MISS, RHYTHM, type Grade } from '../data/rhythm';
+import { GOOD, GREAT, RHYTHM, type Grade } from '../data/rhythm';
 import { SUPER } from '../data/tuning';
 import { Conductor } from './conductor';
 import { judgeAt, type Judgement } from './judge';
 import type { RhythmSim } from './simHooks';
 import type { World } from '../sim/world';
 import type { Fighter } from '../sim/fighter';
-import type { MoveDef } from '../data/moves';
 import type { SwipeEvent } from '../ui/pad';
 
 const FRAME = 1 / 60;
@@ -112,15 +111,66 @@ export class RhythmDirector implements RhythmSim {
   }
 
   // ------------------------------------------------------------ RhythmSim (filled in by later milestones)
-  onMoveStart(_w: World, _p: Fighter, ev: SwipeEvent | null, resnap: boolean): void {
-    if (!resnap) {
-      const j = ev ? this.judged.get(ev) : undefined;
+  onMoveStart(_w: World, p: Fighter, ev: SwipeEvent | null, resnap: boolean): void {
+    if (!resnap && ev) {
+      const j = this.judged.get(ev);
       this.moveGrade = j ? j.grade : -1;
       this.bonusPaid = !(j && j.grade >= GOOD);
-    }
-    void this.snapTarget; void MISS; void FRAME; void (null as unknown as MoveDef);
+    } // ev = null: a chained follow-up keeps the grade of the input that started the string
+    this.snap(p);
   }
-  onMoveTick(_w: World, _p: Fighter): void {}
+
+  /**
+   * Snap the move's contact frame onto the musical grid: pick the 16th-note
+   * grid point nearest the natural contact time, either compressing the
+   * startup (down to snapMinStartupFrac) or delaying it (at most
+   * snapMaxDelayMs). Slow tempos fall back to a finer grid. The dash and any
+   * air hangs are re-timed with it.
+   */
+  private snap(p: Fighter): void {
+    const m = p.move;
+    if (!this.live || !m) { p.snapBase = 0; this.snapTarget = 0; return; }
+    const c = this.clock;
+    const fr = p.moveFrame;
+    const S0 = p.effStartup;
+    const now = this.now;
+    const t0 = now + (S0 - fr) * FRAME;
+    const minS = Math.max(RHYTHM.snapMinStartupFrames, Math.ceil(S0 * RHYTHM.snapMinStartupFrac), fr + 1);
+    const tMin = now + (minS - fr) * FRAME - 0.004;
+    const maxDelay = RHYTHM.snapMaxDelayMs / 1000 + 1e-6;
+    let best = NaN;
+    for (let div = RHYTHM.snapDiv; div <= 16 && !isFinite(best); div *= 2) {
+      const gp = c.prevGrid(t0, div), gn = c.nextGrid(t0, div);
+      const okP = gp >= tMin, okN = gn - t0 <= maxDelay;
+      if (okP && okN) best = t0 - gp <= gn - t0 ? gp : gn;
+      else if (okP) best = gp;
+      else if (okN) best = gn;
+    }
+    if (!isFinite(best)) { p.snapBase = 0; this.snapTarget = 0; return; }
+    const S = Math.max(fr + 1, fr + Math.round((best - now) / FRAME));
+    const delta = S - S0;
+    p.snapBase = S0;
+    p.effStartup = S;
+    this.snapTarget = best;
+    // Re-time the magnetism dash proportionally (it must end by the contact frame).
+    if (p.dashFrames > 0 && fr < p.dashFrames) p.dashFrames = Math.max(fr + 1, Math.min(S, Math.round((p.dashFrames * S) / S0)));
+    if (delta > 0) {
+      // Waiting longer for the beat: keep air hangs alive until the hit.
+      if (!p.grounded || p.stall > 0) p.stall = Math.max(p.stall, S - fr + m.active);
+      const t = p.target;
+      if (t && t.alive && !t.grounded && t.stall > 0) t.stall += delta;
+    }
+  }
+
+  /** Each startup tick: re-derive the contact frame from the clock (hit-stop or step jitter can't drift it off the grid). */
+  onMoveTick(_w: World, p: Fighter): void {
+    if (!this.live || this.snapTarget <= 0 || p.snapBase <= 0) return;
+    const fr = p.moveFrame;
+    let S = fr + Math.max(1, Math.round((this.snapTarget - this.now) / FRAME));
+    if (p.dashFrames > fr) S = Math.max(S, p.dashFrames);
+    if (S !== p.effStartup && Math.abs(S - p.effStartup) <= 3) p.effStartup = S;
+  }
+
   onTap(_w: World, ev: SwipeEvent): void { const j = this.judged.get(ev); this.tapGrade = j ? j.grade : -1; }
 
   damageMult(_w: World): number { return this.moveGrade >= 0 ? RHYTHM.damageMult[this.moveGrade] : 1; }
