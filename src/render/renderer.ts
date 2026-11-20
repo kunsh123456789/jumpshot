@@ -8,7 +8,9 @@ import { drawFighter, drawShadow, drawTrail } from './stickman';
 import { effects } from './effects';
 import type { Fighter } from '../sim/fighter';
 import { DRAW } from './drawStyle';
-import { INK, drawInkFighter, inkReflection, quantize } from './ink';
+import { INK, drawInkFighter, inkReflection, quantize, setPaperColor } from './ink';
+import { paper } from './paper';
+import { PAPER } from '../data/paper';
 import { INKLOOK } from '../data/inkLook';
 import { inkFx } from './inkFx';
 
@@ -49,6 +51,8 @@ export class Renderer {
   }
 
   // ---- Ink look (revision pass 5) ----
+  /** Rhythm beat pulse (0..1) for the page's bouncing margin doodles. */
+  beatPulse = 0;
   private low: HTMLCanvasElement | null = null;
   private lowCtx: CanvasRenderingContext2D | null = null;
 
@@ -124,28 +128,34 @@ export class Renderer {
   private renderInk(world: World, cam: Camera, alpha: number, time: number, dt: number): void {
     const ctx = this.ctx;
     const pixel = settings.look === 'pixel';
+    const r = layout.world, sc = layout.scale;
+    // ---- Paper (screen space, pre-rendered; paper doesn't parallax) ----
+    const q = pixel ? settings.pixelRes / sc : layout.dpr;
+    const floorCss = r.y + (cam.groundScreen - layout.viewY0) * sc;
+    paper.resize(layout.cssW, layout.cssH, q, floorCss);
+    setPaperColor(PAPER.paper[paper.page]);
     this.cssTransform();
-    ctx.fillStyle = INK.paper;
-    ctx.fillRect(0, 0, layout.cssW, layout.cssH);
+    paper.draw(ctx, time, this.beatPulse);
+
+    // ---- World: a transparent layer over the whole screen (no letterbox gaps) ----
     let g: CanvasRenderingContext2D;
     let lw = 0, lh = 0, res: number;
     if (pixel) {
       res = settings.pixelRes;
-      lw = Math.max(16, Math.ceil(layout.viewW * res)); lh = Math.max(16, Math.ceil(layout.viewH * res));
-      if (!this.low) { this.low = document.createElement('canvas'); this.lowCtx = this.low.getContext('2d', { alpha: false, willReadFrequently: true }); }
+      lw = Math.max(16, Math.ceil(layout.cssW * q)); lh = Math.max(16, Math.ceil(layout.cssH * q));
+      if (!this.low) { this.low = document.createElement('canvas'); this.lowCtx = this.low.getContext('2d', { willReadFrequently: true }); }
       if (this.low.width !== lw || this.low.height !== lh) { this.low.width = lw; this.low.height = lh; }
       g = this.lowCtx!;
-      g.setTransform(res, 0, 0, res, -layout.viewX0 * res, -layout.viewY0 * res);
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, lw, lh);
+      g.setTransform(res, 0, 0, res, q * r.x - res * layout.viewX0, q * r.y - res * layout.viewY0);
       g.save();
     } else {
       res = INKLOOK.refRes;
       g = ctx;
       this.viewTransform();
       g.save();
-      g.beginPath(); g.rect(layout.viewX0, layout.viewY0, layout.viewW, layout.viewH); g.clip();
     }
-    g.fillStyle = INK.paper;
-    g.fillRect(layout.viewX0, layout.viewY0, layout.viewW, layout.viewH);
     const z = cam.effectiveZoom();
     // World units per low-res pixel: line weights are authored in low-res pixels.
     const wpp = 1 / (res * z);
@@ -155,11 +165,11 @@ export class Renderer {
     g.translate(-cam.x, -cam.y);
 
     const G = WORLD.groundY;
-    const fw = INKLOOK.floorPx * wpp;
-    // Floor: one thick black line + the Blank Page's few fixed doodles + accumulated damage.
+    const fw = INKLOOK.floorPx * wpp * (settings.highContrast ? 1.4 : 1);
+    // Floor: one thick black pen line (ruled) + the page's fixed doodles + accumulated damage.
     g.fillStyle = INK.ink;
-    g.fillRect(-600, G - fw / 2, WORLD.arenaW + 1200, fw);
-    drawDoodles(g, wpp);
+    g.fillRect(-2600, G - fw / 2, WORLD.arenaW + 5200, fw);
+    if (!settings.highContrast) drawDoodles(g, wpp);
     inkFx.drawFloor(g, wpp);
 
     const order = this.order;
@@ -170,7 +180,7 @@ export class Renderer {
 
     // Reflections (dither key), clipped below the floor line.
     g.save();
-    g.beginPath(); g.rect(-600, G + fw / 2, WORLD.arenaW + 1200, 2000); g.clip();
+    g.beginPath(); g.rect(-2600, G + fw / 2, WORLD.arenaW + 5200, 2000); g.clip();
     for (const f of order) inkReflection(g, f, alpha, time, wpp);
     g.restore();
 
@@ -182,28 +192,27 @@ export class Renderer {
     inkFx.drawFront(g, wpp);
     g.restore();
 
-    // Impact frame: hard black/white inversion; screen flash as a page wash.
-    if (effects.invert > 0 && !settings.reduceFlashes) {
-      g.globalCompositeOperation = 'difference';
-      g.fillStyle = '#ffffff';
-      g.fillRect(layout.viewX0, layout.viewY0, layout.viewW, layout.viewH);
-      g.globalCompositeOperation = 'source-over';
-    }
-    if (effects.screenFlash > 0.25 && !settings.reduceFlashes) {
-      g.fillStyle = effects.screenFlashColor;
-      g.globalAlpha = 0.5;
-      g.fillRect(layout.viewX0, layout.viewY0, layout.viewW, layout.viewH);
-      g.globalAlpha = 1;
-    }
-
     if (pixel) {
       quantize(g, lw, lh);
-      // Nearest-neighbor upscale into the world rect.
       this.cssTransform();
-      const r = layout.world, sc = layout.scale;
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(this.low!, 0, 0, lw, lh, r.x, r.y, layout.viewW * sc, layout.viewH * sc);
+      ctx.drawImage(this.low!, 0, 0, lw, lh, 0, 0, lw / q, lh / q);
       ctx.imageSmoothingEnabled = true;
+    }
+    this.cssTransform();
+    paper.drawOverlay(ctx);
+    // Impact frame: hard inversion of the whole page; screen flash as a page wash.
+    if (effects.invert > 0 && !settings.reduceFlashes) {
+      ctx.globalCompositeOperation = 'difference';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, layout.cssW, layout.cssH);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    if (effects.screenFlash > 0.25 && !settings.reduceFlashes) {
+      ctx.fillStyle = effects.screenFlashColor;
+      ctx.globalAlpha = 0.35;
+      ctx.fillRect(0, 0, layout.cssW, layout.cssH);
+      ctx.globalAlpha = 1;
     }
     // Floating text on the crisp layer (world positioned).
     this.viewTransform();

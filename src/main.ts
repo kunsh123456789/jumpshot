@@ -1,3 +1,5 @@
+import '@fontsource/patrick-hand/latin-400.css';
+import '@fontsource/permanent-marker/latin-400.css';
 import { inkFx } from './render/inkFx';
 import { Game } from './game';
 import { layout } from './core/layout';

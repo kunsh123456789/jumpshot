@@ -148,7 +148,7 @@ export class Menus {
       row.appendChild(span); row.appendChild(inp);
       p.appendChild(row);
     };
-    const check = (label: string, key: 'leftHanded' | 'debug' | 'reduceFlashes' | 'rhythmMode' | 'beatHud', after?: () => void) => {
+    const check = (label: string, key: 'leftHanded' | 'debug' | 'reduceFlashes' | 'rhythmMode' | 'beatHud' | 'boil' | 'highContrast', after?: () => void) => {
       const row = document.createElement('label');
       row.className = 'row';
       const span = document.createElement('span');
@@ -187,6 +187,7 @@ export class Menus {
       p.appendChild(row);
     }
     select('Attack smoothness (Hand-Drawn)', 'set-attackSmooth', [['low', 'Low (key drawings only)'], ['normal', 'Normal (+1 in-between)'], ['high', 'High (+2, strikes on ones)']], () => settings.attackSmooth, (v) => { settings.attackSmooth = v as 'low' | 'normal' | 'high'; });
+    select('Paper page', 'set-page', [['auto', 'Auto (changes with waves)'], ['blank', 'Blank Page'], ['lined', 'Lined Notebook'], ['graph', 'Graph Paper'], ['sketch', 'Sketchbook'], ['kraft', 'Kraft Paper']], () => settings.page, (v) => { settings.page = v as typeof settings.page; });
     select('Look', 'set-look', [['pixel', 'Pixel (ink page, 1-bit)'], ['crisp', 'Crisp (ink page, full res)'], ['smooth', 'Smooth (previous neon look)']], () => settings.look, (v) => { settings.look = v as 'pixel' | 'crisp' | 'smooth'; });
     {
       const row = document.createElement('label');
@@ -208,6 +209,8 @@ export class Menus {
     slider('Touch area (screen height)', 'padRegion', 0.35, 0.6, 0.01, () => window.dispatchEvent(new Event('resize')));
     check('Left-handed pad', 'leftHanded', () => { window.dispatchEvent(new Event('resize')); this.placePause(); });
     check('Reduce flashes', 'reduceFlashes');
+    check('Line boil (doodles re-drawn ~7 fps)', 'boil');
+    check('High contrast (plain page, bolder lines)', 'highContrast', () => window.dispatchEvent(new Event('jumpshot-look')));
     check('Rhythm Mode (off = Classic; applies to the next run)', 'rhythmMode', () => window.dispatchEvent(new Event('jumpshot-mode')));
     check('Beat-track HUD (Rhythm Mode)', 'beatHud');
     {

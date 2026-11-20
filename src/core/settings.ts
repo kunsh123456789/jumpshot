@@ -27,6 +27,12 @@ export interface Settings {
   pixelRes: number;
   /** Hand-Drawn attacks: generated in-betweens and smear chains. */
   attackSmooth: 'low' | 'normal' | 'high';
+  /** Paper page: 'auto' rotates by wave (kraft on boss waves). */
+  page: 'auto' | 'blank' | 'lined' | 'graph' | 'sketch' | 'kraft';
+  /** Doodle / UI line boil (re-drawn at ~7 fps). */
+  boil: boolean;
+  /** High contrast: plain white paper, no doodles, darker lines. */
+  highContrast: boolean;
 }
 
 const KEY = 'jumpshot.settings.v1';
@@ -50,6 +56,9 @@ export const settings: Settings = {
   look: 'pixel',
   pixelRes: 0.4,
   attackSmooth: 'normal',
+  page: 'auto',
+  boil: true,
+  highContrast: false,
 };
 
 export function loadSettings(): void {

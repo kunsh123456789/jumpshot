@@ -27,6 +27,8 @@ import { RhythmUI, type CalibView } from './rhythm/ui';
 import { DRAW, syncDrawStyle } from './render/drawStyle';
 import { INKLOOK } from './data/inkLook';
 import { inkFx, drawEntitiesInk } from './render/inkFx';
+import { paper } from './render/paper';
+import { PAGE_ORDER, type PageId } from './data/paper';
 import { RHYTHM } from './data/rhythm';
 import { SONGS } from './data/songs';
 
@@ -102,6 +104,9 @@ export class Game {
     document.addEventListener('visibilitychange', () => { if (document.hidden && (this.state === 'playing' || this.state === 'tutorial') && !this.paused) this.togglePause(); });
     this.world.events.on('waveClear', () => this.onWaveClear());
     inkFx.bind(this.world);
+    // Pages bake handwriting into their doodles: re-bake once the bundled fonts are ready.
+    document.fonts?.ready.then(() => paper.invalidate());
+    window.addEventListener('jumpshot-look', () => { paper.invalidate(); if (this.state === 'title') paper.setPage(this.pageFor(1)); });
     this.rhythm.onJudge = (j, broke) => this.rhud.judged(j, broke, this.rhythm.now);
     window.addEventListener('jumpshot-mode', () => { this.rhythm.clock.inputOffsetMs = settings.rhythmOffset; });
     this.publishPadTop();
@@ -137,6 +142,8 @@ export class Game {
     this.endRhythm();
     this.rhythm.stopMic();
     this.rui.closeAll();
+    paper.resetTransitions();
+    paper.setPage(this.pageFor(1));
   }
 
   private startFromTitle(): void {
@@ -334,6 +341,7 @@ export class Game {
 
   private effectsReset(): void {
     effects.clear();
+    paper.resetTransitions();
     inkFx.clearFloor();
     this.time.reset();
     this.fx.popups.length = 0;
@@ -347,13 +355,23 @@ export class Game {
     if (arena !== this.renderer.bg.current) this.renderer.bg.set(arena);
     this.setState('countdown');
     const boss = wave % 10 === 0, elite = !boss && wave % 5 === 0;
+    // Paper world: turn to this wave's page.
+    paper.flipTo(this.pageFor(wave));
     this.menus.banner(`WAVE ${wave}`, boss ? '⚠ BOSS INCOMING ⚠' : elite ? 'ELITE INCOMING' : '', 1400);
     this.hud.waveLabel = `WAVE ${wave}`;
     audio.ui('wave');
   }
 
+  /** The page for a wave: the chosen page, or rotate pages every few waves with kraft for bosses. */
+  private pageFor(wave: number): PageId {
+    if (settings.page !== 'auto') return settings.page;
+    if (wave % 10 === 0) return 'kraft';
+    return PAGE_ORDER[Math.floor((Math.max(1, wave) - 1) / WAVES_T.arenaRotateEvery) % PAGE_ORDER.length];
+  }
+
   private onWaveClear(): void {
     if (this.state !== 'playing') return;
+    paper.cleared();
     this.world.combo.end(false);
     this.world.combo.score += SCORE.waveClear * this.nextWave;
     const p = this.world.player;
@@ -403,6 +421,7 @@ export class Game {
     this.overTimer = 0;
     audio.ui('gameover');
     audio.stopMusic();
+    paper.crumple();
     if (this.world.rhythm) this.endRhythm();
     this.time.slowmo(0.3, 1.0);
   }
@@ -497,6 +516,8 @@ export class Game {
     this.updateState(realDt);
     effects.update(dt);
     inkFx.update(dt);
+    paper.update(realDt);
+    this.renderer.beatPulse = this.world.rhythm ? this.rhud.pulse : 0;
     this.fx.update(realDt);
     this.updateCamera(alpha);
     this.cam.update(realDt);
