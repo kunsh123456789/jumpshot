@@ -72,8 +72,12 @@ export function saveSettings(): void {
 }
 
 const SAVE_KEY = 'jumpshot.save.v1';
-export interface SaveData { highScore: number; tutorialDone: boolean; bestCombo: number; bestWave: number; padHintSeen: boolean }
-export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false };
+export interface SaveData {
+  highScore: number; tutorialDone: boolean; bestCombo: number; bestWave: number; padHintSeen: boolean;
+  /** Equipped weapon (last loadout choice) and the weapons whose first-time tooltip was shown. */
+  weapon: string; weaponTips: string[];
+}
+export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false, weapon: 'fists', weaponTips: [] };
 export function loadSave(): void {
   try {
     const raw = localStorage.getItem(SAVE_KEY);

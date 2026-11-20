@@ -150,6 +150,53 @@ class Audio {
     this.noiseBurst(t, 0.18, 0.4, 'highpass', 4000, 0.7, 9000);
   }
 
+  /** Weapon sounds (revision pass 7). */
+  weapon(kind: 'hookFire' | 'hookHit' | 'reel' | 'zap' | 'beam' | 'grab' | 'throw' | 'overheat' | 'swap' | 'deflect'): void {
+    if (!this.ok('w' + kind, 0.04)) return;
+    const t = this.ctx!.currentTime;
+    switch (kind) {
+      case 'hookFire': // snap + a rattling chain
+        this.noiseBurst(t, 0.05, 0.4, 'highpass', 3000, 1, 8000);
+        for (let i = 0; i < 4; i++) this.tone(t + 0.02 + i * 0.025, 'square', 2400 - i * 200, 1900 - i * 200, 0.02, 0.05);
+        break;
+      case 'hookHit': // metallic clank
+        this.tone(t, 'triangle', 1320, 1240, 0.18, 0.22);
+        this.tone(t, 'square', 1980, 1900, 0.06, 0.08);
+        this.noiseBurst(t, 0.05, 0.3, 'bandpass', 3500, 2);
+        break;
+      case 'reel':
+        for (let i = 0; i < 5; i++) this.tone(t + i * 0.03, 'square', 1500 + i * 120, 1500 + i * 120, 0.015, 0.04);
+        break;
+      case 'zap':
+        this.tone(t, 'sawtooth', 1800, 420, 0.09, 0.16);
+        this.noiseBurst(t, 0.06, 0.18, 'highpass', 2500, 1, 6000);
+        break;
+      case 'beam':
+        this.tone(t, 'sawtooth', 220, 60, 0.6, 0.3);
+        this.tone(t, 'square', 880, 180, 0.45, 0.1);
+        this.noiseBurst(t, 0.6, 0.5, 'bandpass', 1200, 0.8, 300);
+        break;
+      case 'grab':
+        this.noiseBurst(t, 0.07, 0.35, 'bandpass', 900, 1.2, 500);
+        this.tone(t, 'sine', 180, 120, 0.08, 0.25);
+        break;
+      case 'throw':
+        this.noiseBurst(t, 0.22, 0.3, 'bandpass', 500, 1.2, 2600);
+        break;
+      case 'overheat':
+        this.noiseBurst(t, 0.7, 0.35, 'highpass', 3000, 0.7, 1200);
+        this.tone(t, 'square', 600, 300, 0.25, 0.06);
+        break;
+      case 'swap':
+        this.tone(t, 'triangle', 660, 990, 0.08, 0.15);
+        this.noiseBurst(t, 0.05, 0.2, 'bandpass', 2000, 1.5);
+        break;
+      case 'deflect':
+        this.tone(t, 'triangle', 1760, 1600, 0.12, 0.15);
+        break;
+    }
+  }
+
   dodge(): void {
     if (!this.ok('dodge', 0.04)) return;
     const t = this.ctx!.currentTime;

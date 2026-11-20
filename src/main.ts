@@ -4,6 +4,7 @@ import { inkFx } from './render/inkFx';
 import { Game } from './game';
 import { initSketchDom } from './ui/sketchDom';
 import { layout } from './core/layout';
+import { save } from './core/settings';
 import { audio } from './core/audio';
 import { SIM_DT } from './data/tuning';
 import { loadSave, loadSettings } from './core/settings';
@@ -24,6 +25,8 @@ const qs = new URLSearchParams(location.search);
 // ?song=dojo|neon|volcano: Rhythm Mode with that song, no picker. ?classic: Classic Mode (dev/tests).
 if (qs.has('classic')) game.forceMode(null);
 else if (qs.get('song')) game.forceMode(qs.get('song'));
+// ?weapon=fists|hook|throw|staff|laser: equip that weapon (dev/tests).
+if (qs.get('weapon')) { save.weapon = qs.get('weapon')!; save.weaponTips.push(save.weapon); }
 const startWave = parseInt(qs.get('wave') ?? '', 10);
 if (startWave > 0) game.devStart(startWave);
 if (location.hash === '#lab') game.openLab();

@@ -1,4 +1,5 @@
 import { layout } from '../core/layout';
+import { drawHeatBar } from './weaponFx';
 import type { World } from '../sim/world';
 import { FxDirector } from './fx';
 import { STYLE, SUPER } from '../data/tuning';
@@ -61,6 +62,7 @@ export class Hud {
       ctx.fillStyle = '#ff9af0';
       ctx.fillText('SUPER READY', left, sy + sh + 10 * u);
     }
+    drawHeatBar(ctx, w, left, sy + sh + 18 * u, hpW * 0.5, 7 * u, u, '#e8eefc', 'system-ui, sans-serif');
 
     // ---- Wave / score ----
     const cx = r.x + r.w / 2;

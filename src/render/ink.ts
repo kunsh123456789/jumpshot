@@ -1,4 +1,5 @@
 import { J, JOINT_N } from './rig';
+import { heldWeapon } from './weaponFx';
 import type { Fighter } from '../sim/fighter';
 import { TAU } from '../core/math';
 import { WORLD } from '../data/tuning';
@@ -227,6 +228,7 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
     inkFigure(ctx, f, j, INK.paper, wpp, true);
   } else inkFigure(ctx, f, j, col, wpp);
 
+  if (f.team === 'player') heldWeapon(ctx, f, j, flashing ? INK.ink : col, wpp);
   const s = f.scale;
   const headR = a.rig.headR * s * INKLOOK.headScale;
   const hx = j[J.head * 2], hy = j[J.head * 2 + 1];

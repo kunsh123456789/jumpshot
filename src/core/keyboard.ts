@@ -6,6 +6,7 @@ import { classifyDir, type DrawPad } from '../ui/pad';
  *  - Move:   A / D  or  ← / →   (held; analog-style axis)
  *  - Attack: I / J / K / L = up / left / down / right; press two together for diagonals
  *  - Shift = heavy, Space = tap (dodge/parry)
+ *  - 1-5 = pick a weapon (loadout screen, or swap during the between-wave breather)
  *  - ` = debug overlay, Esc/P = pause, [ = 0.1x slow-mo, ] = freeze + step one frame, \ = resume
  * Diagonal chords are resolved by polling (no timers): poll() runs every sim tick.
  */
@@ -19,6 +20,8 @@ export class Keyboard {
   onDebugSlow: () => void = () => {};
   onDebugStep: () => void = () => {};
   onDebugResume: () => void = () => {};
+  /** Menu keys (weapon loadout / swap): return true if handled. */
+  onKey: (code: string) => boolean = () => false;
   enabled = true;
 
   constructor(private pad: DrawPad) {
@@ -51,6 +54,7 @@ export class Keyboard {
   }
 
   private down(e: KeyboardEvent): void {
+    if (!e.repeat && this.onKey(e.code)) { e.preventDefault(); return; }
     switch (e.code) {
       case 'Backquote': this.onToggleDebug(); e.preventDefault(); return;
       case 'Escape': case 'KeyP': this.onPause(); e.preventDefault(); return;

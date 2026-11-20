@@ -4,7 +4,7 @@ import type { TimeControl } from '../core/time';
 import type { DrawPad } from '../ui/pad';
 import { effects } from './effects';
 import { audio } from '../core/audio';
-import { ANIM, JUICE, PLAYER, STYLE } from '../data/tuning';
+import { ANIM, JUICE, PLAYER, STYLE, WORLD } from '../data/tuning';
 import { setAnimSfx } from './animator';
 import { settings } from '../core/settings';
 import type { Fighter } from '../sim/fighter';
@@ -147,6 +147,24 @@ export class FxDirector {
     });
     ev.on('dodge', () => { audio.dodge(); });
     ev.on('telegraph', () => { audio.telegraph(); });
+    // ---- Weapons (revision pass 7) ----
+    ev.on('beam', (e) => {
+      if (e.heavy) {
+        audio.weapon('beam');
+        this.cam.shake(Math.min(JUICE.shakeMax, 16), Math.sign(e.x2 - e.x1), 0, 0.5);
+        if (e.hit && !settings.reduceFlashes) effects.invert = ANIM.invertSec;
+        effects.dust(e.x1, WORLD.groundY, 0.4);
+      } else audio.weapon('zap');
+    });
+    ev.on('overheat', (e) => { audio.weapon('overheat'); effects.text('OVERHEAT', e.x, e.y - 120, '#ff5050', 22, 0.9); });
+    ev.on('grab', () => audio.weapon('grab'));
+    ev.on('throw', (e) => { audio.weapon('throw'); if (e.heavy) this.cam.shake(6, 0, -1, 0.2); });
+    ev.on('hookFire', (e) => { audio.weapon('hookFire'); if (e.hit) audio.weapon('hookHit'); });
+    ev.on('pullArrive', () => audio.weapon('reel'));
+    ev.on('deflect', (e) => { audio.weapon('deflect'); effects.text('DEFLECT', e.x, e.y - 60, '#9fd8ff', 16, 0.6); });
+    ev.on('weaponSwap', () => audio.weapon('swap'));
+    // Each weapon's signature moment gets the slow-mo treatment (TimeControl; locked off in Rhythm Mode).
+    ev.on('weaponMoment', (e) => { this.time.slowmo(e.scale, e.sec); this.cam.focus(0.2, 0.5); });
     ev.on('burst', (e) => {
       const r = effects.spawn(2, e.x, e.y, 0, 0, 0.4, 20, '#ff5050'); r.size2 = 200;
       effects.text('BURST!', e.x, e.y - 80, '#ff5050', 28, 0.8);

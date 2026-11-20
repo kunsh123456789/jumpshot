@@ -16,6 +16,8 @@ export interface RhythmSim {
   onMoveTick(w: World, p: Fighter): void;
   /** A tap started a dodge (parry window). */
   onTap(w: World, ev: SwipeEvent): void;
+  /** Timing grade of the input that started the current move (-1 none, 3 = Perfect). */
+  moveGrade(): number;
   /** Damage multiplier for the player's current move. */
   damageMult(w: World): number;
   /** The player's move connected. */

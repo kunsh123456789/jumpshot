@@ -1,5 +1,8 @@
 import { settings, saveSettings } from '../core/settings';
 import { audio } from '../core/audio';
+import { WEAPONS, WEAPON_ORDER, type WeaponDef, type WeaponId } from '../data/weapons';
+import { MOVES } from '../data/moves';
+import { MovePreview } from './preview';
 import { STYLE } from '../data/tuning';
 
 /** DOM overlays for menus (title, pause, settings, loadout, results, banners). */
@@ -55,7 +58,7 @@ export class Menus {
   }
 
   // ---------------- Title ----------------
-  showTitle(high: number, onSettings: () => void, mode: { rhythm: boolean; onToggle: (rhythm: boolean) => void } | null = null): void {
+  showTitle(high: number, onSettings: () => void, mode: { rhythm: boolean; onToggle: (rhythm: boolean) => void } | null = null, loadout: { name: string; open: () => void } | null = null): void {
     const el = this.layer('title', 'layer passthrough');
     el.style.justifyContent = 'flex-start';
     el.style.paddingTop = '7vh';
@@ -74,6 +77,8 @@ export class Menus {
     row.style.position = 'absolute'; row.style.top = '12px'; row.style.left = '12px';
     row.style.display = 'flex'; row.style.alignItems = 'center'; row.style.gap = '10px';
     this.btn(row, '⚙ SETTINGS', onSettings, 'btn small');
+    // TODO(ui-pass): loadout entry point.
+    if (loadout) this.btn(row, `⚔ WEAPON: ${loadout.name}`, loadout.open, 'btn small');
     if (mode) {
       // Rhythm / Classic switch.
       const tg = document.createElement('div');
@@ -240,6 +245,123 @@ export class Menus {
     el.appendChild(p);
   }
 
+  // ---------------- Weapons (revision pass 7) ----------------
+  // TODO(ui-pass): the loadout screen, swap strip and weapon tooltip reuse the existing panel/card/button
+  // components with a plain functional layout; restyle them in the UI pass.
+
+  /** Pre-run loadout: pick one of the weapons (preview loops its moves on a dummy, plus its swipe cheat-sheet). */
+  showLoadout(current: WeaponId, onPick: (id: WeaponId) => void, onClose: () => void): void {
+    const el = this.layer('loadout', 'layer dim');
+    const p = document.createElement('div');
+    p.className = 'panel loadout';
+    p.innerHTML = '<h2>LOADOUT</h2>';
+    const cv = document.createElement('canvas');
+    cv.className = 'lo-preview';
+    const cap = document.createElement('div');
+    cap.className = 'subtitle lo-cap';
+    const preview = new MovePreview(cv, (l) => { cap.textContent = l; });
+    p.appendChild(cv); p.appendChild(cap);
+    const cards = document.createElement('div');
+    cards.className = 'cards lo-cards';
+    const sheet = document.createElement('div');
+    sheet.className = 'lo-sheet';
+    let sel = current;
+    const pick = (id: WeaponId) => {
+      sel = id;
+      for (const c of cards.querySelectorAll<HTMLElement>('.card')) c.classList.toggle('sel', c.dataset.id === id);
+      preview.setWeapon(WEAPONS[id]);
+      sheet.innerHTML = cheatSheet(WEAPONS[id]);
+      onPick(id);
+    };
+    WEAPON_ORDER.forEach((id, i) => {
+      const w = WEAPONS[id];
+      const c = document.createElement('button');
+      c.className = 'card';
+      c.dataset.id = id;
+      const ic = document.createElement('canvas');
+      ic.width = 64; ic.height = 64; ic.className = 'lo-icon';
+      w.icon(ic.getContext('2d')!, 32, 32, 56, '#1b1a17');
+      c.appendChild(ic);
+      const t = document.createElement('div');
+      t.innerHTML = `<div class="nm">${i + 1}. ${w.name}</div><div class="ds">${w.desc}</div>`;
+      c.appendChild(t);
+      c.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.ui('select'); pick(id); });
+      cards.appendChild(c);
+    });
+    p.appendChild(cards);
+    p.appendChild(sheet);
+    const foot = document.createElement('div');
+    foot.className = 'sticky-foot';
+    this.btn(foot, 'DONE', () => { preview.stop(); this.close('loadout'); onClose(); }, 'btn primary');
+    p.appendChild(foot);
+    el.appendChild(p);
+    pick(sel);
+    preview.start();
+  }
+
+  /** Keyboard: number keys pick a weapon in the open loadout; Enter/Escape closes it. Returns true if handled. */
+  loadoutKey(code: string): boolean {
+    const el = this.layers.get('loadout');
+    if (!el) return false;
+    const n = code.startsWith('Digit') ? parseInt(code.slice(5), 10) : NaN;
+    if (n >= 1 && n <= WEAPON_ORDER.length) { (el.querySelectorAll<HTMLButtonElement>('.card')[n - 1])?.click(); return true; }
+    if (code === 'Enter' || code === 'Escape') { el.querySelector<HTMLButtonElement>('.sticky-foot .btn')?.click(); return true; }
+    return false;
+  }
+
+  /** Between waves: a small non-blocking strip of weapon icons; tap (or press 1-5) to swap instantly. */
+  showSwap(current: WeaponId, onSwap: (id: WeaponId) => void): void {
+    const el = this.layer('swap', 'layer passthrough');
+    el.style.pointerEvents = 'none';
+    const bar = document.createElement('div');
+    bar.className = 'swap-bar';
+    const lab = document.createElement('span');
+    lab.className = 'swap-label';
+    lab.textContent = 'Swap weapon';
+    bar.appendChild(lab);
+    WEAPON_ORDER.forEach((id, i) => {
+      const w = WEAPONS[id];
+      const b = document.createElement('button');
+      b.className = 'btn small swap-btn' + (id === current ? ' sel' : '');
+      b.title = `${i + 1}: ${w.name}`;
+      b.dataset.id = id;
+      const ic = document.createElement('canvas');
+      ic.width = 40; ic.height = 40;
+      w.icon(ic.getContext('2d')!, 20, 20, 34, '#1b1a17');
+      b.appendChild(ic);
+      const k = document.createElement('small');
+      k.textContent = String(i + 1);
+      b.appendChild(k);
+      b.addEventListener('click', (e) => {
+        e.stopPropagation(); audio.unlock();
+        for (const x of bar.querySelectorAll('.swap-btn')) x.classList.toggle('sel', x === b);
+        onSwap(id);
+      });
+      bar.appendChild(b);
+    });
+    el.appendChild(bar);
+  }
+
+  /** Keyboard swap during the breather. */
+  swapKey(code: string): boolean {
+    const el = this.layers.get('swap');
+    if (!el) return false;
+    const n = code.startsWith('Digit') ? parseInt(code.slice(5), 10) : NaN;
+    if (n >= 1 && n <= WEAPON_ORDER.length) { el.querySelectorAll<HTMLButtonElement>('.swap-btn')[n - 1]?.click(); return true; }
+    return false;
+  }
+
+  /** First-time tooltip for a weapon: its directional moves, non-blocking. */
+  weaponTip(w: WeaponDef, ms: number): void {
+    const el = this.layer('wtip', 'layer passthrough');
+    el.style.pointerEvents = 'none';
+    const t = document.createElement('div');
+    t.className = 'tut wtip';
+    t.innerHTML = `${w.name}<small>${w.tips.join('<br>')}</small>`;
+    el.appendChild(t);
+    window.setTimeout(() => { if (this.layers.get('wtip') === el) this.close('wtip'); }, ms);
+  }
+
   // ---------------- Results ----------------
   showResults(r: {
     score: number; high: number; newHigh: boolean; wave: number; bestHits: number; bestDamage: number; bestRank: number;
@@ -306,4 +428,12 @@ export class Menus {
   }
 
   closeAll(): void { for (const id of [...this.layers.keys()]) this.close(id); }
+}
+
+/** Swipe cheat-sheet for a weapon: direction -> light / heavy move names (ground, then air). */
+function cheatSheet(w: WeaponDef): string {
+  const nm = (id: string) => MOVES[id]?.name ?? id;
+  const rows: [string, keyof WeaponDef['ground']][] = [['→ ←', 'side'], ['↗ ↖', 'upDiag'], ['↑', 'up'], ['↘ ↙', 'downDiag'], ['↓', 'down']];
+  const tr = (set: WeaponDef['ground']) => rows.map(([d, k]) => `<tr><td>${d}</td><td>${nm(set[k].light)}</td><td>${nm(set[k].heavy)}</td></tr>`).join('');
+  return `<table><tr><th>swipe</th><th>light</th><th>heavy (long fast swipe / Shift)</th></tr>${tr(w.ground)}<tr><th colspan="3">in the air</th></tr>${tr(w.air)}<tr><td>tap</td><td colspan="2">${w.dodge.rope ? 'hook-zip dodge' : 'dodge'} / parry</td></tr></table>`;
 }

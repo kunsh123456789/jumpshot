@@ -13,6 +13,8 @@ import { bowling, enemyPhysics, separate } from './physics';
 import { BOSS, ENEMIES, PROJECTILE, type EnemyAttack, type EnemyKind } from '../data/enemies';
 import { simRng } from '../core/rng';
 import type { RhythmSim } from '../rhythm/simHooks';
+import { WeaponSim } from './weapon';
+import { WEAPONS, weaponById, type WeaponDef } from '../data/weapons';
 
 /** The simulation container. Advanced only in fixed 60 Hz steps. */
 export class World {
@@ -25,6 +27,9 @@ export class World {
   readonly waves = new WaveDirector();
   readonly ents = new Entities();
   readonly ctrl = new PlayerController();
+  /** The equipped weapon and its sim state (hooks, heat, ropes, held bodies). */
+  weapon: WeaponDef = WEAPONS.fists;
+  readonly wpn = new WeaponSim();
   gameOver = false;
   /** Tutorial: whether the training dummy attacks. */
   dummyAttacks = false;
@@ -58,12 +63,22 @@ export class World {
     this.ai.reset();
     this.ents.clear();
     this.ctrl.reset();
+    this.wpn.reset();
+    this.player.weapon = this.weapon.id;
     this.gameOver = false;
     this.wave = 0;
     this.waves.wave = 0;
     this.waves.active = false;
     this.waves.cleared = false;
     simRng.seed(1234567);
+  }
+
+  /** Equip a weapon (between waves or before a run). Drops anything the old one was holding. */
+  setWeapon(id: string): void {
+    this.weapon = weaponById(id);
+    this.wpn.reset();
+    this.player.weapon = this.weapon.id;
+    this.events.emit('weaponSwap', { id: this.weapon.id });
   }
 
   spawnDummy(x: number): Fighter {
@@ -86,6 +101,7 @@ export class World {
     this.ctrl.ingest(this, inputs);
     if (p.alive) this.ctrl.update(this);
     else this.deadPlayerPhysics();
+    this.wpn.update(this);
 
     // S-rank regen.
     if (p.alive && this.combo.rank >= 4 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + PLAYER.hpRegenSRank / 60);
@@ -100,6 +116,8 @@ export class World {
         continue; // frozen; the renderer adds a smooth vibration
       }
       e.stateFrame++;
+      // Held and reeled-in bodies are positioned by the weapon sim.
+      if (e.state === 'held' || e.state === 'pulled') continue;
       if (e.alive || e.state === 'ko' || e.state === 'dead') {
         if (e.alive) this.ai.update(this, e);
         enemyPhysics(this, e);

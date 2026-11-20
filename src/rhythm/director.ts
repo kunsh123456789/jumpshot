@@ -43,7 +43,7 @@ export class RhythmDirector implements RhythmSim {
 
   // ---- RhythmSim state ----
   now = 0;
-  private moveGrade: Grade | -1 = -1;
+  private curGrade: Grade | -1 = -1;
   private bonusPaid = true;
   private tapGrade: Grade | -1 = -1;
   private snapTarget = 0;
@@ -108,7 +108,7 @@ export class RhythmDirector implements RhythmSim {
   // ------------------------------------------------------------ transport
   startRun(): void {
     this.stats = { counts: [0, 0, 0, 0], streak: 0, bestStreak: 0, judged: 0 };
-    this.moveGrade = -1; this.tapGrade = -1; this.bonusPaid = true;
+    this.curGrade = -1; this.tapGrade = -1; this.bonusPaid = true;
     this.clock.inputOffsetMs = settings.rhythmOffset;
     if (this.source === 'file' && this.file) this.conductor.startFile(this.file);
     else if (this.source === 'mic' && this.tracker.running) this.conductor.startMic(this.tracker);
@@ -173,7 +173,7 @@ export class RhythmDirector implements RhythmSim {
   onMoveStart(w: World, p: Fighter, ev: SwipeEvent | null, resnap: boolean): void {
     if (!resnap && ev) {
       const j = this.judged.get(ev);
-      this.moveGrade = j ? j.grade : -1;
+      this.curGrade = j ? j.grade : -1;
       this.bonusPaid = !(j && j.grade >= GOOD);
     } // ev = null: a chained follow-up keeps the grade of the input that started the string
     this.comboIndex = w.combo.hits;
@@ -200,7 +200,7 @@ export class RhythmDirector implements RhythmSim {
     const tMin = now + (minS - fr) * FRAME - 0.004;
     const maxDelay = RHYTHM.snapMaxDelayMs / 1000 + 1e-6;
     let best = NaN;
-    for (let div = RHYTHM.snapDiv; div <= 16 && !isFinite(best); div *= 2) {
+    for (let div = m.grid ?? RHYTHM.snapDiv; div <= 16 && !isFinite(best); div *= 2) {
       const gp = c.prevGrid(t0, div), gn = c.nextGrid(t0, div);
       const okP = gp >= tMin, okN = gn - t0 <= maxDelay;
       if (okP && okN) best = t0 - gp <= gn - t0 ? gp : gn;
@@ -233,15 +233,16 @@ export class RhythmDirector implements RhythmSim {
     if (S !== p.effStartup && Math.abs(S - p.effStartup) <= 3) p.effStartup = S;
   }
 
+  moveGrade(): number { return this.curGrade; }
   onTap(_w: World, ev: SwipeEvent): void { const j = this.judged.get(ev); this.tapGrade = j ? j.grade : -1; }
 
-  damageMult(_w: World): number { return this.moveGrade >= 0 ? RHYTHM.damageMult[this.moveGrade] : 1; }
+  damageMult(_w: World): number { return this.curGrade >= 0 ? RHYTHM.damageMult[this.curGrade] : 1; }
 
   /** On-beat rewards, paid once per move when it first connects (so whiffs can't farm them). */
   onPlayerHit(w: World, v: Fighter, _damage: number): void {
-    if (this.bonusPaid || this.moveGrade < GOOD) return;
+    if (this.bonusPaid || this.curGrade < GOOD) return;
     this.bonusPaid = true;
-    const g = this.moveGrade as Grade;
+    const g = this.curGrade as Grade;
     const m = this.streakMult();
     w.combo.addStyle(RHYTHM.styleBonus[g]);
     w.combo.superMeter = Math.min(SUPER.max, w.combo.superMeter + RHYTHM.superBonus[g]);

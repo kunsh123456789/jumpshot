@@ -48,4 +48,15 @@ export interface SimEvents {
   bossPhase: { phase: number };
   spawn: { enemy: Fighter };
   text: { text: string; x: number; y: number; color: string; size: number };
+  // ---- weapons (revision pass 7) ----
+  beam: { x1: number; y1: number; x2: number; y2: number; width: number; heavy: boolean; color: string; hit: boolean };
+  overheat: { x: number; y: number };
+  grab: { x: number; y: number; victim: Fighter };
+  throw: { x: number; y: number; victim: Fighter; heavy: boolean };
+  hookFire: { x: number; y: number; x2: number; y2: number; hit: boolean };
+  pullArrive: { x: number; y: number; victim: Fighter };
+  deflect: { x: number; y: number };
+  /** A weapon's signature slow-mo moment (hook yank, big throw, charged beam, vault apex). */
+  weaponMoment: { scale: number; sec: number; x: number; y: number };
+  weaponSwap: { id: string };
 }

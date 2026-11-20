@@ -30,6 +30,8 @@ import { PaperHud } from './render/paperHud';
 import { PAGE_ORDER, type PageId } from './data/paper';
 import { RHYTHM } from './data/rhythm';
 import { SONGS } from './data/songs';
+import { weaponById } from './data/weapons';
+import { WEAPON_T } from './data/weapons/tuning';
 
 type GState = 'title' | 'tutorial' | 'countdown' | 'playing' | 'breather' | 'gameover';
 
@@ -82,6 +84,7 @@ export class Game {
     this.keyboard = new Keyboard(this.pad);
     this.keyboard.onToggleDebug = () => { this.debug.visible = !this.debug.visible; settings.debug = this.debug.visible; };
     this.keyboard.onPause = () => this.togglePause();
+    this.keyboard.onKey = (code) => this.menus.loadoutKey(code) || this.menus.swapKey(code);
     this.keyboard.onDebugSlow = () => { this.debugScale = this.debugScale < 1 ? 1 : 0.1; this.debugFrozen = false; };
     this.keyboard.onDebugStep = () => { this.debugFrozen = true; this.stepRequests++; };
     this.keyboard.onDebugResume = () => { this.debugFrozen = false; this.debugScale = 1; };
@@ -135,7 +138,8 @@ export class Game {
     this.menus.pauseBtn.style.display = 'none';
     this.hud.visible = false;
     this.menus.showTitle(save.highScore, () => this.openSettings(true),
-      { rhythm: settings.rhythmMode, onToggle: (r) => { settings.rhythmMode = r; saveSettings(); } });
+      { rhythm: settings.rhythmMode, onToggle: (r) => { settings.rhythmMode = r; saveSettings(); } },
+      { name: weaponById(save.weapon).name, open: () => this.openLoadout() });
     this.cam.targetX = this.world.player.x;
     this.cam.snap();
     audio.stopMusic();
@@ -144,6 +148,25 @@ export class Game {
     this.rui.closeAll();
     paper.resetTransitions();
     paper.setPage(this.pageFor(1));
+  }
+
+  /** Pre-run loadout (from the title). */
+  private openLoadout(): void {
+    this.menus.close('title');
+    this.menus.showLoadout(weaponById(save.weapon).id, (id) => { save.weapon = id; writeSave(); this.world.setWeapon(id); }, () => this.toTitle());
+  }
+
+  /** Equip a weapon for this run (loadout choice or a between-wave swap); first time: show its tooltip. */
+  private equip(id: string, swap: boolean): void {
+    this.world.setWeapon(id);
+    save.weapon = this.world.weapon.id;
+    const p = this.world.player;
+    if (swap) { p.cue = 'draw'; p.cueSerial++; }
+    if (!save.weaponTips.includes(save.weapon)) {
+      save.weaponTips.push(save.weapon);
+      this.menus.weaponTip(this.world.weapon, WEAPON_T.tipMs);
+    }
+    writeSave();
   }
 
   private startFromTitle(): void {
@@ -297,6 +320,7 @@ export class Game {
   startTutorial(): void {
     this.menus.closeAll();
     this.world.reset();
+    this.world.setWeapon('fists'); // the tutorial teaches the base moveset
     this.effectsReset();
     this.renderer.bg.set('dojo');
     this.pad.demo = false;
@@ -331,6 +355,7 @@ export class Game {
     this.hud.visible = true;
     this.menus.pauseBtn.style.display = '';
     this.effectsReset();
+    this.equip(save.weapon, false);
     if (settings.rhythmMode) this.startRhythm();
     else { this.endRhythm(); audio.startMusic(); }
     this.pops.reset();
@@ -392,6 +417,7 @@ export class Game {
     inkFx.clearFloor();
     this.nextWave++;
     this.setState('breather');
+    this.menus.showSwap(this.world.weapon.id, (id) => this.equip(id, true));
   }
 
   private toGameOver(): void {
@@ -546,6 +572,7 @@ export class Game {
         if (this.stateTime >= WAVES_T.countdownSec && this.onBarLine()) {
           this.world.wave = this.nextWave;
           this.world.waves.start(this.world, this.nextWave);
+          this.menus.close('swap');
           this.setState('playing');
         }
         break;

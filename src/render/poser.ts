@@ -3,7 +3,7 @@ import { Ch, shortDelta } from './rig';
 import type { Fighter } from '../sim/fighter';
 import type { Animator } from './animator';
 import { DRAW } from './drawStyle';
-import { ANIM, MOVE, PLAYER } from '../data/tuning';
+import { ANIM, MOVE } from '../data/tuning';
 import { ANIMS, getAnim } from '../data/anims';
 import type { AnimDef } from '../data/anims/types';
 import { RIGS } from './rig';
@@ -118,10 +118,12 @@ export function poseFighter(f: Fighter, _time: number): void {
       a.show(ANIMS.getup, (ANIMS.getup.len * f.stateFrame) / total, 2);
       return;
     }
+    case 'held': a.run(getAnim(kind, 'held'), rate, 2); tumbleSpin(f, a); return;
+    case 'pulled': a.run(getAnim(kind, 'pulled'), rate, 2); return;
     case 'stunned': a.run(ANIMS.stunned, rate, 3); return;
     case 'guardbreak': a.run(ANIMS.guardbreak, rate, ANIM.fadeHit); return;
     case 'burst': a.run(ANIMS.burst, rate, ANIM.fadeHit); return;
-    case 'dodge': a.show(ANIMS.dodge, (f.stateFrame * ANIMS.dodge.len) / PLAYER.dodgeFrames, 1); return;
+    case 'dodge': a.show(ANIMS.dodge, (f.stateFrame * ANIMS.dodge.len) / Math.max(1, f.dodgeLen), 1); return;
     case 'jumpFollow': a.run(ANIMS.leap, rate, 2); return;
     case 'fall': {
       if (newCue && f.cue === 'parry') { a.run(ANIMS.parry, rate, 1, true); return; }
@@ -130,11 +132,14 @@ export function poseFighter(f: Fighter, _time: number): void {
     }
     case 'land': a.run(ANIMS.land, rate, ANIM.fadeLand); return;
     case 'taunt': a.run(getAnim(kind, 'taunt'), rate, 4); return;
-    case 'walk': locomotion(f, a, rate, true); return;
+    case 'walk':
+      if (newCue && f.cue === 'draw') { a.run(ANIMS.drawWeapon, rate, 1, true); return; }
+      locomotion(f, a, rate, true); return;
     case 'idle': default: {
       if (newCue && f.cue === 'parry') { a.run(ANIMS.parry, rate, 1, true); return; }
+      if (newCue && f.cue === 'draw') { a.run(ANIMS.drawWeapon, rate, 1, true); return; }
       // one-shots that finish even though the sim is already idle
-      if (a.playing('parry') || a.playing('land') || a.playing('runStop')) { a.run(a.cur!, rate); return; }
+      if (a.playing('parry') || a.playing('land') || a.playing('runStop') || a.playing('drawWeapon')) { a.run(a.cur!, rate); return; }
       locomotion(f, a, rate, false);
     }
   }

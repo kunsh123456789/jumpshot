@@ -49,3 +49,12 @@ for (const [file, mod] of [['locomotion', loco], ['playerGround', ground], ['pla
   for (const v of Object.values(mod)) { const d = v as AnimDef; if (d && 'keys' in d && 'id' in d) ANIM_FILE[d.id] = file; }
 }
 for (const id of HAND_AUTHORED) ANIM_FILE[id] = 'handDrawn (Hand-Drawn) / ' + (ANIM_FILE[id] ?? '?') + ' (Smooth)';
+
+/** Register animations owned by a weapon: one drawn set serves both styles; the Lab lists them under `file`. */
+export function registerAnims(defs: AnimDef[], file: string): void {
+  for (const d of defs) {
+    ORIGINAL[d.id] = d; HAND[d.id] = d; ANIMS[d.id] = d; ANIM_FILE[d.id] = file;
+    if (!HAND_IDS.includes(d.id)) HAND_IDS.push(d.id);
+    if (!HAND_AUTHORED.includes(d.id)) HAND_AUTHORED.push(d.id);
+  }
+}

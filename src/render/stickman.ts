@@ -1,4 +1,5 @@
 import { Ch, J, JOINT_N, POSE_N, computeJoints, ik2, lerpPose } from './rig';
+import { heldWeapon } from './weaponFx';
 import { SCARF_N, TRAIL_CAP } from './animator';
 import type { Fighter } from '../sim/fighter';
 import { TAU } from '../core/math';
@@ -211,6 +212,7 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
   // hip joint
   ctx.beginPath(); ctx.arc(jt[J.hip * 2], jt[J.hip * 2 + 1], w * 0.62, 0, TAU); ctx.fill();
 
+  if (f.team === 'player') heldWeapon(ctx, f, jt, col, 1.6);
   // Minimal details.
   if (f.team === 'player') {
     ctx.strokeStyle = flashing ? '#fff' : f.accent;

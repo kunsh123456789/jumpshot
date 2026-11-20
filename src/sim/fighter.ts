@@ -8,7 +8,9 @@ import { getAnim } from '../data/anims';
 export type FState =
   | 'idle' | 'walk' | 'move' | 'dodge' | 'hitstun' | 'air' | 'knockdown' | 'getup'
   | 'stunned' | 'ko' | 'dead' | 'windup' | 'attack' | 'recover' | 'burst' | 'land'
-  | 'jumpFollow' | 'fall' | 'guardbreak' | 'taunt' | 'hurt';
+  | 'jumpFollow' | 'fall' | 'guardbreak' | 'taunt' | 'hurt'
+  /** Weapon reactions: held by a grab, reeled in by a hook. Driven by the weapon sim (no AI, no physics). */
+  | 'held' | 'pulled';
 
 export const MAX_HITLIST = 12;
 
@@ -84,6 +86,8 @@ export class Fighter {
   spinVel = 0;
   spinAngle = 0;
   bowlIds = new Int32Array(8);
+  /** Thrown body: bowling damage multiplier while it flies (0 = not thrown). */
+  thrown = 0;
   bowlCount = 0;
   lastHitBy = 0;
   koLaunched = false;
@@ -114,6 +118,10 @@ export class Fighter {
   stallCount = 0;
   followTarget: Fighter | null = null;
   dodgeFromX = 0; dodgeToX = 0;
+  /** Length of the current dodge (frames; weapons can change it). */
+  dodgeLen = 0;
+  /** Equipped weapon id (drives the held-object drawing). */
+  weapon = 'fists';
 
   // ---- AI state ----
   ai = {
@@ -181,7 +189,7 @@ export class Fighter {
   /** True if the fighter is in a "being comboed" state. */
   get inHitState(): boolean {
     const s = this.state;
-    return s === 'hitstun' || s === 'air' || s === 'knockdown' || s === 'stunned' || s === 'guardbreak';
+    return s === 'hitstun' || s === 'air' || s === 'knockdown' || s === 'stunned' || s === 'guardbreak' || s === 'held' || s === 'pulled';
   }
   get canBeHit(): boolean {
     if (this.state === 'knockdown' && this.otgUsed) return false;

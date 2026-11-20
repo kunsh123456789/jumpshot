@@ -1,6 +1,7 @@
 import type { World } from './world';
 import type { Fighter } from './fighter';
 import { ANIM, PHYS, WORLD } from '../data/tuning';
+import { WEAPON_T } from '../data/weapons/tuning';
 
 /**
  * Gravity multiplier with eased air-stall (blends in over stallEaseIn frames and
@@ -64,6 +65,7 @@ export function enemyPhysics(w: World, e: Fighter): void {
     if (e.y >= WORLD.groundY && e.vy >= 0) {
       e.y = WORLD.groundY;
       const vy = e.vy;
+      e.thrown = 0;
       if (e.impactShock) {
         const sh = e.impactShock;
         e.impactShock = null;
@@ -181,7 +183,9 @@ export function bowling(w: World): void {
       if (dx * dx + dy * dy > r * r) continue;
       if (a.bowlCount < a.bowlIds.length) a.bowlIds[a.bowlCount++] = b.id;
       const dir = Math.sign(a.vx) || Math.sign(dx) || 1;
-      sideHit(w, b, PHYS.bowlDamage, dir, -500, 'bowl', PHYS.bowlKnockback);
+      // A thrown body (Throw weapon) hits harder, falling off per collision.
+      const mult = a.thrown > 0 ? a.thrown * Math.pow(WEAPON_T.thrownFalloff, a.bowlCount - 1) : 1;
+      sideHit(w, b, PHYS.bowlDamage * mult, dir, -500, 'bowl', PHYS.bowlKnockback * (a.thrown > 0 ? 1.2 : 1));
       if (b.bowlCount < b.bowlIds.length) b.bowlIds[b.bowlCount++] = a.id;
       if (a.alive) { a.hp -= PHYS.bowlDamage * 0.5; a.flash = 2; }
       a.vx *= 0.65;

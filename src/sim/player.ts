@@ -1,6 +1,6 @@
 import type { World } from './world';
 import type { Fighter } from './fighter';
-import { MOVES, MOVE_MAP, dirClass, dirSignX, type MoveDef, type MoveTag } from '../data/moves';
+import { DIR_VX, DIR_VY, MOVES, dirClass, dirSignX, type MoveDef, type MoveTag } from '../data/moves';
 import { INPUT, MOVE, PHYS, PLAYER, SUPER, WORLD } from '../data/tuning';
 import type { SwipeEvent } from '../ui/pad';
 import { clamp, ease } from '../core/math';
@@ -9,8 +9,6 @@ import { airGravity } from './physics';
 
 interface Buffered { ev: SwipeEvent; age: number; heavy: boolean; used: boolean }
 
-const DIR_VX = [1, 0.707, 0, -0.707, -1, -0.707, 0, 0.707];
-const DIR_VY = [0, -0.707, -1, -0.707, 0, 0.707, 1, 0.707];
 
 /**
  * Turns swipe intents into moves: input buffer, auto-targeting, attack
@@ -172,8 +170,11 @@ export class PlayerController {
       const h = target.height;
       if (dc === 'up' ? h > 150 : h > PLAYER.airborneHeight) useAir = true;
     }
-    const set = useAir ? MOVE_MAP.air : MOVE_MAP.ground;
+    const wp = w.weapon;
+    const set = useAir ? wp.air : wp.ground;
     let id: string = set[dc][heavy ? 'heavy' : 'light'];
+    // Overheated: every swipe is the weapon's melee bash until it cools.
+    if (wp.heat && w.wpn.overheat > 0) id = wp.heat.bash;
     // Auto-strings: repeating the same input advances the string.
     const last = this.lastMove;
     if (last && last.next && MOVES[id].family === last.family && w.frame - this.lastMoveFrame < 48) id = last.next;
@@ -191,7 +192,7 @@ export class PlayerController {
   /** Nearest enemy in a wide cone around the swipe, with fallbacks. */
   selectTarget(w: World, dir: number): Fighter | null {
     const p = w.player;
-    const range = PLAYER.targetRange;
+    const range = w.weapon.range ?? PLAYER.targetRange;
     const cone = (PLAYER.targetConeDeg * Math.PI) / 180;
     const dx = DIR_VX[dir], dy = DIR_VY[dir];
     const sx = dirSignX(dir);
@@ -223,6 +224,7 @@ export class PlayerController {
   startMove(w: World, m: MoveDef, target: Fighter | null, dir: number, crossUp: boolean, strokeId: number): void {
     const p = w.player;
     const prev = p.move;
+    if (prev) w.wpn.endMove(p);
     p.move = m;
     p.moveSerial++;
     p.setState('move');
@@ -256,6 +258,9 @@ export class PlayerController {
       if (sx !== 0) p.facing = sx;
     }
 
+    // Weapon moves aim along the swipe (auto-aimed onto the target inside the move's cone).
+    if (m.beam || m.grab || m.tether || m.aimCone) w.wpn.aim(p, m, dir, target);
+
     // Attack magnetism: dash/air-dash so the strike lands as the dash ends.
     p.dashFrames = 0;
     p.dashFromX = p.x; p.dashFromY = p.y;
@@ -279,7 +284,7 @@ export class PlayerController {
       // keep tiny momentum continuity on cancels
       p.vx *= 0.3;
     }
-    p.effStartup = Math.max(m.startup, p.dashFrames);
+    p.effStartup = Math.max(m.startup, p.dashFrames + (m.grab ? m.grab.hold : 0));
     // Hang an airborne target briefly while we wind up (decays with juggle depth).
     if (target && !target.grounded && target.alive) {
       const fin = m.id === 'jumpshotFinisher';
@@ -292,7 +297,11 @@ export class PlayerController {
     }
     if (isAir || !p.grounded) { p.stall = Math.max(p.stall, p.effStartup + m.active); }
     else p.vx = 0;
-    if (w.rhythm) w.rhythm.onMoveStart(w, p, this.curEv, false);
+    if (w.rhythm) {
+      w.rhythm.onMoveStart(w, p, this.curEv, false);
+      // A Perfect-timed laser shot vents heat.
+      if (m.heat && w.weapon.heat && w.rhythm.moveGrade() === 3) w.wpn.vent(w.weapon.heat.perfectVent);
+    }
   }
 
   private computeDashTarget(p: Fighter, m: MoveDef, t: Fighter, isAir: boolean): void {
@@ -313,7 +322,7 @@ export class PlayerController {
     const p = w.player;
     const m = p.move!;
     if (p.moveFrame >= p.effStartup - 1 || p.moveHit || m.tags.includes('heavy') || m.tags.includes('special')) return;
-    const set = m.tags.includes('air') ? MOVE_MAP.air : MOVE_MAP.ground;
+    const set = m.tags.includes('air') ? w.weapon.air : w.weapon.ground;
     let heavyId: string | null = null;
     for (const k of Object.keys(set) as (keyof typeof set)[]) {
       const pair = set[k];
@@ -336,6 +345,7 @@ export class PlayerController {
     const m = p.move!;
     const fr = p.moveFrame;
     const S = p.effStartup;
+    w.wpn.tick(w, p, m);
 
     // Launcher follow: leap after the launched enemy as soon as hit-stop ends.
     if (m.follow && p.moveHit && p.followTarget && fr >= S + 1) {
@@ -380,7 +390,7 @@ export class PlayerController {
         if (k >= p.multiHitDone && p.multiHitDone < m.multiHit.count && (fr - S) % m.multiHit.interval === 0) {
           p.hitCount = 0;
           p.multiHitDone++;
-          this.checkHits(w, m, true);
+          if (!(m.beam && w.wpn.contact(w, p, m, true))) this.checkHits(w, m, true);
           if (p.multiHitDone >= m.multiHit.count && m.multiHit.then) {
             const next = MOVES[m.multiHit.then];
             const t = p.target;
@@ -388,6 +398,10 @@ export class PlayerController {
             return;
           }
         }
+      } else if (m.beam || m.grab || m.tether || m.plant) {
+        // Weapon hooks resolve on the contact frame; a grab that caught nothing (or a swing) strikes normally.
+        if (fr === S) { if (!w.wpn.contact(w, p, m, false)) this.checkHits(w, m, false); }
+        else if ((m.grab && !p.moveHit) || m.tether?.mode === 'swing' || (m.plant && !m.beam)) this.checkHits(w, m, false);
       } else {
         this.checkHits(w, m, false);
       }
@@ -395,8 +409,13 @@ export class PlayerController {
 
     p.moveFrame++;
     if (p.moveFrame >= S + m.active + m.recovery) {
+      w.wpn.endMove(p);
       p.move = null;
       p.setState(p.grounded ? 'idle' : 'fall');
+      if (m.then) {
+        const t = p.target;
+        this.startMove(w, MOVES[m.then], t && t.alive ? t : null, p.facing > 0 ? 0 : 4, false, -1);
+      }
     }
   }
 
@@ -432,8 +451,11 @@ export class PlayerController {
   // ---------------------------------------------------------------------
   private startDodge(w: World): void {
     const p = w.player;
+    if (p.move) w.wpn.endMove(p);
     p.move = null;
-    p.setState('dodge', PLAYER.dodgeFrames);
+    const D = w.weapon.dodge;
+    p.dodgeLen = D.frames;
+    p.setState('dodge', D.frames);
     p.invuln = Math.max(p.invuln, PLAYER.dodgeInvulnFrames);
     p.parryWindow = PLAYER.parryWindowFrames;
     // Dodge away from the nearest threat (or backwards).
@@ -446,7 +468,8 @@ export class PlayerController {
     const away = threat ? (Math.sign(p.x - threat.x) || -p.facing) : -p.facing;
     if (threat) p.facing = -away;
     p.dodgeFromX = p.x;
-    p.dodgeToX = clamp(p.x + away * PLAYER.dodgeDistance, WORLD.wallMargin, WORLD.arenaW - WORLD.wallMargin);
+    p.dodgeToX = clamp(p.x + away * D.distance, WORLD.wallMargin, WORLD.arenaW - WORLD.wallMargin);
+    if (D.rope) w.wpn.dodgeRope(p, p.dodgeToX);
     if (!p.grounded) { p.vy = Math.min(p.vy, -120); p.stall = 10; }
     p.vx = 0;
     w.events.emit('dodge', { x: p.x, y: p.cy });
@@ -455,7 +478,7 @@ export class PlayerController {
 
   private updateDodge(w: World): void {
     const p = w.player;
-    const t = ease.outCubic(Math.min(1, p.stateFrame / (PLAYER.dodgeFrames - 2)));
+    const t = ease.outCubic(Math.min(1, p.stateFrame / (p.dodgeLen - 2)));
     p.x = p.dodgeFromX + (p.dodgeToX - p.dodgeFromX) * t;
     if ((p.stateFrame & 1) === 0 && p.stateFrame < 8) w.events.emit('afterimage', { fighter: p });
     if (--p.timer <= 0) { p.hitCount = 0; p.setState(p.grounded ? 'idle' : 'fall'); }
@@ -494,7 +517,7 @@ export class PlayerController {
   // ---------------------------------------------------------------------
   private physics(w: World): void {
     const p = w.player;
-    const dashing = p.state === 'move' && p.dashFrames > 0 && p.moveFrame <= p.dashFrames;
+    const dashing = (p.state === 'move' && p.dashFrames > 0 && p.moveFrame <= p.dashFrames) || w.wpn.ownsPlayer;
     const hanging = p.state === 'move' && p.move !== null && !p.grounded && p.moveFrame < p.effStartup;
     if (!p.grounded) {
       if (!dashing && !hanging) {

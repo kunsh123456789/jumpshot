@@ -1,4 +1,5 @@
 import { layout } from '../core/layout';
+import { drawHeatBar } from './weaponFx';
 import { settings } from '../core/settings';
 import type { World } from '../sim/world';
 import type { FxDirector } from './fx';
@@ -100,6 +101,7 @@ export class PaperHud {
       ctx.fillStyle = red; ctx.textBaseline = 'top';
       ctx.fillText('SUPER READY!', bx, sy + sh + 5 * u);
     }
+    drawHeatBar(ctx, w, bx, sy + sh + 24 * u, hpW * 0.5, 7 * u, u, ink, HAND);
 
     // ---- Scoreboard (top centre): wave, score, tally marks for K.O.s ----
     // narrow screens: slide right of the HP number so they never overlap

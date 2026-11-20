@@ -40,6 +40,17 @@ export class Entities {
       pr.x += pr.vx / 60; pr.y += pr.vy / 60;
       if (--pr.life <= 0 || pr.x < -50 || pr.x > WORLD.arenaW + 50) { ps.releaseAt(i); continue; }
       if (pr.team === 'enemy') {
+        // Weapon deflect (staff helicopter): bounces darts back while the move is active.
+        const m = p.state === 'move' ? p.move : null;
+        if (m && m.deflect && p.moveFrame >= p.effStartup && p.moveFrame < p.effStartup + m.active && overlaps(pr.x, pr.y, PROJECTILE.radius + 70 * p.scale, p)) {
+          pr.team = 'player';
+          pr.vx = -pr.vx * PROJECTILE.reflectSpeedMult;
+          pr.vy = 0;
+          pr.life = PROJECTILE.life;
+          w.events.emit('deflect', { x: pr.x, y: pr.y });
+          w.events.emit('projectile', { x: pr.x, y: pr.y, kind: 'reflect' });
+          continue;
+        }
         if (p.parryWindow > 0 && overlaps(pr.x, pr.y, PROJECTILE.radius + 60, p)) {
           // Perfect parry reflects the dart back at double speed.
           pr.team = 'player';

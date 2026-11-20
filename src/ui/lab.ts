@@ -14,6 +14,12 @@ import { INKLOOK } from '../data/inkLook';
 import { effects } from '../render/effects';
 import { WORLD } from '../data/tuning';
 import { audio } from '../core/audio';
+import { placeFighter } from './preview';
+import { WEAPONS } from '../data/weapons';
+
+/** Which weapon owns an animation (for the held-object preview). */
+const WEAPON_OF: Record<string, string> = {};
+for (const w of Object.values(WEAPONS)) for (const d of w.anims) WEAPON_OF[d.id] = w.id;
 
 /** Which rig/kind previews an animation. */
 const KIND_FOR: Record<string, EnemyKind> = {
@@ -460,28 +466,11 @@ export class AnimLab {
 
   /** Put a fighter in the exact pose at time t (no blending), with smear source t-2. */
   private place(f: Fighter, def: AnimDef, t: number, x: number, y: number, facing: number): void {
-    const a = f.anim;
-    f.x = f.px = x; f.y = f.py = y; f.facing = facing;
-    f.grounded = y >= WORLD.groundY - 1;
-    evalAnim(def, t, a.pose);
-    evalAnim(def, Math.max(0, t - 1), a.prevPose);
-    evalAnim(def, Math.max(0, t - 2), a.prev2Pose);
-    a.prevPose.set(a.pose);
-    animFlags(def, t, this.flags);
-    a.smear = this.flags.smear;
-    a.reachW = a.prevReachW = this.flags.reachW;
-    a.reachLimb = def.reach;
-    a.face = a.prevFace = facing;
-    a.trailActive = false;
-    a.cur = def;
-    computeJoints(a.pose, x, y, facing, f.scale, WORLD.groundY, a.joints, a.rig);
-    if (DRAW.stepped) {
-      // Hand-Drawn preview: replay the drawing latches up to t (same smear chains/arcs as in a fight).
-      a.scrubTo(def, Math.floor(t), x, y, facing, f.scale);
-      a.dReachW = this.flags.reachW;
-      a.dEcho = 0;
-    }
+    placeFighter(f, def, t, x, y, facing, this.flags);
+    // Weapon animations show the weapon in the hero's hands.
+    if (f.team === 'player') f.weapon = WEAPON_OF[def.id] ?? 'fists';
   }
+
 
   onKey(e: KeyboardEvent): boolean {
     if (!this.active) return false;

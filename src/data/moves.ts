@@ -62,7 +62,46 @@ export interface MoveDef {
   afterimage: boolean;
   /** Shockwave on victim ground impact (finisher). */
   impactShock?: { radius: number; damage: number };
-  poses: { antic: Float32Array; strike: Float32Array; follow: Float32Array; strikeAlt?: Float32Array };
+  // ---- Generic weapon hooks (revision pass 7). Every hook acts on the CONTACT frame (startup end),
+  //      so Rhythm Mode snapping lands it on the grid with no extra work. ----
+  /** Ranged: no magnetism dash; the target is picked within this range (world units). */
+  ranged?: number;
+  /** Aimed: the strike direction is the swipe direction, auto-aimed onto the target within aimCone (deg). */
+  aimCone?: number;
+  /** Beam/bolt: hits along a line from the hand (pierce = every enemy on the line, else the first). */
+  beam?: BeamSpec;
+  /** Grab: the target is caught at the end of the dash and held until contact, then released (thrown). */
+  grab?: GrabSpec;
+  /** Tether (grappling hook): a rope connects at contact and pulls the victim or the player. */
+  tether?: TetherSpec;
+  /** Plant: a floor shockwave and crack at contact (staff plant, pile-driver, ground blast). */
+  plant?: { radius: number; damage: number; x: number };
+  /** Blocks enemy projectiles while active. */
+  deflect?: boolean;
+  /** Weapon slow-mo moment at contact (time scale, seconds). */
+  slowmo?: { scale: number; sec: number };
+  /** Rhythm Mode: the coarsest grid (divisions per beat) the contact snaps to; default RHYTHM.snapDiv. */
+  grid?: number;
+  /** Laser heat added when the move fires. */
+  heat?: number;
+  /** Move started automatically when this one ends (tether follow-ups). */
+  then?: string;
+  poses?: { antic: Float32Array; strike: Float32Array; follow: Float32Array; strikeAlt?: Float32Array };
+}
+
+export interface BeamSpec { len: number; width: number; pierce: boolean; color: string; hits?: number }
+export interface GrabSpec {
+  /** Thrown body: bowling damage multiplier and whether it bounces off walls. */
+  bowl: number;
+  /** Heavy enemies with poise can't be thrown until it is broken. */
+  respectPoise: boolean;
+  /** Frames the body is held (lifted / wound up) between the catch and the release. */
+  hold: number;
+}
+export interface TetherSpec {
+  mode: 'pull' | 'zip' | 'swing' | 'slam' | 'air';
+  /** Frames the rope pulls for (pull/swing). */
+  frames: number;
 }
 
 const C_LIGHT = '#bff4ff';
@@ -81,7 +120,7 @@ type MoveInput = Omit<MoveDef, 'poses' | 'family' | 'zoom' | 'poise' | 'maxTarge
   family?: string; zoom?: number; poise?: number; maxTargets?: number; dash?: boolean; travel?: number;
   launch?: number; follow?: boolean; knockdown?: boolean; spike?: boolean; aoe?: number; selfVY?: number;
   afterimage?: boolean; cancelFrom?: number;
-  poses: { antic: PoseSpec; strike: PoseSpec; follow: PoseSpec; strikeAlt?: PoseSpec };
+  poses?: { antic: PoseSpec; strike: PoseSpec; follow: PoseSpec; strikeAlt?: PoseSpec };
 };
 
 const AIR_BASE: PoseSpec = {
@@ -98,7 +137,7 @@ function def(m: MoveInput): MoveDef {
     knockdown: false, spike: false, aoe: 0, selfVY: 0, afterimage: false,
     cancelFrom: Math.max(1, m.active - 1),
     ...m,
-    poses: {
+    poses: m.poses && {
       antic: makePose(m.poses.antic, base),
       strike: makePose(m.poses.strike, base),
       follow: makePose(m.poses.follow, base),
@@ -108,7 +147,12 @@ function def(m: MoveInput): MoveDef {
 }
 
 export const MOVES: Record<string, MoveDef> = {};
-function add(m: MoveInput): MoveDef { const d = def(m); MOVES[d.id] = d; return d; }
+/** Register a move (weapon files add theirs through this too). */
+export function addMove(m: MoveInput): MoveDef { const d = def(m); MOVES[d.id] = d; return d; }
+const add = addMove;
+export type { MoveInput };
+/** Shared cancel lists (weapon files use these too). */
+export const CANCEL = { light: LIGHT_CANCEL, heavy: HEAVY_CANCEL, air: AIR_CANCEL };
 
 // ---------------- Grounded: E / W ----------------
 add({
@@ -409,26 +453,11 @@ add({
 
 /** Direction indices: 0=E,1=NE,2=N,3=NW,4=W,5=SW,6=S,7=SE (counter-clockwise, screen-up = N). */
 export const DIR_NAMES = ['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'] as const;
+/** Unit vectors per direction (screen space, +y down). */
+export const DIR_VX = [1, 0.707, 0, -0.707, -1, -0.707, 0, 0.707];
+export const DIR_VY = [0, -0.707, -1, -0.707, 0, 0.707, 1, 0.707];
 
-/** Move lookup by situation and swipe direction class. */
-export const MOVE_MAP = {
-  ground: {
-    side: { light: 'jab1', heavy: 'backfist' },
-    upDiag: { light: 'hook', heavy: 'knee' },
-    up: { light: 'launcher', heavy: 'launcherH' },
-    downDiag: { light: 'sweep', heavy: 'slide' },
-    down: { light: 'stomp', heavy: 'stompH' },
-  },
-  air: {
-    side: { light: 'akick1', heavy: 'aheavy' },
-    upDiag: { light: 'aslash', heavy: 'aslashH' },
-    up: { light: 'arise', heavy: 'arise' },
-    downDiag: { light: 'spike', heavy: 'spike' },
-    down: { light: 'spike', heavy: 'spike' },
-  },
-} as const;
-
-export type DirClass = keyof typeof MOVE_MAP.ground;
+export type DirClass = 'side' | 'upDiag' | 'up' | 'downDiag' | 'down';
 export function dirClass(dir: number): DirClass {
   switch (dir) {
     case 0: case 4: return 'side';
