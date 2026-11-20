@@ -36,6 +36,29 @@ Some screens the brief asks for don't exist in this build: loadout/weapon select
 | 15 | Damage numbers / floating text | Bold sans with a black outline. Fine, but not hand-lettered | low |
 | 16 | Background | A plain white page with a few floor doodles; no paper feel | low |
 
-## After
+## After (pass 6)
 
-See the "After" section at the end of this file. It is filled in after the redesign, with screenshots in `docs/screenshots/after/`.
+Screenshots: `docs/screenshots/after/` (same names as before).
+
+| # | Fix |
+|---|---|
+| 1 | Every menu is a notebook page: ruled paper background, wobbly SVG pen borders drawn twice, hand font. Buttons get a highlighter swipe on hover |
+| 2 | Title: hand-lettered marker logo with a red offset, a pen doodle of the hero, the prompt in marker with a highlighter underline |
+| 3 | Title on phones: the mode toggle moved below the logo doodle as two drawn checkboxes. Nothing overlaps at any size |
+| 4 | Calibration hides the title layer behind it |
+| 5 | Settings: DONE sits in a sticky footer so it is always visible; tighter rows on short screens |
+| 6 | HP is a heart + pen box with a scribble fill (blue → purple → red), with a hatched lag segment. Super is two hatched pencil boxes with ticks; "SUPER READY!" in red marker |
+| 7 | Combo number is measured and placed left of the rank, which sits in a pen circle. No overlap at any combo length |
+| 8 | Combo summary is a yellow sticky note |
+| 9 | Hurt feedback is red pen hatching at the screen edges, not a pink wash |
+| 10 | Pad: a dashed pencil top line with a "swipe here!" label and arrow (two lines on narrow screens), a doodled stick ring, an ink trail |
+| 11 | The paper and floor cover the whole screen, including letterbox bands |
+| 12 | Upgrades are pastel sticky notes with tape; "WAVE N CLEARED" in marker; a red pen circle on hover |
+| 13 | Pause is a notebook page. Results is a report card with a rank stamp and a highlighted best combo, two-column on short landscape screens so the buttons stay visible |
+| 14 | Rhythm HUD: pencil ticks, pen ring, metronome doodle, marker judgments with shapes; BPM in the hand font at a readable size |
+| 15 | Damage numbers are handwritten with a stepped pop |
+| 16 | Five paper pages with texture, doodles and line boil; page flip, cleared check and crumple transitions |
+
+Also fixed during the after pass: the scoreboard no longer collides with the HP number on phone portrait, and the "x hits" combo label now reads "hit combo".
+
+Crowd check: 15 enemies on graph paper at desktop and phone portrait. The hero, enemy teams and red attack telegraphs stay readable; damage numbers and BREAK!/BLOCK labels sit above the crowd.

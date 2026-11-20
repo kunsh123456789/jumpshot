@@ -247,7 +247,7 @@ Beat-detection constants live in `rhythm/analyze.ts` and `rhythm/live.ts`. They 
 
 ## Hand-Drawn animation and ink look
 
-**Settings:** `animStyle` ('drawn' | 'smooth'), `stepRate` (8–20 fps, default 12, so a step is 60 / rate ticks, clamped to 3–8), `look` ('pixel' | 'crisp' | 'smooth'), `pixelRes` (0.3–0.55 of the logical view).
+**Settings:** `animStyle` ('drawn' | 'smooth'), `attackSmooth` ('low' | 'normal' | 'high'), `stepRate` (8–20 fps, default 20, so a step is 60 / rate ticks, clamped to 3–8), `look` ('pixel' | 'crisp' | 'smooth'), `pixelRes` (0.3–0.55 of the logical view).
 
 **Drawings.** `drawn({ id, base, drawings: [{ hold, p, smear?, impact?, sfx?, ones?, inbetween? }] })`:
 - `hold`: ticks on screen. Attack drawings sum to the move's length, and the contact drawing starts exactly on the move's startup frame.
@@ -280,3 +280,49 @@ In Rhythm Mode the step falls on the subdivision (2/3/4/6/8 per beat) nearest th
 
 **Palette** (`render/ink.ts`): paper white, ink black, blue #2436e6, red #e22424, and the reflection's dither-key gray #b0a8c8, which the Pixel post-pass turns into a checkerboard stipple. Anti-aliased edges snap to the nearest palette color through a 4096-entry lookup table.
 
+
+## Smears and in-betweens (`data/smears.ts`)
+
+**SMOOTHNESS** (the Attack Smoothness setting)
+
+| Level | bonus | chain | strikeOnes |
+|---|---|---|---|
+| low | 0 extra in-betweens per moving attack segment | smear chain capped at 1 drawing | no |
+| normal | +1 | 3 | no |
+| high | +2 | 4 | strike segment plays on ones (every tick) |
+
+In-betweens are generated per segment by type: anticipation (eased, clustered near the keys), strike (accelerating; the fastest in-between is stretched ×1.08) and follow-through (overshoot ease). A key marked `breakdown: true` (authored in the Lab with "Add breakdown") suppresses generation on the segments it touches. Contact key times are never moved. `SMOOTH_CHAIN.max` in `render/animator.ts` is a global cap on chain length.
+
+**SmearCfg** (`SMEAR_DEFAULT`, per-animation overrides in `SMEAR_BY_ANIM`)
+
+| Key | Purpose |
+|---|---|
+| chain | Max drawings in a smear chain (fastest in-between → contact → follow-through) |
+| density | Hatch density per chain step (1 = full) |
+| jitter, lenJitter | Stroke angle jitter (rad) and length jitter |
+| radius, sweep | How far past the limb end the hatch reaches; how much of the swept angle it covers |
+| stretch, swoosh | Limb-stretch wedge on the fastest drawing; thin swoosh line along the path |
+| multiArm | Ghost arms fanned around a punch (flurry: 3) |
+| minSweep | Sweeps shorter than this get no smear |
+| color | Override (default: the fighter's ink color) |
+
+`ATTACKISH` lists non-attack animations that still get the attack treatment (dashes, dodges, flips, thrown bodies).
+
+## Paper world (`data/paper.ts`)
+
+| Key | Purpose |
+|---|---|
+| paper | Paper color per page (blank, lined, graph, sketch, kraft) |
+| ink, pencil, blue, red, highlighter | The pen palette, shared by the world, HUD and CSS (`--ink`, `--pencil`, … in `ui/style.css`) |
+| doodleAlpha, doodleWidth | Background doodle opacity and stroke width; they must never fight the fighters |
+| fibers, grain, vignette | Paper texture density, grain alpha, edge vignette |
+| cleanAbove, cleanBelow | No doodles in this band around the floor (fraction of screen height) |
+| boilVariants, boilFps | Baked doodle variants and how often a new one is shown |
+| ruleGap, gridGap | Lined page rule spacing and graph page grid size (css px) |
+| flipSec, clearedSec, crumpleSec, transitionFps | Wave-start page flip, wave-cleared check, game-over crumple; stepped at this rate |
+
+`PAGE_ORDER` is the rotation; `game.ts` `pageFor(wave)` picks kraft every 10th wave, else rotates every `arenaRotateEvery` (3) waves. The Paper page setting overrides it.
+
+**Sketch helpers** (`render/sketch.ts`): `penLine(wob, over)`, `penRect`, `penCircle`, `penArrow`, `penCheck`, `penScribble(step, slant)`, `penHatch(gap)`. All are seeded with `seedSketch(n)`; the HUD uses seed + boil index so strokes boil with the page. DOM borders (`ui/sketchDom.ts`) use the same idea in SVG, seeded from the element's text and size.
+
+**Fonts:** `HAND` (Patrick Hand) for labels and numbers, `MARKER` (Permanent Marker) for titles, ranks and judgments. Both are imported in `main.ts` and inlined by `vite.config.ts` `assetsInlineLimit`.

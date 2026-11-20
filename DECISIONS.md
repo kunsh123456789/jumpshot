@@ -220,3 +220,30 @@ Particles advance on the drawing step in Hand-Drawn mode, so FX move in the same
 - The radial burst and inverted night frames of the reference's big moments (410–422) only appear as the existing black/white impact invert.
 - HUD styling for the white page: the dark HP and super bars read fine, but they were designed for the dark arenas.
 
+
+## Revision pass 6: smoother attacks + paper-drawn world and UI
+
+**Missing systems, again.** The brief mentions weapons, the TimeDirector, the Jackpot Core, a loadout screen and a laser heat bar. None of these exist in this codebase, so there was nothing to restyle; they were skipped. The UI audit lists them as not applicable.
+
+**Tags.** `pre-paper-theme` (like `pre-rhythm` and the pass 5 tag) exists only locally: the git proxy in this environment refuses tag pushes.
+
+**In-betweens, not interpolation.** Hand-Drawn stays stepped. The smoothness comes from *more drawings* on the attack segments, generated with arc-aware, eased placement, not from tweening every tick. That keeps the held-drawing look while the swing reads as a continuous arc. Contacts still latch on the exact tick at every smoothness level (14/14 measured), and Rhythm strikes still land within ~8 ms of the grid (p95 7.9 ms).
+
+**Default step rate is now 20.** With in-betweens and smear chains, 12 fps loops looked choppy next to the smoother attacks. 20 keeps the hand-drawn hold on idle/run while matching the attack rhythm better. The slider still goes down to 8.
+
+**Smear chains instead of single smears.** One dense hatch on one drawing read as a flash. A chain (dense on the fastest drawing, then thinning over contact and follow-through) reads as the swing sweeping through and dissipating, which is how the reference does it.
+
+**Flurry rebuilt.** The pass 5 automatic version of the flurry was a blur. It is now hand-authored: two coils, nine alternating punches (3 ticks each) with 3 ghost arms per punch, then a recovery. Its length (34) and contact frame match the original, so gameplay is unchanged.
+
+**Paper behind the Pixel Look.** The paper is pre-rendered at screen resolution (3 boil variants) and drawn first; the low-res Pixel world is transparent and quantized with an alpha threshold, so only the ink lands on top. White in the palette maps to the current page color. That keeps the texture smooth while the fighters stay crisp 1-bit, and costs nothing extra per frame beyond one `drawImage`.
+
+**HUD on canvas, menus in the DOM.** The HUD changes every frame and needs stepped pops and boil, so it is drawn on the canvas with the sketch helpers. Menus stay DOM (accessibility, text input, scrolling) and get their pen borders from an SVG overlay that is generated once per element size, not per frame.
+
+**Readability over decoration.** Doodles stay out of a band around the floor (`cleanAbove`) and sit at 36% opacity. A crowd check with 15 enemies on graph paper (the busiest page) shows the hollow-headed hero, the solid-headed enemies and the red telegraphs clearly. High Contrast removes the doodles entirely. Judgments carry a shape as well as a color.
+
+**Performance.** With 16 enemies at 1280×720 in headless Chrome: Pixel look renders in ~3.6 ms per frame (p95 4.9 ms), Crisp in ~0.8 ms, sim ~0.2 ms. Both hold 60 fps. The paper adds roughly nothing per frame because it is cached; only a resize or a page change re-renders it.
+
+**What still needs work.**
+- The paper sounds are synthesized noise bursts; real recorded pencil and paper samples would sell the theme better.
+- The page-flip transition is a stepped wipe, not a 3D curl.
+- The smear configs are tuned by eye on the most-used attacks; enemy attacks use the defaults.

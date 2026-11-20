@@ -100,9 +100,29 @@ Animation is **stepped drawings with holds**, not interpolation.
 | Setting | Options |
 |---|---|
 | Animation style | **Hand-Drawn** (stepped drawings, default) / Smooth (the previous interpolated pose-to-pose system) |
-| Hand-Drawn step rate | 8–20 fps (default 12). It paces looping drawings (idle, run, tumbles) and the stepped root travel. Attack and reaction drawings always change on their authored frames |
+| Hand-Drawn step rate | 8–20 fps (default 20). It paces looping drawings (idle, run, tumbles) and the stepped root travel. Attack and reaction drawings always change on their authored frames |
+| Attack smoothness | Low / **Normal** / High: how many generated in-between drawings attacks get and how long their smear chains are (Hand-Drawn only; Smooth ignores it) |
+| Paper page | **Auto** (changes with waves) or a fixed Blank / Lined / Graph / Sketchbook / Kraft page |
+| Line boil | Background doodles re-drawn at ~7 fps, like a hand-drawn cartoon (on by default) |
+| High contrast | Plain page, no doodles, bolder HUD lines |
 | Look | **Pixel** (low-res 1-bit ink page, default) / Crisp (the same ink page at full resolution) / Smooth (the previous neon look and follow camera) |
 | Pixel Look resolution | 30–55% of the 1280×720 logical view (default 40%) |
+
+### Smoother attacks (pass 6)
+
+Attacks stay stepped, but each swing now has proper animation in-betweens:
+- Generated in-between drawings follow the limb's arc (not a straight line), cluster near the key poses on the anticipation, accelerate into the strike, and overshoot on the follow-through. The contact drawing still lands on the exact tick the hit resolves.
+- Every swing leaves a **smear chain**: the fastest drawing carries the densest hatch, then the contact and follow-through drawings carry thinning trails along the same arc. Fast drawings also get limb-stretch wedges and a thin swoosh line. Spins get spin arcs; dashes get speed bars.
+- The Flurry finisher is back: two coils into nine alternating punches with "hundred fists" ghost arms, then the big finishing blow.
+
+### Paper world and hand-drawn UI (pass 6)
+
+- The whole screen is a sheet of paper: fiber texture, a soft edge vignette and low-contrast pencil doodles that boil at ~7 fps and stay clear of the fight area. Pages rotate every 3 waves (Blank, Lined notebook, Graph paper, Sketchbook); every 10th wave is Kraft paper.
+- Wave start flips the page, a cleared wave gets a big pen check and "cleared!", and game over crumples the page.
+- The HUD is drawn in pen: a heart and a scribble-filled HP box, hatched super segments, a scoreboard with K.O. tally marks, a pen-circled rank letter, sticky-note combo summaries and handwritten damage numbers.
+- The Rhythm HUD is a pencil tick track with a doodled metronome. Judgments are marker-lettered, each with its own shape (star, circle, dot, cross), so they don't rely on color.
+- The pad is a dashed pencil line with a doodled stick ring and an ink trail. Every menu is a notebook page with wobbly pen borders; upgrades are sticky notes; results are a stamped report card.
+- Fonts: Patrick Hand and Permanent Marker (SIL OFL, bundled via @fontsource, inlined into the build). Paper sounds: pencil taps, page rustles, a page flip, a pen scratch and a crumple.
 
 In Rhythm Mode, Hand-Drawn steps fall on the musical subdivision nearest the step rate, so drawings change on the grid the hits already land on.
 
@@ -165,17 +185,19 @@ src/
   core/            math, seeded RNG, object pools, event bus, camera, slow-mo, audio synth, layout, settings, keyboard
   sim/             fighter entity, player controller (buffer/targeting/magnetism/cancels), combat resolver,
                    enemy physics + bowling, token AI, combo/style/super tracker, waves, projectiles/hazards/pickups
-  data/            tuning.ts, moves.ts, enemies.ts, waves.ts, upgrades.ts, rhythm.ts, songs.ts, inkLook.ts: every tunable lives here
+  data/            tuning.ts, moves.ts, enemies.ts, waves.ts, upgrades.ts, rhythm.ts, songs.ts, inkLook.ts, smears.ts, paper.ts: every tunable lives here
   data/anims/      authored key-pose animations (locomotion, player ground/air, reactions, enemies)
   render/          rig (FK + 2-bone IK, per-kind proportions), animPlayer (key evaluation, easing, staggered leads),
                    animator (pose-to-pose playback, interruption crossfades, smears), poser (gameplay -> animation time),
                    stickman renderer, particles/afterimages/floating text, backgrounds, HUD, FX director,
                    drawStyle (Hand-Drawn state), ink (ink page look, palette quantizer, ink figures), inkFx (hatch smears,
-                   specks/splatter, floor damage, scribble energy, ink entities)
+                   specks/splatter, floor damage, scribble energy, ink entities), paper (pages, doodles, transitions),
+                   paperHud (pen-drawn HUD), sketch (wobbly pen line/rect/circle/arrow/scribble/hatch helpers)
   rhythm/          Rhythm Mode (isolated): beatClock (tempo map + audio-clock queries), conductor (lookahead scheduler,
                    song/file/mic sources), synth (song patterns), judge, director (rules + sim hooks), hud, ui (picker,
                    calibration), analyze (song beat detection), live (mic beat tracking), simHooks (the sim-facing interface)
-  ui/              pad (drag-to-move + flick recognizer + trail), menus (DOM), tutorial, debug overlay, pop detector, Animation Lab
+  ui/              pad (drag-to-move + flick recognizer + trail), menus (DOM), sketchDom (wobbly SVG borders for DOM UI),
+                   tutorial, debug overlay, pop detector, Animation Lab
 ```
 
 See **TUNING.md** for every tunable value and **DECISIONS.md** for the judgment calls.
