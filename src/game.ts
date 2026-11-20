@@ -18,8 +18,6 @@ import { Tutorial } from './ui/tutorial';
 import { PopDetector } from './ui/popDetector';
 import { AnimLab } from './ui/lab';
 import { CAMERA, WAVES_T, WORLD, SCORE } from './data/tuning';
-import { UPGRADES, type UpgradeDef } from './data/upgrades';
-import { fxRng } from './core/rng';
 import { clamp } from './core/math';
 import { RhythmDirector } from './rhythm/director';
 import { RhythmHud, drawRhythmWorld } from './rhythm/hud';
@@ -33,7 +31,7 @@ import { PAGE_ORDER, type PageId } from './data/paper';
 import { RHYTHM } from './data/rhythm';
 import { SONGS } from './data/songs';
 
-type GState = 'title' | 'tutorial' | 'countdown' | 'playing' | 'clear' | 'upgrade' | 'gameover';
+type GState = 'title' | 'tutorial' | 'countdown' | 'playing' | 'breather' | 'gameover';
 
 /** Top-level game: owns world, renderer, input, UI and the state machine. */
 export class Game {
@@ -68,10 +66,10 @@ export class Game {
   private inputs: SwipeEvent[] = [];
   private renderTime = 0;
   private stateTime = 0;
-  private stacks: Record<string, number> = {};
   private nextWave = 1;
   private overTimer = 0;
-  private breather = 0;
+  /** Rhythm Mode: the bar the next wave starts on (-1 = not chosen yet). */
+  private waitBar = -1;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas);
@@ -326,7 +324,6 @@ export class Game {
   startRun(): void {
     this.menus.closeAll();
     this.world.reset();
-    this.stacks = {};
     this.nextWave = 1;
     this.pad.demo = false;
     this.pad.hint = -1;
@@ -350,18 +347,27 @@ export class Game {
     this.fx.lastComboEnd = null;
   }
 
-  /** Show the WAVE banner; the wave spawns 1.2 s later. */
+  /** Show the WAVE banner; the wave spawns WAVES_T.countdownSec later (on a bar line in Rhythm Mode). */
   private beginCountdown(): void {
     const wave = this.nextWave;
     const arena = ARENA_ORDER[Math.floor((wave - 1) / WAVES_T.arenaRotateEvery) % ARENA_ORDER.length];
     if (arena !== this.renderer.bg.current) this.renderer.bg.set(arena);
     this.setState('countdown');
+    this.waitBar = -1;
     const boss = wave % 10 === 0, elite = !boss && wave % 5 === 0;
     // Paper world: turn to this wave's page.
     paper.flipTo(this.pageFor(wave));
     this.menus.banner(`WAVE ${wave}`, boss ? '⚠ BOSS INCOMING ⚠' : elite ? 'ELITE INCOMING' : '', 1400);
     this.hud.waveLabel = `WAVE ${wave}`;
     audio.ui('wave');
+  }
+
+  /** Rhythm Mode: hold the wave start until the next bar line after the countdown. */
+  private onBarLine(): boolean {
+    if (!this.world.rhythm || !this.rhythm.live) return true;
+    const bar = this.rhythm.clock.barInfo(this.rhythm.now).bar;
+    if (this.waitBar < 0) this.waitBar = bar + 1;
+    return bar >= this.waitBar;
   }
 
   /** The page for a wave: the chosen page, or rotate pages every few waves with kraft for bosses. */
@@ -381,41 +387,11 @@ export class Game {
     save.bestWave = Math.max(save.bestWave, this.nextWave);
     this.menus.banner('WAVE CLEAR', `+${(SCORE.waveClear * this.nextWave).toLocaleString()}  ·  +${Math.round(WAVES_T.healFraction * 100)}% HP`, 1500);
     audio.ui('clear');
-    this.setState('clear');
-  }
-
-  private showUpgradePicker(): void {
-    this.setState('upgrade');
-    const choices = this.rollUpgrades(3);
-    this.menus.showUpgrades(choices, this.stacks, (u) => this.pickUpgrade(u), `WAVE ${this.nextWave} CLEARED`);
-  }
-
-  private rollUpgrades(n: number): UpgradeDef[] {
-    const avail = UPGRADES.filter((u) => (this.stacks[u.id] ?? 0) < u.maxStacks);
-    const out: UpgradeDef[] = [];
-    while (out.length < n && avail.length > 0) {
-      let total = 0;
-      for (const u of avail) total += u.weight;
-      let r = fxRng.next() * total;
-      let idx = 0;
-      for (; idx < avail.length - 1; idx++) { r -= avail[idx].weight; if (r <= 0) break; }
-      out.push(avail[idx]);
-      avail.splice(idx, 1);
-    }
-    return out;
-  }
-
-  private pickUpgrade(u: UpgradeDef): void {
-    this.stacks[u.id] = (this.stacks[u.id] ?? 0) + 1;
-    u.apply(this.world.stats);
-    this.world.applyStats();
-    const p = this.world.player;
-    if (u.onPick === 'fullHeal') p.hp = p.maxHp;
+    // Breather: the arena is already empty; reset the floor cracks, then the
+    // next wave's title comes up and it auto-continues. Nothing blocks on a choice.
+    inkFx.clearFloor();
     this.nextWave++;
-    // Breather before the next wave (the WAVE banner covers the last 1.2 s).
-    this.setState('upgrade');
-    this.breather = WAVES_T.breatherSec - 1.2;
-    this.menus.banner(u.icon + ' ' + u.name.toUpperCase(), 'next wave in 3…', 1300);
+    this.setState('breather');
   }
 
   private toGameOver(): void {
@@ -435,11 +411,11 @@ export class Game {
     const newHigh = score > save.highScore;
     if (newHigh) save.highScore = score;
     save.bestCombo = Math.max(save.bestCombo, c.bestHits);
-    save.bestWave = Math.max(save.bestWave, this.nextWave);
+    save.bestWave = Math.max(save.bestWave, this.world.wave);
     writeSave();
     this.menus.pauseBtn.style.display = 'none';
     this.menus.showResults({
-      score, high: save.highScore, newHigh, wave: this.nextWave, bestHits: c.bestHits, bestDamage: c.bestDamage,
+      score, high: save.highScore, newHigh, wave: Math.max(1, this.world.wave), bestHits: c.bestHits, bestDamage: c.bestDamage,
       bestRank: c.bestRank, kos: c.totalKOs, parries: c.parries, finishers: c.finishers, maxRank: c.maxRankRun,
       rhythm: settings.rhythmMode && this.rhythm.stats.judged > 0
         ? { label: this.rhythm.label(), counts: this.rhythm.stats.counts, bestStreak: this.rhythm.stats.bestStreak, accuracy: this.rhythm.accuracy() } : null,
@@ -448,7 +424,6 @@ export class Game {
 
   togglePause(): void {
     if (this.state === 'title' || this.state === 'gameover') return;
-    if (this.menus.isOpen('upgrades')) return;
     if (this.calib) return;
     this.paused = !this.paused;
     if (this.paused) {
@@ -479,7 +454,7 @@ export class Game {
         if (e.kind === 'swipe' || e.kind === 'tap') { ev.length = 0; this.startFromTitle(); return; }
       }
     }
-    const acceptInput = this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'clear';
+    const acceptInput = this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'breather';
     if (acceptInput) for (let i = 0; i < ev.length; i++) this.inputs.push(ev[i]);
     ev.length = 0;
     syncDrawStyle();
@@ -499,7 +474,7 @@ export class Game {
     if (this.world.rhythm) this.rhythm.afterStep(this.world);
     this.pops.log = this.debug.visible;
     this.pops.check(this.world);
-    if ((this.state === 'playing' || this.state === 'countdown' || this.state === 'clear') && this.world.gameOver) this.toGameOver();
+    if ((this.state === 'playing' || this.state === 'countdown' || this.state === 'breather') && this.world.gameOver) this.toGameOver();
   }
 
   render(alpha: number, realDt: number, simSteps = 0, frameDt = realDt): void {
@@ -568,20 +543,14 @@ export class Game {
   private updateState(dt: number): void {
     switch (this.state) {
       case 'countdown':
-        if (this.stateTime >= 1.2) {
+        if (this.stateTime >= WAVES_T.countdownSec && this.onBarLine()) {
           this.world.wave = this.nextWave;
           this.world.waves.start(this.world, this.nextWave);
           this.setState('playing');
         }
         break;
-      case 'clear':
-        if (this.stateTime > 1.6) this.showUpgradePicker();
-        break;
-      case 'upgrade':
-        if (this.breather > 0) {
-          this.breather -= dt;
-          if (this.breather <= 0) { this.breather = 0; this.beginCountdown(); }
-        }
+      case 'breather':
+        if (this.stateTime >= WAVES_T.breatherSec - WAVES_T.countdownSec) this.beginCountdown();
         break;
       case 'tutorial':
         this.tutorial.update(this.world, dt);

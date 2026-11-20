@@ -181,8 +181,7 @@ export function bowling(w: World): void {
       if (dx * dx + dy * dy > r * r) continue;
       if (a.bowlCount < a.bowlIds.length) a.bowlIds[a.bowlCount++] = b.id;
       const dir = Math.sign(a.vx) || Math.sign(dx) || 1;
-      const mult = w.stats.bowlMult;
-      sideHit(w, b, PHYS.bowlDamage * mult, dir, -420 - 80 * mult, 'bowl', PHYS.bowlKnockback * (0.8 + 0.2 * mult));
+      sideHit(w, b, PHYS.bowlDamage, dir, -500, 'bowl', PHYS.bowlKnockback);
       if (b.bowlCount < b.bowlIds.length) b.bowlIds[b.bowlCount++] = a.id;
       if (a.alive) { a.hp -= PHYS.bowlDamage * 0.5; a.flash = 2; }
       a.vx *= 0.65;

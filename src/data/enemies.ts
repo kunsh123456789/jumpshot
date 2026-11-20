@@ -130,9 +130,9 @@ const E_KICK = atk({ ...KICK, id: 'eKick', windup: 15, damage: 12, kbY: -420,
 
 // Boss.
 const B_HAMMER = atk({
-  id: 'hammer', windup: 36, active: 5, recovery: 40, damage: 22,
+  id: 'hammer', windup: 36, active: 5, recovery: 40, damage: 18,
   hitbox: { x: 90, y: 40, r: 80 }, range: 190, lunge: 0, stepIn: 20, kbX: 620, kbY: -560, sound: 'slam',
-  shockwave: { speed: 820, damage: 12, life: 60 },
+  shockwave: { speed: 820, damage: 10, life: 60 },
   poses: {
     antic: { lean: -0.35, aU: 3.05, aL: 0.2, bU: 3.0, bL: 0.2, rootY: 8, flex: 6, head: 0.25 },
     strike: { lean: 0.85, aU: 1.1, aL: 0.0, bU: 1.0, bL: 0.0, rootY: -30, footA: 36 },
@@ -148,7 +148,7 @@ const B_SWEEP = atk({
     follow: { rootY: -32, plant: 0.25, lean: 0.5, laU: 1.5, laL: -0.2 },
   },
 });
-const B_RUSH = atk({ ...LUNGE, id: 'bRush', windup: 22, damage: 18, lunge: 1250, hitbox: { x: 70, y: 90, r: 60 }, range: 520,
+const B_RUSH = atk({ ...LUNGE, id: 'bRush', windup: 22, damage: 15, lunge: 1250, hitbox: { x: 70, y: 90, r: 60 }, range: 520,
   poses: { antic: { lean: 0.6, rootY: -26, aU: -1.2, aL: 0.6, bU: -1.0, bL: 0.6, footA: 30, footB: -30 }, strike: { lean: 0.75, rootY: -18, aU: 1.55, aL: 0.0, bU: -1.2, plant: 0.3, laU: 1.2, laL: -1.0 }, follow: { lean: 0.5, rootY: -14, aU: 1.3, aL: 0.4 } } });
 
 const base = {
@@ -164,19 +164,19 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   kicker: { ...base, kind: 'kicker', name: 'Kicker', hp: 74, color: '#4dff9a', accent: '#28a862', walkSpeed: 190, holdDist: 210, attacks: [KICK], score: 150, cost: 1.5, cooldown: 60 },
   thrower: { ...base, kind: 'thrower', name: 'Thrower', hp: 58, color: '#3fe0ff', accent: '#1f8aa8', walkSpeed: 160, holdDist: 470, attacks: [THROW], score: 160, cost: 1.6, thickness: 4.5, cooldown: 110 },
   shield: { ...base, kind: 'shield', name: 'Shield', hp: 95, color: '#6f9bff', accent: '#3a5ab8', walkSpeed: 120, holdDist: 170, attacks: [BASH], blocksFront: true, score: 220, cost: 2.2, thickness: 6, cooldown: 85 },
-  elite: { ...base, kind: 'elite', name: 'RONIN', hp: 380, poise: 18, poiseRegenFrames: 100, scale: 1.12, thickness: 6.5, color: '#ff4dd2', accent: '#ffd0f4', walkSpeed: 210, holdDist: 200, attacks: [E_COMBO, E_LUNGE, E_KICK], weight: 0.85, burstThreshold: 9, score: 1500, cost: 6, cooldown: 45, hpBar: true, scarf: true },
-  boss: { ...base, kind: 'boss', name: 'THE COLOSSUS', hp: 1500, poise: 70, poiseRegenFrames: 200, scale: 2.0, thickness: 12, color: '#ffd23f', accent: '#ff3b3b', walkSpeed: 90, holdDist: 230, attacks: [B_HAMMER, B_SWEEP, B_RUSH], weight: 0.38, launchMult: 0.7, burstThreshold: 7, score: 8000, cost: 20, cooldown: 40, hpBar: true, scarf: true },
+  elite: { ...base, kind: 'elite', name: 'RONIN', hp: 340, poise: 18, poiseRegenFrames: 100, scale: 1.12, thickness: 6.5, color: '#ff4dd2', accent: '#ffd0f4', walkSpeed: 210, holdDist: 200, attacks: [E_COMBO, E_LUNGE, E_KICK], weight: 0.85, burstThreshold: 9, score: 1500, cost: 6, cooldown: 45, hpBar: true, scarf: true },
+  boss: { ...base, kind: 'boss', name: 'THE COLOSSUS', hp: 1000, poise: 70, poiseRegenFrames: 200, scale: 2.0, thickness: 12, color: '#ffd23f', accent: '#ff3b3b', walkSpeed: 90, holdDist: 230, attacks: [B_HAMMER, B_SWEEP, B_RUSH], weight: 0.38, launchMult: 0.7, burstThreshold: 7, score: 8000, cost: 20, cooldown: 40, hpBar: true, scarf: true },
 };
 
 export const BOSS = {
   /** HP fractions where phases begin. */
   phase2: 0.62,
   phase3: 0.3,
-  meteorInterval: 150,
+  meteorInterval: 190,
   meteorWarn: 55,
-  meteorDamage: 14,
+  meteorDamage: 11,
   meteorRadius: 70,
-  summonEvery: 420,
+  summonEvery: 540,
   staggerFrames: 170,
   /** Windup multiplier in phase 3 (faster). */
   p3Speed: 0.75,

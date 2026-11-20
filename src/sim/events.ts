@@ -47,6 +47,5 @@ export interface SimEvents {
   waveClear: { wave: number };
   bossPhase: { phase: number };
   spawn: { enemy: Fighter };
-  chain: { x1: number; y1: number; x2: number; y2: number };
   text: { text: string; x: number; y: number; color: string; size: number };
 }

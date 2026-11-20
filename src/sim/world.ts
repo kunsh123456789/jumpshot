@@ -5,7 +5,6 @@ import { PICKUPS, PLAYER, STYLE, WORLD } from '../data/tuning';
 import type { SwipeEvent } from '../ui/pad';
 import { poseFighter, setPoseBeat } from '../render/poser';
 import { ComboTracker } from './combo';
-import { baseStats, type Stats } from '../data/upgrades';
 import { EnemyAI } from './enemyAI';
 import { WaveDirector } from './waves';
 import { Entities } from './entities';
@@ -21,7 +20,6 @@ export class World {
   player: Fighter;
   enemies: Fighter[] = [];
   frame = 0;
-  stats: Stats = baseStats();
   readonly combo: ComboTracker;
   readonly ai = new EnemyAI();
   readonly waves = new WaveDirector();
@@ -41,7 +39,7 @@ export class World {
 
   constructor() {
     this.player = this.makePlayer();
-    this.combo = new ComboTracker(this.events, this.stats);
+    this.combo = new ComboTracker(this.events);
   }
 
   private makePlayer(): Fighter {
@@ -56,9 +54,7 @@ export class World {
   reset(): void {
     this.player = this.makePlayer();
     this.enemies.length = 0;
-    this.stats = baseStats();
-    this.combo.setStats(this.stats);
-    Object.assign(this.combo, new ComboTracker(this.events, this.stats));
+    Object.assign(this.combo, new ComboTracker(this.events));
     this.ai.reset();
     this.ents.clear();
     this.ctrl.reset();
@@ -68,13 +64,6 @@ export class World {
     this.waves.active = false;
     this.waves.cleared = false;
     simRng.seed(1234567);
-  }
-
-  applyStats(): void {
-    const p = this.player;
-    const newMax = PLAYER.maxHp + this.stats.maxHpBonus;
-    if (newMax !== p.maxHp) { p.hp += newMax - p.maxHp; p.maxHp = newMax; }
-    this.combo.setStats(this.stats);
   }
 
   spawnDummy(x: number): Fighter {

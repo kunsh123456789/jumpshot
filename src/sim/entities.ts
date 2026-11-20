@@ -115,7 +115,7 @@ export class Entities {
       if (u.y > WORLD.groundY - 12) { u.y = WORLD.groundY - 12; u.vy = -u.vy * 0.3; if (Math.abs(u.vy) < 40) { u.vy = 0; u.grounded = true; } }
       if (d < 46 && u.life > 15 && p.alive) {
         if (u.kind === 'health') p.hp = Math.min(p.maxHp, p.hp + PICKUPS.healthAmount);
-        else w.combo.superMeter = Math.min(SUPER.max, w.combo.superMeter + SUPER.orbGain * w.stats.superGain);
+        else w.combo.superMeter = Math.min(SUPER.max, w.combo.superMeter + SUPER.orbGain);
         w.events.emit('pickup', { kind: u.kind, x: u.x, y: u.y });
         pk.releaseAt(i);
         continue;

@@ -3,7 +3,9 @@ import type { EnemyKind } from './enemies';
 /**
  * Wave composition. Waves 1-10 are hand-authored to introduce enemies;
  * later waves are generated from a growing budget. Every 5th wave has an
- * elite, every 10th a boss.
+ * elite, every 10th a boss. The player never gets stronger during a run, so
+ * the difficulty curve comes only from here: composition, a gentle HP and
+ * damage ramp, and the attack-token count in WAVES_T.
  */
 export interface WaveDef { enemies: EnemyKind[]; elite: boolean; boss: boolean }
 
@@ -13,11 +15,11 @@ const AUTHORED: EnemyKind[][] = [
   ['grunt', 'kicker', 'grunt', 'rusher', 'grunt'],
   ['brute', 'grunt', 'grunt', 'rusher', 'kicker'],
   ['elite', 'grunt', 'grunt', 'grunt'],
-  ['thrower', 'grunt', 'grunt', 'kicker', 'rusher', 'grunt'],
-  ['shield', 'grunt', 'grunt', 'thrower', 'grunt', 'rusher'],
-  ['brute', 'shield', 'kicker', 'grunt', 'grunt', 'thrower', 'rusher'],
-  ['brute', 'brute', 'grunt', 'grunt', 'rusher', 'rusher', 'kicker', 'thrower'],
-  ['boss', 'grunt', 'grunt'],
+  ['thrower', 'grunt', 'grunt', 'kicker', 'rusher', 'grunt', 'kicker'],
+  ['shield', 'grunt', 'grunt', 'thrower', 'grunt', 'rusher', 'kicker'],
+  ['brute', 'shield', 'kicker', 'grunt', 'grunt', 'thrower', 'rusher', 'grunt'],
+  ['brute', 'brute', 'grunt', 'grunt', 'rusher', 'rusher', 'kicker', 'thrower', 'shield'],
+  ['boss', 'grunt'],
 ];
 
 const POOL: { kind: EnemyKind; cost: number; from: number }[] = [
@@ -31,10 +33,14 @@ const POOL: { kind: EnemyKind; cost: number; from: number }[] = [
 
 export const WAVE_GEN = {
   baseBudget: 6,
-  budgetPerWave: 1.15,
+  budgetPerWave: 1.0,
   maxEnemies: 16,
-  /** HP multiplier per wave after 10. */
-  hpScalePerWave: 0.06,
+  /** Enemy HP multiplier: +hpScalePerWave per wave after hpScaleFrom. */
+  hpScaleFrom: 5,
+  hpScalePerWave: 0.035,
+  /** Enemy damage multiplier: +dmgScalePerWave per wave after wave 1, capped. */
+  dmgScalePerWave: 0.025,
+  dmgScaleMax: 1.6,
 };
 
 export function waveDef(wave: number, rand: () => number): WaveDef {
@@ -56,5 +62,9 @@ export function waveDef(wave: number, rand: () => number): WaveDef {
 }
 
 export function hpScale(wave: number): number {
-  return 1 + Math.max(0, wave - 10) * WAVE_GEN.hpScalePerWave;
+  return 1 + Math.max(0, wave - WAVE_GEN.hpScaleFrom) * WAVE_GEN.hpScalePerWave;
+}
+
+export function dmgScale(wave: number): number {
+  return Math.min(WAVE_GEN.dmgScaleMax, 1 + Math.max(0, wave - 1) * WAVE_GEN.dmgScalePerWave);
 }

@@ -4,7 +4,7 @@ import { MOVES, MOVE_MAP, dirClass, dirSignX, type MoveDef, type MoveTag } from 
 import { INPUT, MOVE, PHYS, PLAYER, SUPER, WORLD } from '../data/tuning';
 import type { SwipeEvent } from '../ui/pad';
 import { clamp, ease } from '../core/math';
-import { overlaps, playerHit, sideHit } from './combat';
+import { overlaps, playerHit } from './combat';
 import { airGravity } from './physics';
 
 interface Buffered { ev: SwipeEvent; age: number; heavy: boolean; used: boolean }
@@ -38,11 +38,11 @@ export class PlayerController {
   ingest(w: World, inputs: SwipeEvent[]): void {
     const p = w.player;
     for (const ev of inputs) {
-      if (ev.kind === 'upgrade') {
-        // Upgrade a buffered swipe or the move it just started.
+      if (ev.kind === 'promote') {
+        // Promote a buffered swipe, or the move it just started, to heavy.
         let done = false;
         for (const b of this.buf) if (b.ev.segId === ev.segId) { b.heavy = true; done = true; }
-        if (!done && p.state === 'move' && p.move && p.strokeId === ev.segId) this.upgradeCurrent(w);
+        if (!done && p.state === 'move' && p.move && p.strokeId === ev.segId) this.promoteCurrent(w);
         continue;
       }
       let b: Buffered;
@@ -68,7 +68,7 @@ export class PlayerController {
     // Age the buffer only while the player could act: never during hit-stop (above)
     // or while committed to a move before its cancel window, so long dashes and
     // heavy startups never eat a queued swipe.
-    const cancelStart = p.move ? p.effStartup + p.move.cancelFrom - w.stats.cancelEarly : 0;
+    const cancelStart = p.move ? p.effStartup + p.move.cancelFrom : 0;
     const committed = (p.state === 'move' && p.moveFrame < cancelStart) || p.state === 'hurt' || (p.state === 'dodge' && p.stateFrame < 6);
     if (!committed) {
       for (let i = this.buf.length - 1; i >= 0; i--) {
@@ -116,7 +116,7 @@ export class PlayerController {
         return p.stateFrame >= 6;
       case 'move': {
         const m = p.move!;
-        const start = p.effStartup + m.cancelFrom - this.cancelEarly;
+        const start = p.effStartup + m.cancelFrom;
         if (p.moveFrame < start) return false;
         if (p.hitstop > 0) return false;
         if (tap) return m.cancelInto.includes('dodge');
@@ -128,13 +128,11 @@ export class PlayerController {
         return false;
     }
   }
-  private cancelEarly = 0;
   /** The input whose tryExecute is starting a move (Rhythm Mode binds its judgement). */
   private curEv: SwipeEvent | null = null;
 
   private tryExecute(w: World, b: Buffered): boolean {
     const p = w.player;
-    this.cancelEarly = w.stats.cancelEarly;
     if (b.ev.kind === 'tap') {
       if (!this.canAct(p, null, true)) return false;
       this.startDodge(w);
@@ -193,7 +191,7 @@ export class PlayerController {
   /** Nearest enemy in a wide cone around the swipe, with fallbacks. */
   selectTarget(w: World, dir: number): Fighter | null {
     const p = w.player;
-    const range = PLAYER.targetRange * w.stats.dashRange;
+    const range = PLAYER.targetRange;
     const cone = (PLAYER.targetConeDeg * Math.PI) / 180;
     const dx = DIR_VX[dir], dy = DIR_VY[dir];
     const sx = dirSignX(dir);
@@ -245,7 +243,6 @@ export class PlayerController {
       if (m.id === 'jumpshotFinisher' || m.id === 'flurry') {
         w.combo.superMeter -= SUPER.finisherCost;
         w.combo.finishers++;
-        if (w.stats.finisherHeal > 0) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * w.stats.finisherHeal);
         w.events.emit('finisher', { kind: m.id === 'flurry' ? 'flurry' : 'jumpshot', x: p.x, y: p.cy });
       }
     }
@@ -268,7 +265,7 @@ export class PlayerController {
       const ddx = p.dashToX - p.x, ddy = p.dashToY - p.y;
       const dist = Math.sqrt(ddx * ddx + ddy * ddy);
       if (dist > PLAYER.dashMinDistance || (isAir && dist > 4)) {
-        const perFrame = (PLAYER.dashSpeed * Math.max(1, w.stats.dashRange * 0.85)) / 60;
+        const perFrame = PLAYER.dashSpeed / 60;
         p.dashFrames = clamp(Math.ceil(dist / perFrame), 2, isAir ? PLAYER.airDashMaxFrames : PLAYER.dashMaxFrames);
         if (isAir && p.grounded) { p.grounded = false; }
         w.events.emit('afterimage', { fighter: p });
@@ -286,7 +283,7 @@ export class PlayerController {
     // Hang an airborne target briefly while we wind up (decays with juggle depth).
     if (target && !target.grounded && target.alive) {
       const fin = m.id === 'jumpshotFinisher';
-      const pre = fin ? p.effStartup + 8 : Math.round(p.effStartup * Math.max(0, 1 - target.juggleHits * 0.1 * w.stats.juggleDecayMult));
+      const pre = fin ? p.effStartup + 8 : Math.round(p.effStartup * Math.max(0, 1 - target.juggleHits * 0.1));
       if (pre > target.stall) {
         target.stall = pre;
         if (target.vy > 0 || fin) target.vy *= fin ? 0 : 0.3;
@@ -312,7 +309,7 @@ export class PlayerController {
     }
   }
 
-  private upgradeCurrent(w: World): void {
+  private promoteCurrent(w: World): void {
     const p = w.player;
     const m = p.move!;
     if (p.moveFrame >= p.effStartup - 1 || p.moveHit || m.tags.includes('heavy') || m.tags.includes('special')) return;
@@ -438,8 +435,7 @@ export class PlayerController {
     p.move = null;
     p.setState('dodge', PLAYER.dodgeFrames);
     p.invuln = Math.max(p.invuln, PLAYER.dodgeInvulnFrames);
-    p.parryWindow = PLAYER.parryWindowFrames + w.stats.parryWindowBonus;
-    p.dodgeHit = 0;
+    p.parryWindow = PLAYER.parryWindowFrames;
     // Dodge away from the nearest threat (or backwards).
     let threat: Fighter | null = null, td = Infinity;
     for (const e of w.enemies) {
@@ -462,15 +458,6 @@ export class PlayerController {
     const t = ease.outCubic(Math.min(1, p.stateFrame / (PLAYER.dodgeFrames - 2)));
     p.x = p.dodgeFromX + (p.dodgeToX - p.dodgeFromX) * t;
     if ((p.stateFrame & 1) === 0 && p.stateFrame < 8) w.events.emit('afterimage', { fighter: p });
-    // Afterburn: damage enemies you pass through.
-    if (w.stats.dodgeStrike > 0 && p.dodgeHit < 3) {
-      for (const e of w.enemies) {
-        if (e.canBeHit && Math.abs(e.x - p.x) < 30 && !p.alreadyHit(e.id)) {
-          p.markHit(e.id); p.dodgeHit++;
-          sideHit(w, e, w.stats.dodgeStrike, p.facing, -200, 'shock', 120);
-        }
-      }
-    }
     if (--p.timer <= 0) { p.hitCount = 0; p.setState(p.grounded ? 'idle' : 'fall'); }
   }
 

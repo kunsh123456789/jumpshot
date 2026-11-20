@@ -1,7 +1,6 @@
 import { COMBO, SCORE, STYLE, SUPER } from '../data/tuning';
 import type { EventBus } from '../core/events';
 import type { SimEvents } from './events';
-import type { Stats } from '../data/upgrades';
 
 export interface HitFlags {
   air: boolean;
@@ -50,9 +49,7 @@ export class ComboTracker {
   private multiThisFrame = 0;
   private frame = 0;
 
-  constructor(private bus: EventBus<SimEvents>, private stats: Stats) {}
-
-  setStats(s: Stats): void { this.stats = s; }
+  constructor(private bus: EventBus<SimEvents>) {}
 
   /** Damage multiplier from hit count. */
   scale(): number {
@@ -93,12 +90,12 @@ export class ComboTracker {
     this.addStyle(st);
     this.lastFamily = family;
     this.lastHitFrame = this.frame;
-    this.superMeter = Math.min(SUPER.max, this.superMeter + SUPER.perHitBase * SUPER.rankMult[this.rank] * this.stats.superGain);
+    this.superMeter = Math.min(SUPER.max, this.superMeter + SUPER.perHitBase * SUPER.rankMult[this.rank]);
     this.score += Math.round(damage * SCORE.perDamage * STYLE.scoreMult[this.rank]);
   }
 
   addStyle(v: number): void {
-    this.style = Math.min(STYLE.max, this.style + v * this.stats.styleGain);
+    this.style = Math.min(STYLE.max, this.style + v);
     this.updateRank();
   }
 
@@ -121,7 +118,7 @@ export class ComboTracker {
   onParry(): void {
     this.parries++;
     this.addStyle(STYLE.parryBonus);
-    this.superMeter = Math.min(SUPER.max, this.superMeter + SUPER.parryGain * this.stats.superGain);
+    this.superMeter = Math.min(SUPER.max, this.superMeter + SUPER.parryGain);
     this.score += SCORE.parry;
     this.sinceHit = Math.min(this.sinceHit, 10);
   }
@@ -140,7 +137,7 @@ export class ComboTracker {
     if (this.hits > 0) {
       this.sinceHit++;
       this.idleFrames = anyHitState ? 0 : this.idleFrames + 1;
-      if (this.sinceHit > COMBO.timeoutFrames + this.stats.comboTimeoutBonus || this.idleFrames > COMBO.idleDropFrames + this.stats.comboTimeoutBonus * 0.5) {
+      if (this.sinceHit > COMBO.timeoutFrames || this.idleFrames > COMBO.idleDropFrames) {
         this.end(false);
       }
     }
@@ -177,6 +174,6 @@ export class ComboTracker {
     for (let i = 0; i < RECENT_N; i++) this.recent[i] = '';
   }
 
-  canGroundBounce(): boolean { return this.groundBouncesUsed < COMBO.groundBounces + this.stats.extraGroundBounces; }
-  canWallBounce(): boolean { return this.wallBouncesUsed < COMBO.wallBounces + this.stats.extraWallBounces; }
+  canGroundBounce(): boolean { return this.groundBouncesUsed < COMBO.groundBounces; }
+  canWallBounce(): boolean { return this.wallBouncesUsed < COMBO.wallBounces; }
 }

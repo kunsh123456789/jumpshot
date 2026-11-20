@@ -63,7 +63,7 @@ export class Fighter {
   hitCount = 0;
   multiHitDone = 0;
   moveHit = false;
-  /** Which stroke id started this move (for heavy upgrades). */
+  /** Which stroke id started this move (for heavy promotion). */
   strokeId = -1;
   crossUp = false;
 
@@ -114,7 +114,6 @@ export class Fighter {
   stallCount = 0;
   followTarget: Fighter | null = null;
   dodgeFromX = 0; dodgeToX = 0;
-  dodgeHit = 0;
 
   // ---- AI state ----
   ai = {

@@ -244,7 +244,7 @@ export class RhythmDirector implements RhythmSim {
     const g = this.moveGrade as Grade;
     const m = this.streakMult();
     w.combo.addStyle(RHYTHM.styleBonus[g]);
-    w.combo.superMeter = Math.min(SUPER.max, w.combo.superMeter + RHYTHM.superBonus[g] * w.stats.superGain);
+    w.combo.superMeter = Math.min(SUPER.max, w.combo.superMeter + RHYTHM.superBonus[g]);
     const pts = Math.round(RHYTHM.scoreBonus[g] * m);
     w.combo.score += pts;
     if (g >= GREAT) w.events.emit('text', { text: `+${pts}`, x: v.x, y: v.y - 175 * v.scale, color: g === 3 ? '#ffe14a' : '#7dff8a', size: 15 });

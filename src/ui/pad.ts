@@ -9,7 +9,7 @@ import { penArrow, penCircle, penLine, seedSketch, srand } from '../render/sketc
 const PEN_TRAIL = ['#7d7a73', '#1b1a17', '#d42a2a', '#d42a2a', '#2f55c8'];
 const PAPER_INK = '#1b1a17';
 
-export type SwipeKind = 'swipe' | 'tap' | 'upgrade';
+export type SwipeKind = 'swipe' | 'tap' | 'promote';
 export interface SwipeEvent {
   kind: SwipeKind;
   /** 0=E,1=NE,2=N,3=NW,4=W,5=SW,6=S,7=SE */
@@ -17,7 +17,7 @@ export interface SwipeEvent {
   heavy: boolean;
   len: number;
   speed: number;
-  /** Segment id; an 'upgrade' refers to the swipe with the same id. */
+  /** Segment id; a 'promote' (light flick turning heavy) refers to the swipe with the same id. */
   segId: number;
   time: number;
   source: 'pad' | 'key';
@@ -48,7 +48,7 @@ export function classifyDir(dx: number, dy: number): number {
  * One touch can do everything without lifting:
  *  - slow drag  -> floating-stick movement (anchor = touch start, re-anchored after flicks)
  *  - quick flick (speed + length over the last ~75 ms) -> directional attack,
- *    with heavy upgrades for long fast strokes and zig-zag chaining
+ *    promoted to heavy for long fast strokes and zig-zag chaining
  *  - tap -> dodge / parry
  */
 export class DrawPad {
@@ -80,7 +80,7 @@ export class DrawPad {
   private commitAng = 0;
   private chainX = 0; private chainY = 0;
   private segOX = 0; private segOY = 0; private segT = 0;
-  private upgraded = true;
+  private promoted = true;
   private curSegId = 0;
   private curDir = 0;
   // samples
@@ -135,7 +135,7 @@ export class DrawPad {
     this.travel = 0;
     this.anyCommit = false;
     this.armed = true;
-    this.upgraded = true;
+    this.promoted = true;
     this.sCount = 0;
     this.moveX = 0;
     this.mode = 'idle';
@@ -227,15 +227,15 @@ export class DrawPad {
           }
         }
       }
-      // Heavy upgrade: the flick keeps going long, fast and straight.
-      if (!this.upgraded && t - this.commitT <= PAD.heavyUpgradeFrames * 16.7) {
+      // Promote to heavy: the flick keeps going long, fast and straight.
+      if (!this.promoted && t - this.commitT <= PAD.heavyPromoteFrames * 16.7) {
         const hx = x - this.segOX, hy = y - this.segOY;
         const hd = Math.sqrt(hx * hx + hy * hy);
         const avg = (hd / Math.max(8, t - this.segT)) * 1000;
         if (hd >= PAD.heavyDist / settings.sensitivity && avg >= PAD.heavySpeed / settings.sensitivity && angleDiff(Math.atan2(-hy, hx), this.commitAng) < 0.55) {
-          this.upgraded = true;
+          this.promoted = true;
           this.recolorSegment(this.curDir === 2 ? 3 : 2);
-          this.emit('upgrade', this.curDir, true, hd, avg, t);
+          this.emit('promote', this.curDir, true, hd, avg, t);
           this.flash(x, y, this.curDir, this.curColor);
         }
       }
@@ -268,7 +268,7 @@ export class DrawPad {
     this.commitT = t;
     this.chainX = x; this.chainY = y;
     this.segOX = ox; this.segOY = oy; this.segT = ot;
-    this.upgraded = false;
+    this.promoted = false;
     this.curSegId = ++this.segId;
     this.curDir = dir;
     // Re-anchor movement and suppress it for a few frames (post-flick drift).

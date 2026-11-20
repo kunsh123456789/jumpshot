@@ -1,9 +1,8 @@
 import { settings, saveSettings } from '../core/settings';
 import { audio } from '../core/audio';
-import type { UpgradeDef } from '../data/upgrades';
 import { STYLE } from '../data/tuning';
 
-/** DOM overlays for menus (title, pause, settings, upgrades, results, banners). */
+/** DOM overlays for menus (title, pause, settings, loadout, results, banners). */
 export class Menus {
   private root: HTMLElement;
   private layers = new Map<string, HTMLElement>();
@@ -239,41 +238,6 @@ export class Menus {
     this.btn(foot, 'DONE', () => { this.close('settings'); onClose(); }, 'btn primary');
     p.appendChild(foot);
     el.appendChild(p);
-  }
-
-  // ---------------- Upgrade picker ----------------
-  showUpgrades(choices: UpgradeDef[], stacks: Record<string, number>, onPick: (u: UpgradeDef) => void, title: string): void {
-    const el = this.layer('upgrades', 'layer dim');
-    const h = document.createElement('div');
-    h.className = 'big';
-    h.textContent = title;
-    h.style.marginBottom = '6px';
-    el.appendChild(h);
-    const sub = document.createElement('div');
-    sub.className = 'subtitle';
-    sub.textContent = 'CHOOSE AN UPGRADE';
-    sub.style.marginBottom = '18px';
-    el.appendChild(sub);
-    const cards = document.createElement('div');
-    cards.className = 'cards';
-    choices.forEach((u, i) => {
-      const c = document.createElement('button');
-      c.className = 'card';
-      c.style.animationDelay = `${i * 0.08}s`;
-      const st = stacks[u.id] ?? 0;
-      c.innerHTML = `<div class="ic">${u.icon}</div><div class="nm">${u.name}${st > 0 ? ` <span style="opacity:.6;font-size:13px">LV${st + 1}</span>` : ''}</div><div class="ds">${u.desc}</div><div class="tg">${u.tag}</div>`;
-      let picked = false;
-      c.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (picked) return;
-        picked = true;
-        audio.ui('select');
-        this.close('upgrades');
-        onPick(u);
-      });
-      cards.appendChild(c);
-    });
-    el.appendChild(cards);
   }
 
   // ---------------- Results ----------------

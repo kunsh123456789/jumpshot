@@ -197,10 +197,6 @@ export class FxDirector {
       audio.boom();
       this.bossBarFlash = 1;
     });
-    ev.on('chain', (e) => {
-      effects.bolt(e.x1, e.y1, e.x2, e.y2, '#9fd8ff');
-      effects.bolt(e.x1, e.y1, e.x2, e.y2, '#ffffff');
-    });
     ev.on('text', (e) => effects.text(e.text, e.x, e.y, e.color, e.size));
     ev.on('spawn', (e) => {
       const f: Fighter = e.enemy;

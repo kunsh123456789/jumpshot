@@ -1,6 +1,6 @@
 /**
  * Global tunables. Every number that shapes feel lives here (or in moves/enemies/
- * waves/upgrades). See TUNING.md for documentation of each value.
+ * waves/weapons). See TUNING.md for documentation of each value.
  * Units: world units (1280x720 logical view), seconds, or sim frames (60 Hz).
  */
 export const SIM_HZ = 60;
@@ -115,11 +115,11 @@ export const PAD = {
   rearmFrac: 0.45,
   /** ...and only after this long (ms), so one flick can never fire twice. */
   rearmMinMs: 60,
-  /** Stroke length (px) and average speed (px/s) that upgrade a flick to HEAVY. */
+  /** Stroke length (px) and average speed (px/s) that promote a flick to HEAVY. */
   heavyDist: 120,
   heavySpeed: 1500,
-  /** Frames after the flick during which it can still upgrade to heavy. */
-  heavyUpgradeFrames: 9,
+  /** Frames after the flick during which it can still be promoted to heavy. */
+  heavyPromoteFrames: 9,
   /** Directional sector half-width in degrees (22.5 = exact 8-way). */
   sectorHalfDeg: 22.5,
   /** Bias toward cardinal directions (deg added to cardinal sectors). */
@@ -307,8 +307,11 @@ export const CAMERA = {
 } as const;
 
 export const WAVES_T = {
+  /** Between waves: total breather (s), of which the last countdownSec shows the next wave's title. */
   breatherSec: 3,
-  healFraction: 0.3,
+  countdownSec: 1.2,
+  /** Fraction of max HP healed when a wave is cleared. */
+  healFraction: 0.35,
   /** Attack tokens available by wave index: base + floor(wave / per), capped. */
   tokensBase: 1,
   tokensPerWaves: 3,

@@ -5,6 +5,7 @@ import { ANIM, COMBO, JUICE, PHYS, PLAYER, SCORE, SUPER } from '../data/tuning';
 import { settings } from '../core/settings';
 import { simRng } from '../core/rng';
 import type { EnemyAttack } from '../data/enemies';
+import { dmgScale } from '../data/waves';
 
 function hitstopFrames(base: number): number {
   return Math.max(0, Math.min(JUICE.hitstopMaxFrames, Math.round(base * settings.hitstop)));
@@ -31,11 +32,9 @@ export function overlaps(hx: number, hy: number, hr: number, f: Fighter): boolea
  */
 export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): void {
   const p = w.player;
-  const s = w.stats;
   const combo = w.combo;
   const dirX = v.x === p.x ? p.facing : Math.sign(v.x - p.x) || p.facing;
   const finisher = m.tags.includes('finisher');
-  const heavy = m.tags.includes('heavy');
 
   // ---- Shield block ----
   if (v.def?.blocksFront && v.guardBroken <= 0 && !finisher) {
@@ -57,9 +56,7 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   // ---- Damage ----
   let crit = false;
   if (p.critTimer > 0) { crit = true; p.critTimer = 0; }
-  else if (s.critChance > 0 && simRng.chance(s.critChance)) crit = true;
   let dmg = m.damage * combo.scale() * combo.repeatMult(m.family);
-  dmg *= heavy ? s.heavyDamage : m.tags.includes('light') ? s.lightDamage : 1;
   if (crit) dmg *= PLAYER.critMult;
   if (w.rhythm) dmg *= w.rhythm.damageMult(w);
   dmg = Math.max(1, dmg);
@@ -102,9 +99,9 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   const lying = v.state === 'knockdown';
   if (lying) v.otgUsed = true;
   const weight = v.def ? v.def.weight : 1;
-  const launchMult = (v.def ? v.def.launchMult : 1) * s.launchMult;
+  const launchMult = v.def ? v.def.launchMult : 1;
   const hsScale = Math.max(COMBO.hitstunScaleFloor, 1 - COMBO.hitstunScalePerHit * v.comboHits);
-  const jDecay = COMBO.juggleKbDecay * s.juggleDecayMult;
+  const jDecay = COMBO.juggleKbDecay;
   let kind: 'normal' | 'launch' | 'spike' | 'finisher' = finisher ? 'finisher' : 'normal';
   v.facing = -dirX;
   v.hitDirX = dirX;
@@ -124,9 +121,7 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
     goAir(v);
     v.spiked = true;
     v.stall = 0;
-    v.impactShock = m.impactShock
-      ? { radius: m.impactShock.radius * s.finisherRadiusMult, damage: m.impactShock.damage }
-      : s.spikeShockRadius > 0 ? { radius: s.spikeShockRadius, damage: 8 } : null;
+    v.impactShock = m.impactShock ? { radius: m.impactShock.radius, damage: m.impactShock.damage } : null;
     v.hitDirY = 1;
     if (!finisher) kind = 'spike';
   } else if (wasAir || lying || m.kbY < -250 || m.knockdown) {
@@ -140,9 +135,9 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
     goAir(v);
     if (m.knockdown) v.knockdownOnLand = true;
     if (wasAir) {
-      const stallDecay = Math.max(0.3, 1 - COMBO.juggleStallDecay * v.juggleHits * s.juggleDecayMult);
-      v.stall = Math.round((PHYS.stallFrames + s.airStallBonus) * stallDecay);
-      v.gravityScale = 1 + COMBO.juggleGravityPerHit * v.juggleHits * s.juggleDecayMult;
+      const stallDecay = Math.max(0.3, 1 - COMBO.juggleStallDecay * v.juggleHits);
+      v.stall = Math.round(PHYS.stallFrames * stallDecay);
+      v.gravityScale = 1 + COMBO.juggleGravityPerHit * v.juggleHits;
     }
     v.hitDirY = vy < 0 ? -0.5 : 0.5;
   } else {
@@ -173,7 +168,7 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
       p.vy = m.selfVY !== 0 ? m.selfVY : -80;
       const ph = p.height - COMBO.juggleCeiling;
       if (ph > 0 && p.vy < 0) p.vy *= Math.max(0, 1 - ph / COMBO.juggleCeilingFade);
-      p.stall = PHYS.playerAirStallFrames + s.airStallBonus;
+      p.stall = PHYS.playerAirStallFrames;
       p.stallCount++;
     }
   }
@@ -191,9 +186,6 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
     air, multi, bounce: false, finisher, launcher: m.launch !== 0, bowl: false, ko: v.hp <= 0,
   });
   emitHit(w, p, v, m, dmg, crit, kind, dirX, v.hitDirY, m.weight);
-
-  // Chain lightning on heavy hits.
-  if (heavy && s.chainLightning > 0) chainLightning(w, v, s.chainLightning, dmg * 0.4);
 
   if (v.hp <= 0) ko(w, v, dirX);
 }
@@ -238,30 +230,7 @@ function burst(w: World, v: Fighter): void {
   w.events.emit('burst', { x: v.x, y: v.cy, enemy: v });
 }
 
-const chainVisited = new Int32Array(8);
-export function chainLightning(w: World, from: Fighter, arcs: number, dmg: number): void {
-  let nv = 0;
-  chainVisited[nv++] = from.id;
-  let src = from;
-  for (let n = 0; n < arcs && nv < chainVisited.length; n++) {
-    let best: Fighter | null = null, bd = 300 * 300;
-    for (const e of w.enemies) {
-      if (!e.canBeHit) continue;
-      let seen = false;
-      for (let i = 0; i < nv; i++) if (chainVisited[i] === e.id) { seen = true; break; }
-      if (seen) continue;
-      const dx = e.x - src.x, dy = e.cy - src.cy, d = dx * dx + dy * dy;
-      if (d < bd) { bd = d; best = e; }
-    }
-    if (!best) break;
-    chainVisited[nv++] = best.id;
-    w.events.emit('chain', { x1: src.x, y1: src.cy, x2: best.x, y2: best.cy });
-    sideHit(w, best, dmg, Math.sign(best.x - src.x) || 1, -320, 'shock');
-    src = best;
-  }
-}
-
-/** Generic non-move hit (shockwaves, bowling, lightning, reflected darts). */
+/** Generic non-move hit (shockwaves, bowling, reflected darts). */
 export function sideHit(w: World, v: Fighter, dmg: number, dirX: number, vy: number, kind: 'bowl' | 'shock' | 'reflect', kbX = 260): void {
   if (!v.canBeHit) return;
   v.hp -= dmg;
@@ -307,7 +276,7 @@ function emitSide(w: World, v: Fighter, dmg: number, dirX: number, kind: 'bowl' 
   });
 }
 
-/** Shockwave (finisher impact, crater upgrade, KO blast): hits everything in radius. */
+/** Shockwave (finisher impact): hits everything in radius. */
 export function shockwave(w: World, x: number, y: number, radius: number, damage: number, exclude: Fighter | null, color: string): void {
   w.events.emit('shockwave', { x, y, radius, color, power: Math.min(1.5, radius / 250) });
   for (const e of w.enemies) {
@@ -345,7 +314,6 @@ export function ko(w: World, v: Fighter, dirX: number): void {
   for (const e of w.enemies) if (e.alive) { last = false; break; }
   if (last && w.waves.remainingToSpawn() > 0) last = false;
   w.events.emit('ko', { x: v.x, y: v.cy, victim: v, last });
-  if (w.stats.koBlast > 0) shockwave(w, v.x, v.y, w.stats.koBlast, 10, v, '#ffb040');
 }
 
 /** Enemy attack connects check against the player. Returns true if it hit/parried. */
@@ -371,13 +339,11 @@ export function enemyStrike(w: World, e: Fighter, atk: EnemyAttack): boolean {
 
 export function parry(w: World, e: Fighter | null, projectile: boolean): void {
   const p = w.player;
-  const s = w.stats;
   w.combo.onParry();
-  p.critTimer = PLAYER.parryCritFrames + s.critWindowBonus;
+  p.critTimer = PLAYER.parryCritFrames;
   p.telegraph = -1;
   p.invuln = Math.max(p.invuln, 16);
   p.parryWindow = 0;
-  if (s.parryHeal > 0) p.hp = Math.min(p.maxHp, p.hp + s.parryHeal);
   if (p.state === 'dodge') { p.setState(p.grounded ? 'idle' : 'fall'); p.vx = 0; }
   p.cue = 'parry'; p.cueSerial++;
   if (e) {
@@ -399,6 +365,7 @@ export function parry(w: World, e: Fighter | null, projectile: boolean): void {
 export function hurtPlayer(w: World, dmg: number, dirX: number, kbX: number, kbY: number, _src: Fighter | null): void {
   const p = w.player;
   if (p.invuln > 0 || !p.alive) return;
+  dmg *= dmgScale(w.wave);
   p.hp -= dmg;
   p.impact = ANIM.impactSnapFrames;
   p.hitSerial++;
