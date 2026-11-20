@@ -129,6 +129,8 @@ export class PlayerController {
     }
   }
   private cancelEarly = 0;
+  /** The input whose tryExecute is starting a move (Rhythm Mode binds its judgement). */
+  private curEv: SwipeEvent | null = null;
 
   private tryExecute(w: World, b: Buffered): boolean {
     const p = w.player;
@@ -136,12 +138,15 @@ export class PlayerController {
     if (b.ev.kind === 'tap') {
       if (!this.canAct(p, null, true)) return false;
       this.startDodge(w);
+      if (w.rhythm) w.rhythm.onTap(w, b.ev);
       return true;
     }
     const plan = this.resolve(w, b.ev.dir, b.heavy);
     if (!plan) return false;
     if (!this.canAct(p, plan.move.tags, false)) return false;
+    this.curEv = b.ev;
     this.startMove(w, plan.move, plan.target, b.ev.dir, plan.crossUp, b.ev.segId);
+    this.curEv = null;
     return true;
   }
 
@@ -290,6 +295,7 @@ export class PlayerController {
     }
     if (isAir || !p.grounded) { p.stall = Math.max(p.stall, p.effStartup + m.active); }
     else p.vx = 0;
+    if (w.rhythm) w.rhythm.onMoveStart(w, p, this.curEv, false);
   }
 
   private computeDashTarget(p: Fighter, m: MoveDef, t: Fighter, isAir: boolean): void {
@@ -323,6 +329,7 @@ export class PlayerController {
     this.lastMove = h;
     p.effStartup = Math.max(h.startup, p.dashFrames, p.moveFrame + 2);
     if (p.dashFrames > 0 && p.target) this.computeDashTarget(p, h, p.target, h.tags.includes('air'));
+    if (w.rhythm) w.rhythm.onMoveStart(w, p, null, true);
     w.events.emit('afterimage', { fighter: p });
   }
 

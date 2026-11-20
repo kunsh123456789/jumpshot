@@ -67,12 +67,12 @@ export class Keyboard {
       e.preventDefault();
       if (e.repeat) return;
       this.held[k] = true;
-      if (this.pendingSince < 0) this.pendingSince = performance.now();
+      if (this.pendingSince < 0) this.pendingSince = e.timeStamp || performance.now();
       return;
     }
     if (e.code === 'Space') {
       e.preventDefault();
-      if (!e.repeat) this.pad.inject('tap', -1, false);
+      if (!e.repeat) this.pad.inject('tap', -1, false, e.timeStamp || performance.now());
     }
   }
 
@@ -93,11 +93,12 @@ export class Keyboard {
   }
 
   private fire(): void {
+    const t0 = this.pendingSince;
     this.pendingSince = -1;
     const h = this.held;
     const dx = (h.right ? 1 : 0) - (h.left ? 1 : 0);
     const dy = (h.down ? 1 : 0) - (h.up ? 1 : 0);
     if (dx === 0 && dy === 0) return;
-    this.pad.inject('swipe', classifyDir(dx, dy), this.shift);
+    this.pad.inject('swipe', classifyDir(dx, dy), this.shift, t0);
   }
 }

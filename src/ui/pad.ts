@@ -296,9 +296,9 @@ export class DrawPad {
   }
 
   /** Inject a keyboard-generated event. */
-  inject(kind: SwipeKind, dir: number, heavy: boolean): void {
+  inject(kind: SwipeKind, dir: number, heavy: boolean, time = performance.now()): void {
     const segId = ++this.segId;
-    this.events.push({ kind, dir, heavy, len: 0, speed: 0, segId, time: performance.now(), source: 'key' });
+    this.events.push({ kind, dir, heavy, len: 0, speed: 0, segId, time, source: 'key' });
     this.lastDir = dir; this.lastKind = kind; this.lastLen = 0; this.lastSpeed = 0;
     const p = layout.pad;
     this.flash(p.x + p.w / 2, p.y + p.h / 2, kind === 'tap' ? -1 : dir, kind === 'tap' ? 4 : heavy ? 2 : dir === 2 ? 3 : 1);

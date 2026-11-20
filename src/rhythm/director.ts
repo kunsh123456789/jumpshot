@@ -2,6 +2,7 @@ import { audio } from '../core/audio';
 import { settings } from '../core/settings';
 import { SONGS, METRONOME_SONG, type SongDef } from '../data/songs';
 import { GOOD, GREAT, MISS, RHYTHM, type Grade } from '../data/rhythm';
+import { SUPER } from '../data/tuning';
 import { Conductor } from './conductor';
 import { judgeAt, type Judgement } from './judge';
 import type { RhythmSim } from './simHooks';
@@ -22,6 +23,8 @@ export interface RhythmStats { counts: number[]; streak: number; bestStreak: num
  */
 export class RhythmDirector implements RhythmSim {
   readonly conductor = new Conductor();
+  /** Separate conductor for the calibration metronome (a paused run keeps its own). */
+  readonly metro = new Conductor();
   get clock() { return this.conductor.clock; }
   song: SongDef = SONGS[1];
   /** A Rhythm Mode run is in progress (music + rules). */
@@ -63,11 +66,13 @@ export class RhythmDirector implements RhythmSim {
   pause(): void { this.conductor.pause(); }
   resume(): void { this.conductor.resume(); }
 
-  startMetronome(bpm: number): void { this.conductor.startSong(METRONOME_SONG(bpm), 'metronome'); }
+  startMetronome(bpm: number): void { this.metro.clock.inputOffsetMs = 0; this.metro.startSong(METRONOME_SONG(bpm), 'metronome'); }
+  stopMetronome(): void { this.metro.stop(); }
 
   /** Per animation frame: keep the perf ↔ audio mapping fresh. */
   frame(perfNow: number): void {
     this.clock.sync(perfNow);
+    if (this.metro.playing) this.metro.clock.sync(perfNow);
     this.conductor.hype = audio.intensity;
   }
 
@@ -113,13 +118,34 @@ export class RhythmDirector implements RhythmSim {
       this.moveGrade = j ? j.grade : -1;
       this.bonusPaid = !(j && j.grade >= GOOD);
     }
-    void this.snapTarget; void MISS; void GREAT; void FRAME; void (null as unknown as MoveDef);
+    void this.snapTarget; void MISS; void FRAME; void (null as unknown as MoveDef);
   }
   onMoveTick(_w: World, _p: Fighter): void {}
   onTap(_w: World, ev: SwipeEvent): void { const j = this.judged.get(ev); this.tapGrade = j ? j.grade : -1; }
-  damageMult(_w: World): number { return 1; }
-  onPlayerHit(_w: World, _v: Fighter, _damage: number): void { void this.bonusPaid; void this.moveGrade; void this.tapGrade; }
-  onParry(_w: World): void {}
+
+  damageMult(_w: World): number { return this.moveGrade >= 0 ? RHYTHM.damageMult[this.moveGrade] : 1; }
+
+  /** On-beat rewards, paid once per move when it first connects (so whiffs can't farm them). */
+  onPlayerHit(w: World, v: Fighter, _damage: number): void {
+    if (this.bonusPaid || this.moveGrade < GOOD) return;
+    this.bonusPaid = true;
+    const g = this.moveGrade as Grade;
+    const m = this.streakMult();
+    w.combo.addStyle(RHYTHM.styleBonus[g]);
+    w.combo.superMeter = Math.min(SUPER.max, w.combo.superMeter + RHYTHM.superBonus[g] * w.stats.superGain);
+    const pts = Math.round(RHYTHM.scoreBonus[g] * m);
+    w.combo.score += pts;
+    if (g >= GREAT) w.events.emit('text', { text: `+${pts}`, x: v.x, y: v.y - 175 * v.scale, color: g === 3 ? '#ffe14a' : '#7dff8a', size: 15 });
+  }
+
+  onParry(w: World): void {
+    if (this.tapGrade < GREAT) return;
+    const p = w.player;
+    w.combo.addStyle(RHYTHM.beatParryStyle);
+    w.combo.score += Math.round(RHYTHM.beatParryScore * this.streakMult());
+    w.events.emit('text', { text: 'ON-BEAT PARRY', x: p.x, y: p.y - 195 * p.scale, color: '#ffe14a', size: 24 });
+  }
+
   enemyCanStart(_w: World, _e: Fighter): boolean { void this.enemyWait; return true; }
   enemyWindup(_w: World, _e: Fighter, wind: number): number { void this.enemyTarget; return wind; }
   enemyWindupTick(_w: World, _e: Fighter): void {}

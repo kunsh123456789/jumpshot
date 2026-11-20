@@ -61,7 +61,9 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   let dmg = m.damage * combo.scale() * combo.repeatMult(m.family);
   dmg *= heavy ? s.heavyDamage : m.tags.includes('light') ? s.lightDamage : 1;
   if (crit) dmg *= PLAYER.critMult;
+  if (w.rhythm) dmg *= w.rhythm.damageMult(w);
   dmg = Math.max(1, dmg);
+  if (w.rhythm) w.rhythm.onPlayerHit(w, v, dmg);
 
   // ---- Poise / armor ----
   if (v.poise > 0 && !v.inHitState) {
@@ -390,6 +392,7 @@ export function parry(w: World, e: Fighter | null, projectile: boolean): void {
     p.facing = Math.sign(e.x - p.x) || p.facing;
   }
   w.combo.superMeter = Math.min(SUPER.max, w.combo.superMeter);
+  if (w.rhythm) w.rhythm.onParry(w);
   w.events.emit('parry', { x: e ? (e.x + p.x) / 2 : p.x + p.facing * 30, y: p.cy, projectile });
 }
 

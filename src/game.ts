@@ -23,7 +23,8 @@ import { fxRng } from './core/rng';
 import { clamp } from './core/math';
 import { RhythmDirector } from './rhythm/director';
 import { RhythmHud } from './rhythm/hud';
-import { RhythmUI } from './rhythm/ui';
+import { RhythmUI, type CalibView } from './rhythm/ui';
+import { RHYTHM } from './data/rhythm';
 
 type GState = 'title' | 'tutorial' | 'countdown' | 'playing' | 'clear' | 'upgrade' | 'gameover';
 
@@ -169,8 +170,59 @@ export class Game {
     this.time.locked = false;
   }
 
-  /** Calibration (filled in by milestone 2). */
-  startCalibration(onDone: () => void): void { onDone(); }
+  // ------------------------------------------------------------ rhythm latency calibration
+  private calib: { view: CalibView; deltas: number[]; done: boolean; prevDemo: boolean; onDone: () => void } | null = null;
+
+  /** Metronome + live pad: flick on each click; the median offset becomes the input latency offset. */
+  startCalibration(onDone: () => void): void {
+    this.menus.close('settings');
+    const view = this.rui.showCalibration(() => this.endCalibration());
+    this.calib = { view, deltas: [], done: false, prevDemo: this.pad.demo, onDone };
+    this.pad.demo = false;
+    this.rhythm.startMetronome(RHYTHM.calibrateBpm);
+    view.onRetry = () => {
+      this.rhythm.startMetronome(RHYTHM.calibrateBpm);
+      if (this.calib) { this.calib.deltas = []; this.calib.done = false; }
+      view.reset();
+    };
+  }
+
+  private endCalibration(): void {
+    const c = this.calib;
+    if (!c) return;
+    this.rui.close('calib');
+    this.pad.demo = c.prevDemo;
+    this.calib = null;
+    this.rhythm.stopMetronome();
+    c.onDone();
+  }
+
+  /** Route pad input to the calibration instead of the game. */
+  private calibInput(): void {
+    const c = this.calib!;
+    const clock = this.rhythm.metro.clock;
+    const ev = this.pad.events;
+    for (const e of ev) {
+      if (c.done || (e.kind !== 'swipe' && e.kind !== 'tap') || !clock.ready) continue;
+      // Raw (uncalibrated) offset from the nearest click, in ms.
+      const t = clock.heardAt(e.time);
+      const b = clock.beatAt(t);
+      const k = Math.round(b);
+      if (k < RHYTHM.calibrateCountIn) continue;
+      const d = (t - clock.timeOfBeat(k)) * 1000;
+      if (Math.abs(d) > 250) continue;
+      c.deltas.push(d);
+      const med = median(c.deltas);
+      c.view.value(med, c.deltas.length, RHYTHM.calibrateTaps);
+      if (c.deltas.length >= RHYTHM.calibrateTaps) {
+        c.done = true;
+        const ms = clamp(Math.round(med / 5) * 5, RHYTHM.offsetMin, RHYTHM.offsetMax);
+        c.view.done(ms, (v) => { settings.rhythmOffset = v; saveSettings(); this.rhythm.clock.inputOffsetMs = v; this.endCalibration(); });
+      }
+    }
+    ev.length = 0;
+    if (clock.ready) { const now = clock.heardAt(performance.now()); c.view.beat(clock.beat(now)); }
+  }
 
   startTutorial(): void {
     this.menus.closeAll();
@@ -310,6 +362,7 @@ export class Game {
   togglePause(): void {
     if (this.state === 'title' || this.state === 'gameover') return;
     if (this.menus.isOpen('upgrades')) return;
+    if (this.calib) return;
     this.paused = !this.paused;
     if (this.paused) {
       this.menus.showPause(
@@ -332,6 +385,7 @@ export class Game {
   step(): void {
     this.inputs.length = 0;
     this.keyboard.poll(performance.now());
+    if (this.calib) { this.calibInput(); return; }
     const ev = this.pad.events;
     if (this.state === 'title') {
       for (const e of ev) {
@@ -356,7 +410,8 @@ export class Game {
   }
 
   render(alpha: number, realDt: number, simSteps = 0, frameDt = realDt): void {
-    if (this.world.rhythm || this.rhythm.conductor.playing) this.rhythm.frame(performance.now());
+    if (this.world.rhythm || this.rhythm.conductor.playing || this.rhythm.metro.playing) this.rhythm.frame(performance.now());
+    if (this.calib) this.calibInput();
     const dt = realDt * this.time.scale;
     this.lastAlpha = alpha;
     this.renderTime += dt;
@@ -465,4 +520,10 @@ export class Game {
     }
     if (this.state === 'title') { this.cam.targetZoom = 1.25; this.cam.targetY = WORLD.groundY; }
   }
+}
+
+function median(a: number[]): number {
+  const s = [...a].sort((x, y) => x - y);
+  const n = s.length;
+  return n === 0 ? NaN : n % 2 ? s[(n - 1) >> 1] : (s[n / 2 - 1] + s[n / 2]) / 2;
 }
