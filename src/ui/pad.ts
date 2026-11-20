@@ -2,6 +2,12 @@ import { MOVE, PAD } from '../data/tuning';
 import { layout } from '../core/layout';
 import { settings } from '../core/settings';
 import { angleDiff, clamp } from '../core/math';
+import { DRAW } from '../render/drawStyle';
+import { penArrow, penCircle, penLine, seedSketch, srand } from '../render/sketch';
+
+/** Pen colours for the paper pad: movement = pencil, light = ink, heavy = red, others = blue. */
+const PEN_TRAIL = ['#7d7a73', '#1b1a17', '#d42a2a', '#d42a2a', '#2f55c8'];
+const PAPER_INK = '#1b1a17';
 
 export type SwipeKind = 'swipe' | 'tap' | 'upgrade';
 export interface SwipeEvent {
@@ -334,6 +340,7 @@ export class DrawPad {
 
   // ---------------- Rendering (css px space) ----------------
   draw(ctx: CanvasRenderingContext2D, now: number, dt: number): void {
+    if (DRAW.ink) { this.drawPaper(ctx, now, dt); return; }
     const p = layout.pad;
     this.pulse = Math.max(0, this.pulse - dt * 3.2);
     ctx.save();
@@ -394,6 +401,132 @@ export class DrawPad {
     }
     ctx.globalAlpha = 1;
     ctx.restore();
+  }
+
+  // ------------------------------------------------------------ paper look (revision pass 6)
+  /**
+   * The pad stays fully transparent. Feedback is drawn in pen and pencil: the
+   * swipe trail is a jittered ink stroke that scribbles in and fades out in
+   * steps, the floating stick a doodled circle and dot, a committed swipe a
+   * hand-drawn circle and arrow in the pen colour of its kind. On first launch
+   * a dashed pencil line marks the pad's top edge with a "swipe here" arrow.
+   */
+  private drawPaper(ctx: CanvasRenderingContext2D, now: number, dt: number): void {
+    const p = layout.pad;
+    const step = Math.floor(now / 1000 * 8);
+    ctx.save();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (this.labelAlpha > 0.01) {
+      const a = Math.min(1, this.labelAlpha);
+      ctx.globalAlpha = a * 0.8;
+      ctx.strokeStyle = '#7d7a73'; ctx.lineWidth = 1.5;
+      ctx.setLineDash([8, 7]);
+      seedSketch(5);
+      ctx.beginPath(); penLine(ctx, p.x + 10, p.y + 2, p.x + p.w - 10, p.y + 3, 1, 0); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = PAPER_INK;
+      ctx.font = `${Math.round(Math.max(15, Math.min(20, p.h * 0.05)))}px "Patrick Hand", "Comic Sans MS", cursive`;
+      ctx.textAlign = settings.leftHanded ? 'left' : 'right'; ctx.textBaseline = 'top';
+      const lx = settings.leftHanded ? p.x + 14 : p.x + p.w - 14;
+      const full = 'swipe here! drag = move · flick = attack · tap = dodge';
+      if (ctx.measureText(full).width <= p.w - 28) ctx.fillText(full, lx, p.y + 10);
+      else { // narrow screens: two lines, shrunk to fit
+        const l2 = 'drag = move · flick = attack · tap = dodge';
+        ctx.fillText('swipe here!', lx, p.y + 10);
+        const fs = Math.max(11, Math.floor(15 * Math.min(1, (p.w - 28) / Math.max(1, ctx.measureText(l2).width))));
+        ctx.font = `${fs}px "Patrick Hand", "Comic Sans MS", cursive`;
+        ctx.fillText(l2, lx, p.y + 30);
+      }
+      ctx.strokeStyle = PAPER_INK; ctx.lineWidth = 2;
+      seedSketch(6);
+      ctx.beginPath(); penArrow(ctx, p.x + p.w * 0.5, p.y - 22, p.x + p.w * 0.5, p.y + 22, 9, 1); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    if (this.hint !== -1 || this.demo) this.drawPaperHint(ctx, now);
+    // floating stick: doodled ring + dot (pencil)
+    const touching = this.pointerId !== -1;
+    this.stickAlpha += ((touching ? 1 : 0) - this.stickAlpha) * Math.min(1, dt * (touching ? 14 : 6));
+    if (this.stickAlpha > 0.05) {
+      ctx.globalAlpha = 0.55 * this.stickAlpha;
+      ctx.strokeStyle = '#7d7a73'; ctx.lineWidth = 1.5;
+      seedSketch(7 + (step % 3));
+      ctx.beginPath(); penCircle(ctx, this.anchorX, this.anchorY, MOVE.maxRadius, MOVE.maxRadius, 1.5); ctx.stroke();
+      if (touching) {
+        ctx.fillStyle = PAPER_INK; ctx.globalAlpha = 0.75 * this.stickAlpha;
+        ctx.beginPath(); ctx.arc(this.lastX, this.lastY, 5, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    // swipe trail: ink stroke, fading in steps (4 levels), slightly jittered
+    if (this.tCount >= 2) {
+      const fade = PAD.trailFadeMs;
+      const start = (this.tHead - this.tCount + TRAIL_CAP) % TRAIL_CAP;
+      seedSketch(step * 13 + 1);
+      for (let lvl = 3; lvl >= 0; lvl--) {
+        let prev = start, open = false;
+        ctx.beginPath();
+        for (let n = 1; n < this.tCount; n++) {
+          const i = (start + n) % TRAIL_CAP;
+          if (this.tBreak[prev]) { prev = i; open = false; continue; }
+          const age = now - this.tt[i];
+          const l = age > fade || age < -50 ? -1 : 3 - Math.min(3, Math.floor((age / fade) * 4));
+          if (l !== lvl) { prev = i; open = false; continue; }
+          const c = this.tc[i];
+          ctx.strokeStyle = PEN_TRAIL[c] ?? PAPER_INK;
+          if (!open) { ctx.moveTo(this.tx[prev] + (srand() - 0.5) * 2, this.ty[prev] + (srand() - 0.5) * 2); open = true; }
+          ctx.lineTo(this.tx[i] + (srand() - 0.5) * 2.4, this.ty[i] + (srand() - 0.5) * 2.4);
+          prev = i;
+        }
+        ctx.globalAlpha = [0.25, 0.45, 0.7, 0.95][lvl];
+        ctx.lineWidth = [1.5, 2.2, 3, 3.6][lvl];
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    // committed swipe: hand-drawn circle + arrow, stepped growth
+    for (let i = 0; i < 8; i++) {
+      const age = (now - this.fxT[i]) / 1000;
+      if (age < 0 || age > 0.35 || this.fxT[i] === 0) continue;
+      const k = Math.floor((age / 0.35) * 4) / 4;
+      const col = PEN_TRAIL[this.fxC[i]] ?? PAPER_INK;
+      ctx.strokeStyle = col; ctx.lineWidth = 2.5 - k * 1.5;
+      ctx.globalAlpha = 1 - k * 0.8;
+      seedSketch(i * 31 + 3);
+      ctx.beginPath(); penCircle(ctx, this.fxX[i], this.fxY[i], 12 + k * 40, 12 + k * 40, 1.6);
+      if (this.fxDir[i] >= 0) {
+        const a = -this.fxDir[i] * Math.PI / 4, d0 = 20 + k * 22, d1 = d0 + 30;
+        penArrow(ctx, this.fxX[i] + Math.cos(a) * d0, this.fxY[i] + Math.sin(a) * d0, this.fxX[i] + Math.cos(a) * d1, this.fxY[i] + Math.sin(a) * d1, 10, 1);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  private drawPaperHint(ctx: CanvasRenderingContext2D, now: number): void {
+    const p = layout.pad;
+    const cx = p.x + p.w / 2, cy = p.y + p.h * 0.45;
+    let dir = this.hint;
+    if (this.demo) dir = [0, 2, 4, 6][Math.floor(now / 1400) % 4];
+    const t = (now / 1000) % 1.4;
+    const st = Math.floor(t * 8) / 8;
+    ctx.strokeStyle = '#d42a2a'; ctx.fillStyle = '#d42a2a'; ctx.lineWidth = 3;
+    seedSketch(Math.floor(now / 140) % 3 + 40);
+    ctx.beginPath();
+    if (dir === -2) { penCircle(ctx, cx, cy, 14 + (st % 0.7) * 60, 14 + (st % 0.7) * 60, 2); }
+    else if (dir === -3) { const off = Math.sin(st * 4.5) * MOVE.maxRadius * 0.9; penCircle(ctx, cx, cy, MOVE.maxRadius, MOVE.maxRadius, 2); ctx.moveTo(cx + off + 9, cy); ctx.arc(cx + off, cy, 9, 0, Math.PI * 2); }
+    else if (dir >= 0) {
+      const a = -dir * Math.PI / 4, len = Math.min(p.w, p.h) * 0.3, e = Math.min(1, st / 0.35);
+      const x0 = cx - Math.cos(a) * len * 0.5, y0 = cy - Math.sin(a) * len * 0.5;
+      penArrow(ctx, x0, y0, x0 + Math.cos(a) * len * e, y0 + Math.sin(a) * len * e, 16, 2);
+    }
+    ctx.stroke();
+    if (this.hintLabel) {
+      ctx.fillStyle = PAPER_INK;
+      ctx.font = `${Math.round(Math.max(16, Math.min(22, p.h * 0.055)))}px "Patrick Hand", "Comic Sans MS", cursive`;
+      ctx.textAlign = 'center';
+      ctx.fillText(this.hintLabel, cx, p.y + p.h - Math.max(18, p.h * 0.1));
+    }
   }
 
   /** Faint floating-stick indicator: dim ring at the anchor, dot at the finger. */

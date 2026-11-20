@@ -222,11 +222,41 @@ class Audio {
     if (!this.ok('ui' + kind, 0.03)) return;
     const t = this.ctx!.currentTime;
     switch (kind) {
-      case 'click': this.tone(t, 'square', 880, 660, 0.06, 0.06); break;
+      case 'click': this.paper('tap'); break;
       case 'select': this.tone(t, 'triangle', 660, 1320, 0.16, 0.18); this.tone(t + 0.08, 'sine', 1320, 1760, 0.2, 0.12); break;
       case 'wave': for (let i = 0; i < 3; i++) this.tone(t + i * 0.11, 'square', 440 * (1 + i * 0.25), 440 * (1 + i * 0.25), 0.1, 0.07); break;
       case 'clear': for (const [i, f] of [523, 659, 784, 1046].entries()) this.tone(t + i * 0.08, 'triangle', f, f, 0.4, 0.14); break;
       case 'gameover': for (const [i, f] of [392, 330, 262, 196].entries()) this.tone(t + i * 0.18, 'triangle', f, f * 0.98, 0.5, 0.16); break;
+    }
+  }
+
+  /**
+   * Paper UI sounds (revision pass 6), short and quiet: a marker tap, a pencil
+   * scratch, a paper rustle, a page turn and a crumple. Filtered noise bursts
+   * through the SFX bus, so the volume sliders apply.
+   */
+  paper(kind: 'tap' | 'scratch' | 'rustle' | 'page' | 'crumple'): void {
+    if (!this.ok('paper' + kind, 0.04)) return;
+    const t = this.ctx!.currentTime;
+    switch (kind) {
+      case 'tap':
+        this.noiseBurst(t, 0.03, 0.18, 'bandpass', 2400, 2.5, 1600);
+        this.tone(t, 'triangle', 420, 300, 0.035, 0.05);
+        break;
+      case 'scratch':
+        for (let i = 0; i < 3; i++) this.noiseBurst(t + i * 0.045, 0.04, 0.09, 'bandpass', 5200 + i * 600, 4, 3800);
+        break;
+      case 'rustle':
+        this.noiseBurst(t, 0.16, 0.08, 'highpass', 2600, 0.8, 1400);
+        this.noiseBurst(t + 0.05, 0.12, 0.06, 'bandpass', 3800, 1.2, 2200);
+        break;
+      case 'page':
+        this.noiseBurst(t, 0.28, 0.12, 'bandpass', 1400, 0.9, 4200);
+        this.noiseBurst(t + 0.18, 0.1, 0.09, 'highpass', 3000, 0.7, 1500);
+        break;
+      case 'crumple':
+        for (let i = 0; i < 7; i++) this.noiseBurst(t + i * 0.06 + Math.random() * 0.03, 0.05, 0.12, 'bandpass', 1800 + Math.random() * 2500, 2, 900);
+        break;
     }
   }
 

@@ -2,6 +2,7 @@ import '@fontsource/patrick-hand/latin-400.css';
 import '@fontsource/permanent-marker/latin-400.css';
 import { inkFx } from './render/inkFx';
 import { Game } from './game';
+import { initSketchDom } from './ui/sketchDom';
 import { layout } from './core/layout';
 import { audio } from './core/audio';
 import { SIM_DT } from './data/tuning';
@@ -11,6 +12,7 @@ loadSettings();
 loadSave();
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
+initSketchDom();
 const game = new Game(canvas);
 const W = window as unknown as Record<string, unknown>;
 W.__jumpshot = game;

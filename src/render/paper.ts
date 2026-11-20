@@ -1,6 +1,7 @@
 import { PAPER, type PageId } from '../data/paper';
 import { settings } from '../core/settings';
 import { penArrow, penCircle, penLine, penRect, seedSketch, srand } from './sketch';
+import { audio } from '../core/audio';
 
 /** Handwriting font stack (bundled via @fontsource; falls back to system cursive). */
 export const HAND = '"Patrick Hand", "Comic Sans MS", "Chalkboard SE", cursive';
@@ -44,9 +45,10 @@ export class Paper {
     this.flipFrom = cur.page;
     this.page = p;
     this.flipT = 0;
+    audio.paper('page');
   }
-  cleared(): void { this.clearT = 0; this.seed++; }
-  crumple(): void { this.crumpleT = 0; this.seed++; }
+  cleared(): void { this.clearT = 0; this.seed++; audio.paper('scratch'); }
+  crumple(): void { this.crumpleT = 0; this.seed++; audio.paper('crumple'); }
   resetTransitions(): void { this.flipT = this.clearT = this.crumpleT = -1; this.flipFrom = null; }
   get busy(): boolean { return this.flipT >= 0 || this.crumpleT >= 0; }
 

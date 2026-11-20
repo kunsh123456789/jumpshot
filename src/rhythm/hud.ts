@@ -4,6 +4,10 @@ import { GOOD, GRADE_COLOR, GRADE_NAME, MISS, RHYTHM, type Grade } from '../data
 import type { World } from '../sim/world';
 import type { RhythmDirector } from './director';
 import type { Judgement } from './judge';
+import { DRAW } from '../render/drawStyle';
+import { HAND, MARKER } from '../render/paper';
+import { penCircle, penLine, seedSketch } from '../render/sketch';
+import { PAPER } from '../data/paper';
 
 /**
  * Beat track under the score: markers slide in from both sides and meet the
@@ -63,6 +67,7 @@ export class RhythmHud {
   }
 
   draw(ctx: CanvasRenderingContext2D, r: RhythmDirector, w: World, now: number): void {
+    if (DRAW.ink) { this.drawPaper(ctx, r, w, now); return; }
     const u = layout.ui;
     const R = layout.world;
     const c = r.clock;
@@ -213,6 +218,128 @@ export function drawRhythmWorld(ctx: CanvasRenderingContext2D, r: RhythmDirector
     ctx.restore();
   }
 }
+
+// ------------------------------------------------------------ paper look
+const SHAPE = ['cross', 'dot', 'circle', 'star'] as const;
+export interface RhythmHud { drawPaper(ctx: CanvasRenderingContext2D, r: RhythmDirector, w: World, now: number): void }
+RhythmHud.prototype.drawPaper = function (this: RhythmHud & Record<string, unknown>, ctx: CanvasRenderingContext2D, r: RhythmDirector, w: World, now: number): void {
+  const self = this as unknown as { ticks: { d: number; g: Grade; t: number }[]; jT: number; jGrade: Grade; lostT: number; lostN: number; ring: number; sectionName: string; sectionT: number; streakPop: number; pulse: number };
+  const u = Math.max(0.8, layout.ui);
+  const R = layout.world;
+  const c = r.clock;
+  const ink = PAPER.ink, pencil = PAPER.pencil;
+  if (!settings.beatHud) return;
+  const narrow = R.w < 640;
+  const cx = R.x + R.w / 2;
+  const top = layout.portrait ? 8 : R.y + 10 * u;
+  let boss = false;
+  for (const e of w.enemies) if (e.def?.hpBar && e.alive) { boss = true; break; }
+  const cy = top + (boss ? 104 : 84) * u;
+  const halfW = narrow ? R.w * 0.3 : Math.min(200 * u, R.w * 0.3);
+  const look = RHYTHM.hudLookaheadMs / 1000;
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // pencil track
+  seedSketch(5);
+  ctx.strokeStyle = pencil; ctx.lineWidth = 1.5;
+  ctx.beginPath(); penLine(ctx, cx - halfW, cy, cx + halfW, cy, 0.8, 0); ctx.stroke();
+  if (r.live) {
+    const b0 = Math.floor(c.beatAt(now - 0.12)) + 1;
+    ctx.beginPath();
+    for (let b = b0, i = 0; i < 16; b++, i++) {
+      const tb = c.timeOfBeat(b), dtB = tb - now;
+      if (dtB > look) break;
+      if (dtB < -0.12) continue;
+      const k = Math.max(0, dtB / look);
+      const accent = c.barInfo(tb + 1e-4).beatInBar === 0;
+      const h = (accent ? 9 : 6) * u;
+      for (const sg of [-1, 1]) { const x = cx + sg * k * halfW; ctx.moveTo(x, cy - h); ctx.lineTo(x + 1, cy + h); }
+    }
+    ctx.strokeStyle = ink; ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  // ring
+  seedSketch(9 + Math.floor(now * 7) % 3);
+  ctx.strokeStyle = r.live ? ink : pencil; ctx.lineWidth = 2 + self.ring * 1.5;
+  const rad = (10 + Math.round(self.ring * 2) * 2) * u;
+  ctx.beginPath(); penCircle(ctx, cx, cy, rad, rad, 1.2); ctx.stroke();
+  // timing ticks (early left | late right)
+  for (const t of self.ticks) {
+    const age = (now - t.t) / 2.5;
+    if (age > 1 || age < 0) continue;
+    ctx.fillStyle = t.g >= 2 ? PAPER.blue : t.g === 0 ? pencil : ink;
+    ctx.fillRect(cx + Math.max(-1.6, Math.min(1.6, t.d / RHYTHM.goodMs)) * 34 * u - 1, cy + 14 * u, 2, 6 * u);
+  }
+  // judgement: marker lettering + scribbled underline + shape icon (colour-blind safe)
+  const ja = (now - self.jT) / 0.52;
+  if (self.jT > 0 && ja >= 0 && ja < 1 && !(ja > 0.8 && Math.floor(now * 20) % 2)) {
+    const pop = ja < 0.12 ? 1.25 : 1;
+    const g = self.jGrade;
+    const col = g === 3 ? PAPER.red : g === 2 ? PAPER.blue : g === 1 ? ink : pencil;
+    const y = cy + 36 * u;
+    ctx.font = `${Math.round(19 * u * pop)}px ${MARKER}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = col;
+    const label = g === 3 ? 'PERFECT!' : g === 2 ? 'GREAT' : g === 1 ? 'GOOD' : 'OFF';
+    ctx.fillText(label, cx, y);
+    const tw = ctx.measureText(label).width;
+    seedSketch(13);
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath(); penLine(ctx, cx - tw / 2, y + 12 * u, cx + tw / 2, y + 11 * u, 1, 1);
+    // shape icon to the left
+    const ix = cx - tw / 2 - 14 * u, iy = y;
+    const shape = SHAPE[g];
+    if (shape === 'star') { for (let k = 0; k < 5; k++) { const a1 = -Math.PI / 2 + (k * 4 * Math.PI) / 5, a2 = -Math.PI / 2 + ((k + 1) * 4 * Math.PI) / 5; ctx.moveTo(ix + Math.cos(a1) * 7 * u, iy + Math.sin(a1) * 7 * u); ctx.lineTo(ix + Math.cos(a2) * 7 * u, iy + Math.sin(a2) * 7 * u); } }
+    else if (shape === 'circle') penCircle(ctx, ix, iy, 6 * u, 6 * u, 0.6);
+    else if (shape === 'cross') { ctx.moveTo(ix - 5 * u, iy - 5 * u); ctx.lineTo(ix + 5 * u, iy + 5 * u); ctx.moveTo(ix + 5 * u, iy - 5 * u); ctx.lineTo(ix - 5 * u, iy + 5 * u); }
+    ctx.stroke();
+    if (shape === 'dot') { ctx.beginPath(); ctx.arc(ix, iy, 3.5 * u, 0, Math.PI * 2); ctx.fill(); }
+    if (g === 3) { // doodle stars for PERFECT
+      ctx.beginPath();
+      for (const [dx, dy] of [[tw / 2 + 10, -10], [tw / 2 + 18, 6]]) { const x = cx + dx * u, yy = y + dy * u; ctx.moveTo(x - 4, yy); ctx.lineTo(x + 4, yy); ctx.moveTo(x, yy - 4); ctx.lineTo(x, yy + 4); }
+      ctx.stroke();
+    }
+  }
+  const la = (now - self.lostT) / 1.1;
+  if (self.lostT > 0 && la >= 0 && la < 1) {
+    ctx.font = `${Math.round(15 * u)}px ${HAND}`; ctx.fillStyle = PAPER.red; ctx.textAlign = 'center';
+    ctx.fillText(`streak lost · ${self.lostN}`, cx, cy + 58 * u);
+  }
+  const sa = now - self.sectionT;
+  if (r.live && sa >= 0 && sa < 2.2 && self.sectionName) {
+    ctx.font = `${Math.round(16 * u)}px ${MARKER}`; ctx.fillStyle = PAPER.red; ctx.textAlign = 'center';
+    ctx.fillText('♪ ' + self.sectionName.toLowerCase(), cx, cy - 20 * u);
+  }
+  // tempo + a doodled metronome pendulum (left), streak (right)
+  const lx = narrow ? cx - halfW + 10 * u : cx - halfW - 30 * u;
+  const ly = narrow ? cy + 22 * u : cy;
+  ctx.textBaseline = 'middle';
+  if (r.live) {
+    const ph = c.phase(now), swing = (Math.floor(c.beat(now)) % 2 ? 1 : -1) * (1 - 2 * ph);
+    const ang = Math.round(swing * 3) / 3 * 0.45;
+    seedSketch(17);
+    ctx.strokeStyle = ink; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    const mx = lx + 2 * u, my = ly + 9 * u;
+    penLine(ctx, mx - 9 * u, my, mx + 9 * u, my, 0.4, 0); penLine(ctx, mx - 9 * u, my, mx - 4 * u, my - 22 * u, 0.4, 0); penLine(ctx, mx + 9 * u, my, mx + 4 * u, my - 22 * u, 0.4, 0);
+    ctx.moveTo(mx, my - 2 * u); ctx.lineTo(mx + Math.sin(ang) * 20 * u, my - 2 * u - Math.cos(ang) * 20 * u);
+    ctx.stroke();
+    ctx.font = `${Math.round(14 * u)}px ${HAND}`; ctx.fillStyle = ink; ctx.textAlign = narrow ? 'left' : 'right';
+    ctx.fillText(`${Math.round(c.bpm(now))} bpm`, narrow ? mx + 14 * u : mx - 14 * u, my - 8 * u);
+  } else {
+    ctx.font = `${Math.round(14 * u)}px ${HAND}`; ctx.fillStyle = PAPER.red; ctx.textAlign = 'right';
+    ctx.fillText(r.statusText().toLowerCase(), lx, ly);
+  }
+  const tier = r.streakTier();
+  const sx = narrow ? cx + halfW - 40 * u : cx + halfW + 16 * u, sy = narrow ? cy + 24 * u : cy;
+  ctx.textAlign = 'left';
+  ctx.font = `${Math.round((17 + self.streakPop * 4) * u)}px ${MARKER}`;
+  ctx.fillStyle = tier >= 2 ? PAPER.red : ink;
+  ctx.fillText(`×${r.stats.streak}`, sx, sy - 2 * u);
+  ctx.font = `${Math.round(12 * u)}px ${HAND}`; ctx.fillStyle = pencil;
+  ctx.fillText(tier > 0 ? `streak · bonus ×${RHYTHM.streakMult[tier]}` : 'streak', sx, sy + 13 * u);
+  ctx.restore();
+};
 
 function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   ctx.beginPath();

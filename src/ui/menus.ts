@@ -32,6 +32,7 @@ export class Menus {
 
   private layer(id: string, cls = 'layer'): HTMLElement {
     this.close(id);
+    if (cls.includes('dim')) audio.paper('rustle');
     const el = document.createElement('div');
     el.className = cls;
     el.dataset.id = id;
@@ -59,7 +60,9 @@ export class Menus {
     const el = this.layer('title', 'layer passthrough');
     el.style.justifyContent = 'flex-start';
     el.style.paddingTop = '7vh';
-    el.innerHTML = `<h1 class="title-logo">JUMPSHOT</h1><div class="subtitle">SWIPE · LAUNCH · JUGGLE · SPIKE</div>`;
+    // Hand-lettered logo + a doodled stick figure doing a jumpshot flip.
+    el.innerHTML = `<h1 class="title-logo">JUMPSHOT</h1><div class="subtitle">swipe · launch · juggle · spike</div>
+      <svg class="title-doodle" viewBox="0 0 120 80" aria-hidden="true"><circle cx="70" cy="20" r="7"/><path d="M66 26 L52 46 M60 36 L44 30 M60 36 L74 44 M52 46 L36 58 M52 46 L62 64 M80 12 Q96 18 98 34 M98 34 L93 29 M98 34 L101 28 M20 70 L100 70"/></svg>`;
     const spacer = document.createElement('div');
     spacer.style.flex = '1';
     el.appendChild(spacer);
@@ -92,9 +95,12 @@ export class Menus {
         });
         tg.appendChild(b);
       };
-      mk('♪ RHYTHM MODE', true);
-      mk('⚔ CLASSIC MODE', false);
-      row.appendChild(tg);
+      mk('Rhythm MODE', true);
+      mk('Classic MODE', false);
+      // Under the logo (not in the corner row, where it overlapped the logo on phones).
+      tg.classList.add('title-modes');
+      const doodle = el.querySelector('.title-doodle');
+      el.insertBefore(tg, doodle ? doodle.nextSibling : null);
     }
     if (high > 0) {
       const hs = document.createElement('div');
@@ -228,7 +234,10 @@ export class Menus {
     if (onCalibrate) this.btn(p, 'CALIBRATE RHYTHM LATENCY', () => { this.close('settings'); onCalibrate(); });
     check('Show debug overlay', 'debug', () => window.dispatchEvent(new Event('jumpshot-debug')));
     if (onTutorial) this.btn(p, 'REPLAY TUTORIAL', () => { this.close('settings'); onTutorial(); });
-    this.btn(p, 'DONE', () => { this.close('settings'); onClose(); }, 'btn primary');
+    const foot = document.createElement('div');
+    foot.className = 'sticky-foot';
+    this.btn(foot, 'DONE', () => { this.close('settings'); onClose(); }, 'btn primary');
+    p.appendChild(foot);
     el.appendChild(p);
   }
 
@@ -276,13 +285,13 @@ export class Menus {
   }, onRetry: () => void, onTitle: () => void): void {
     const el = this.layer('results', 'layer dim');
     const p = document.createElement('div');
-    p.className = 'panel';
-    p.innerHTML = `<h2>DEFEATED</h2>
+    p.className = 'panel report';
+    p.innerHTML = `<div class="stamp">${STYLE.ranks[r.maxRank]}<small>STYLE</small></div><h2>Report card</h2>
       <div class="big">${r.score.toLocaleString()}</div>
       <div class="subtitle" style="margin-bottom:8px">${r.newHigh ? '★ NEW HIGH SCORE ★' : 'BEST ' + r.high.toLocaleString()}</div>
       <div class="stats">
         <span>Wave reached</span><span class="v">${r.wave}</span>
-        <span>Best combo</span><span class="v">${r.bestHits} hits · ${r.bestDamage} dmg · ${STYLE.ranks[r.bestRank]}</span>
+        <span>Best combo</span><span class="v"><span class="hl">${r.bestHits} hits · ${r.bestDamage} dmg · ${STYLE.ranks[r.bestRank]}</span></span>
         <span>Highest style rank</span><span class="v">${STYLE.ranks[r.maxRank]}</span>
         <span>K.O.s</span><span class="v">${r.kos}</span>
         <span>Perfect parries</span><span class="v">${r.parries}</span>

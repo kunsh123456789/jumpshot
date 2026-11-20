@@ -342,6 +342,9 @@ export class Effects {
     ctx.globalCompositeOperation = 'source-over';
   }
 
+  /** Ink look: handwritten, stepped floating text (set by the Game each frame). */
+  paperText = false;
+
   drawTexts(ctx: CanvasRenderingContext2D): void {
     const ts = this.texts;
     ctx.textAlign = 'center';
@@ -350,6 +353,20 @@ export class Effects {
     for (let i = 0; i < ts.count; i++) {
       const t = ts.items[i];
       const k = t.life / t.max;
+      if (this.paperText) {
+        // Handwritten numbers with a stepped bounce (3 drawings), ink on paper; blink out instead of fading.
+        const kq = Math.floor(k * 12) / 12;
+        if (kq > 0.8 && Math.floor(k * 24) % 2) continue;
+        const pop = kq < 0.09 ? 1.35 : kq < 0.18 ? 0.9 : 1;
+        const size = Math.round(t.size * pop * 1.05);
+        ctx.font = `${size}px "Patrick Hand", "Comic Sans MS", cursive`;
+        ctx.lineWidth = Math.max(3, size * 0.18);
+        ctx.strokeStyle = '#fbf8f0';
+        ctx.strokeText(t.text, t.x, t.y - (kq < 0.09 ? 6 : 0));
+        ctx.fillStyle = PAPER_INK[t.color] ?? t.color;
+        ctx.fillText(t.text, t.x, t.y - (kq < 0.09 ? 6 : 0));
+        continue;
+      }
       const pop = k < 0.12 ? 0.6 + (k / 0.12) * 0.7 : k < 0.22 ? 1.3 - ((k - 0.12) / 0.1) * 0.3 : 1;
       ctx.globalAlpha = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
       const size = Math.round(t.size * pop);
@@ -384,3 +401,8 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r1: numbe
 }
 
 export const effects = new Effects();
+
+/** Neon text colours -> pen colours on paper. */
+const PAPER_INK: Record<string, string> = {
+  '#ffffff': '#1b1a17', '#ffe14a': '#d42a2a', '#c9b6ff': '#2f55c8', '#7dff8a': '#2f55c8', '#6fe3ff': '#2f55c8', '#ff9af0': '#d42a2a',
+};

@@ -28,6 +28,7 @@ import { DRAW, syncDrawStyle } from './render/drawStyle';
 import { INKLOOK } from './data/inkLook';
 import { inkFx, drawEntitiesInk } from './render/inkFx';
 import { paper } from './render/paper';
+import { PaperHud } from './render/paperHud';
 import { PAGE_ORDER, type PageId } from './data/paper';
 import { RHYTHM } from './data/rhythm';
 import { SONGS } from './data/songs';
@@ -52,6 +53,7 @@ export class Game {
   // ---- Rhythm Mode (src/rhythm). Inert in Classic Mode: world.rhythm stays null. ----
   readonly rhythm = new RhythmDirector();
   readonly rhud = new RhythmHud();
+  readonly phud = new PaperHud();
   readonly rui = new RhythmUI();
   /** performance.now()-domain time the current sim step advances to (set by the main loop). */
   simNow = 0;
@@ -515,6 +517,7 @@ export class Game {
     }
     this.updateState(realDt);
     effects.update(dt);
+    effects.paperText = DRAW.ink;
     inkFx.update(dt);
     paper.update(realDt);
     this.renderer.beatPulse = this.world.rhythm ? this.rhud.pulse : 0;
@@ -525,7 +528,11 @@ export class Game {
     this.renderer.render(this.world, this.cam, alpha, this.renderTime, dt);
     const ctx = this.renderer.ctx;
     this.renderer.cssTransform();
-    this.hud.draw(ctx, this.world, this.fx, realDt, this.renderTime);
+    if (DRAW.ink) {
+      // Paper-drawn HUD (ink looks); the previous HUD stays for the Smooth look.
+      this.phud.visible = this.hud.visible; this.phud.waveLabel = this.hud.waveLabel;
+      this.phud.draw(ctx, this.world, this.fx, realDt, this.renderTime);
+    } else this.hud.draw(ctx, this.world, this.fx, realDt, this.renderTime);
     if (this.world.rhythm && this.hud.visible && this.state !== 'gameover') {
       const now = this.rhythm.heardAt(performance.now());
       // On each heard beat: a soft count tick while any enemy is winding up.
