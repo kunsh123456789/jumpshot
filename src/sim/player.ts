@@ -231,6 +231,8 @@ export class PlayerController {
     const p = w.player;
     const prev = p.move;
     if (prev) w.wpn.endMove(p);
+    // Starting anything else calls a thrown weapon back to the hand (except the throw itself).
+    if (!m.toss) w.wpn.recall(p);
     p.move = m;
     p.moveSerial++;
     p.setState('move');
@@ -406,7 +408,7 @@ export class PlayerController {
             return;
           }
         }
-      } else if (m.beam || m.grab || m.tether || m.plant) {
+      } else if (m.beam || m.grab || m.tether || m.plant || m.toss) {
         // Weapon hooks resolve on the contact frame; a grab that caught nothing (or a swing) strikes normally.
         if (fr === S) { if (!w.wpn.contact(w, p, m, false)) this.checkHits(w, m, false); }
         else if ((m.grab && !p.moveHit) || m.tether?.mode === 'swing' || (m.plant && !m.beam)) this.checkHits(w, m, false);

@@ -28,7 +28,7 @@ const base = { ranged: 860, dash: false, sound: 'punch' as const, kbY: 0, shake:
 add({ ...base, id: 'lz_bolt', family: 'lz_bolt', name: 'Bolt', tags: ['light'], startup: 4, active: 2, recovery: 12,
   damage: 7, hitstun: 22, kbX: 170, beam: bolt(), aimCone: 30, heat: 0.12, grid: LIGHT_GRID, cancelInto: CANCEL.light, weight: 0.3, trail: tr() });
 add({ ...base, id: 'lz_beam', family: 'lz_beam', name: 'Charged Beam', tags: ['heavy'], startup: 14, active: 4, recovery: 20,
-  damage: 16, hitstun: 36, kbX: 900, kbY: -220, hitstop: 8, shake: 14, zoom: 0.4, poise: 2.4, maxTargets: 12, beam: beam(), aimCone: 22,
+  damage: 16, hitstun: 36, kbX: 900, kbY: -220, hitstop: 8, shake: 14, zoom: 0.4, poise: 2.4, maxTargets: 12, beam: beam(), aimCone: 22, fx: { crescent: true },
   heat: 0.45, grid: HEAVY_GRID, slowmo: { scale: 0.3, sec: 0.3 }, cancelInto: CANCEL.heavy, weight: 0.95, afterimage: true, trail: tr(16) });
 add({ ...base, id: 'lz_sky', family: 'lz_sky', name: 'Sky Blast', tags: ['launcher'], startup: 6, active: 3, recovery: 16,
   damage: 9, hitstun: 40, kbX: 40, launch: -1180, maxTargets: 4, beam: { ...bolt(760), width: 26, pierce: true }, aimCone: 118,
@@ -51,7 +51,7 @@ add({ id: 'lz_blast', family: 'lz_blast', name: 'Ground Blast', tags: ['light', 
   maxTargets: 8, knockdown: true, plant: { radius: 190, damage: 0, x: 24 }, heat: 0.2, grid: HEAVY_GRID, cancelInto: CANCEL.light, sound: 'stomp', weight: 0.6, trail: tr(12) });
 add({ id: 'lz_blastH', family: 'lz_blast', name: 'Nova', tags: ['heavy', 'down'], startup: 12, active: 3, recovery: 22,
   damage: 13, hitstun: 36, kbX: 460, kbY: -520, hitstop: 8, shake: 14, zoom: 0.45, poise: 2.5, hitbox: { x: 0, y: 30, r: 0 }, aoe: 250, reach: 80,
-  maxTargets: 10, knockdown: true, plant: { radius: 300, damage: 7, x: 24 }, heat: 0.4, grid: HEAVY_GRID, cancelInto: CANCEL.heavy, sound: 'stomp', weight: 0.95, afterimage: true, trail: tr(16) });
+  maxTargets: 10, knockdown: true, plant: { radius: 300, damage: 7, x: 24 }, fx: { lightning: true, crescent: true }, heat: 0.4, grid: HEAVY_GRID, cancelInto: CANCEL.heavy, sound: 'stomp', weight: 0.95, afterimage: true, trail: tr(16) });
 // air
 add({ ...base, id: 'lz_abolt', family: 'lz_bolt', name: 'Air Bolt', tags: ['air', 'light'], startup: 4, active: 2, recovery: 12,
   damage: 7, hitstun: 32, kbX: 140, kbY: -320, selfVY: -150, beam: bolt(), aimCone: 35, heat: 0.12, grid: LIGHT_GRID, cancelInto: CANCEL.air, weight: 0.3, trail: tr() });

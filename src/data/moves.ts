@@ -76,12 +76,18 @@ export interface MoveDef {
   tether?: TetherSpec;
   /** Plant: a floor shockwave and crack at contact (staff plant, pile-driver, ground blast). */
   plant?: { radius: number; damage: number; x: number };
+  /** Thrown weapon (reference gif2 54-58): the weapon spins out along the aim for `range`, then returns,
+   *  hitting everything it passes once per leg. The held weapon is hidden while it is out. */
+  toss?: { speed: number; range: number; radius: number };
   /** Blocks enemy projectiles while active. */
   deflect?: boolean;
   /** Weapon slow-mo moment (time scale, seconds): at contact, or at the apex of the follow leap. */
   slowmo?: { scale: number; sec: number; at?: 'apex' };
   /** Rhythm Mode: the coarsest grid (divisions per beat) the contact snaps to; default RHYTHM.snapDiv. */
   grid?: number;
+  /** Presentation-only effects (reference FX): lightning strikes the victims, a whirlwind ball while
+   *  active (radius), the white-crescent impact frame. No gameplay effect. */
+  fx?: { lightning?: boolean; whirl?: number; crescent?: boolean };
   /** Laser heat added when the move fires. */
   heat?: number;
   /** Move started automatically when this one ends (tether follow-ups). */
@@ -97,6 +103,8 @@ export interface GrabSpec {
   respectPoise: boolean;
   /** Frames the body is held (lifted / wound up) between the catch and the release. */
   hold: number;
+  /** Over-the-shoulder: the body is released behind the hero instead of in the swipe direction. */
+  behind?: boolean;
 }
 export interface TetherSpec {
   mode: 'pull' | 'zip' | 'swing' | 'slam' | 'air';

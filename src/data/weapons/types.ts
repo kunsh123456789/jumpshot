@@ -49,6 +49,8 @@ export interface WeaponDef {
   ground: MoveSet;
   air: MoveSet;
   dodge: DodgeSpec;
+  /** How the tether is drawn: a sketchy chain (hook) or a stretched arm (throw's long-arm grab). */
+  ropeStyle?: 'chain' | 'arm';
   /** Auto-targeting range (world units); default PLAYER.targetRange. Ranged weapons reach further. */
   range?: number;
   /** Heat limiter instead of ammo (laser): firing adds MoveDef.heat; full heat overheats. */

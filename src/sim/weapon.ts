@@ -50,6 +50,10 @@ export class WeaponSim {
   anchorX = 0; anchorY = 0;
   hookOut = 0;
   readonly rope: RopePt[] = [];
+  /** Thrown weapon (staff toss): position, velocity, leg (1 = out, 2 = returning, 0 = in hand), spin. */
+  tossX = 0; tossY = 0; tossVX = 0; tossVY = 0; tossLeg = 0; tossDist = 0; tossSpin = 0;
+  private tossMove: MoveDef | null = null;
+  private tossHits = new Int32Array(16); private tossN = 0;
   /** Beam flash for rendering (world coords), frames left and max. */
   beamX1 = 0; beamY1 = 0; beamX2 = 0; beamY2 = 0; beamW = 0; beamT = 0; beamMax = 1; beamColor = '#e22424';
   /** Reflected segment end (NaN = no reflection). */
@@ -63,6 +67,7 @@ export class WeaponSim {
     this.heat = 0; this.overheat = 0;
     this.drop(null);
     this.tied = null; this.tetherMode = ''; this.ownsPlayer = false; this.hookOut = 0; this.beamT = 0; this.apexMoment = null;
+    this.tossLeg = 0; this.tossMove = null;
   }
 
   // ------------------------------------------------------------------ aiming
@@ -128,6 +133,7 @@ export class WeaponSim {
     if (m.heat) this.addHeat(w, m.heat);
     if (m.plant && p.moveFrame === p.effStartup) this.plant(w, p, m);
     if (m.beam) { this.fireBeam(w, p, m, multi); return true; }
+    if (m.toss) { this.throwWeapon(w, p, m); return true; }
     if (m.grab) {
       if (!this.held) return false; // whiffed or unthrowable: the move strikes instead
       this.release(w, p, m);
@@ -246,8 +252,8 @@ export class WeaponSim {
   private release(w: World, p: Fighter, m: MoveDef): void {
     const t = this.held!;
     this.held = null;
-    // Aim decides the side: swing the body over to the throw side.
-    const side = Math.abs(this.aimX) > 0.05 ? Math.sign(this.aimX) : p.facing;
+    // Aim decides the side: swing the body over to the throw side (over-the-shoulder throws go behind).
+    const side = m.grab!.behind ? -p.facing : Math.abs(this.aimX) > 0.05 ? Math.sign(this.aimX) : p.facing;
     p.facing = side;
     t.x = clamp(p.x + side * 40 * p.scale, WORLD.wallMargin, WORLD.arenaW - WORLD.wallMargin);
     t.y = Math.min(WORLD.groundY - 1, t.y);
@@ -329,6 +335,52 @@ export class WeaponSim {
     for (const r of this.rope) { r.x = r.ox = x; r.y = r.oy = y; }
   }
 
+  // ------------------------------------------------------------------ thrown weapon
+  private throwWeapon(w: World, p: Fighter, m: MoveDef): void {
+    const T = m.toss!;
+    this.tossMove = m;
+    this.tossX = p.x + p.facing * 30 * p.scale; this.tossY = p.y - 96 * p.scale;
+    this.tossVX = this.aimX * T.speed; this.tossVY = this.aimY * T.speed;
+    this.tossLeg = 1; this.tossDist = 0; this.tossN = 0;
+    p.weaponOut = true;
+    p.moveHit = true;
+    w.events.emit('whoosh', { x: this.tossX, y: this.tossY, weight: 0.9, fighter: p });
+  }
+
+  /** Recall the thrown weapon at once (the hero started something else). */
+  recall(p: Fighter): void { if (this.tossLeg) { this.tossLeg = 0; p.weaponOut = false; } }
+
+  private updateToss(w: World): void {
+    const p = w.player, m = this.tossMove;
+    if (!this.tossLeg || !m || !m.toss) return;
+    const T = m.toss;
+    this.tossSpin += 0.55;
+    if (this.tossLeg === 1) {
+      this.tossX += this.tossVX / 60; this.tossY += this.tossVY / 60;
+      this.tossDist += T.speed / 60;
+      const out = this.tossX < WORLD.wallMargin || this.tossX > WORLD.arenaW - WORLD.wallMargin || this.tossY > WORLD.groundY - 10;
+      if (this.tossDist >= T.range || out) { this.tossLeg = 2; this.tossN = 0; }
+    } else {
+      // home back to the hand, accelerating
+      const hx = p.x + p.facing * 24 * p.scale, hy = p.y - 96 * p.scale;
+      const dx = hx - this.tossX, dy = hy - this.tossY, d = Math.hypot(dx, dy) || 1;
+      const v = T.speed * 1.15 / 60;
+      if (d <= v + 20) { this.tossLeg = 0; p.weaponOut = false; w.events.emit('grab', { x: hx, y: hy, victim: p }); return; }
+      this.tossX += (dx / d) * v; this.tossY += (dy / d) * v;
+    }
+    const r = T.radius * p.scale;
+    for (const e of w.enemies) {
+      if (!e.canBeHit) continue;
+      let seen = false;
+      for (let i = 0; i < this.tossN; i++) if (this.tossHits[i] === e.id) { seen = true; break; }
+      if (seen) continue;
+      const dx = e.cx - this.tossX, dy = e.cy - this.tossY, rr = r + e.hurtR;
+      if (dx * dx + dy * dy > rr * rr) continue;
+      if (this.tossN < this.tossHits.length) this.tossHits[this.tossN++] = e.id;
+      playerHit(w, m, e, true);
+    }
+  }
+
   // ------------------------------------------------------------------ plant
   private plant(w: World, p: Fighter, m: MoveDef): void {
     const pl = m.plant!;
@@ -348,6 +400,7 @@ export class WeaponSim {
       else this.heat = Math.max(0, this.heat - H.decayPerSec / 60);
     }
     if (this.beamT > 0) this.beamT--;
+    this.updateToss(w);
     // A held body is only valid inside a grab move.
     if (this.held && (p.state !== 'move' || !p.move?.grab || !this.held.alive)) this.drop(p);
     // Pull: reel the victim to just in front of the player, then hand it to the follow-up.

@@ -29,7 +29,7 @@ const twirl3 = addMove({ id: 'st_twirl3', family: 'st_twirl', name: 'Twirl Finis
   sound: 'slash', weight: 0.55, afterimage: true, trail: tr(16) });
 const spin = addMove({ id: 'st_spin', name: 'Spinning Sweep', tags: ['heavy', 'sweep', 'guardbreak'],
   startup: 10, active: 8, recovery: 20, damage: 15, hitstun: 34, kbX: 520, kbY: -330, hitstop: 7, shake: 10, zoom: 0.35, poise: 2.2,
-  hitbox: { x: 0, y: 40, r: 0 }, aoe: 210, reach: 90, maxTargets: 10, knockdown: true, cancelInto: CANCEL.heavy,
+  hitbox: { x: 0, y: 40, r: 0 }, aoe: 210, reach: 90, maxTargets: 10, knockdown: true, fx: { crescent: true }, cancelInto: CANCEL.heavy,
   sound: 'heavy', weight: 0.85, afterimage: true, trail: tr(18) });
 const vault = addMove({ id: 'st_vault', family: 'st_vault', name: 'Pole Vault', tags: ['launcher'],
   startup: 8, active: 4, recovery: 16, damage: 11, hitstun: 40, kbX: 40, kbY: 0, hitstop: 6, shake: 7, zoom: 0.3, poise: 1.6,
@@ -41,11 +41,11 @@ const vaultH = addMove({ id: 'st_vaultH', family: 'st_vault', name: 'Pole Vault+
   sound: 'launch', weight: 0.9, afterimage: true, trail: tr(18), slowmo: { scale: 0.3, sec: 0.4, at: 'apex' } });
 const heli = addMove({ id: 'st_heli', family: 'st_heli', name: 'Helicopter', tags: ['light'],
   startup: 7, active: 12, recovery: 14, damage: 3, hitstun: 24, kbX: 140, kbY: -260, hitstop: 2, shake: 3, poise: 1.2,
-  hitbox: { x: 0, y: 116, r: 112 }, reach: 60, maxTargets: 6, multiHit: { interval: 4, count: 3 }, deflect: true,
+  hitbox: { x: 0, y: 116, r: 112 }, reach: 60, maxTargets: 6, multiHit: { interval: 4, count: 3 }, deflect: true, fx: { whirl: 110 },
   cancelFrom: 12, cancelInto: CANCEL.light, sound: 'slash', weight: 0.35, trail: tr(14) });
 const heliH = addMove({ id: 'st_heliH', family: 'st_heli', name: 'Helicopter+', tags: ['heavy'],
   startup: 9, active: 20, recovery: 16, damage: 4, hitstun: 26, kbX: 220, kbY: -340, hitstop: 2, shake: 4, poise: 1.6,
-  hitbox: { x: 0, y: 116, r: 130 }, reach: 60, maxTargets: 8, multiHit: { interval: 4, count: 5 }, deflect: true,
+  hitbox: { x: 0, y: 116, r: 130 }, reach: 60, maxTargets: 8, multiHit: { interval: 4, count: 5 }, deflect: true, fx: { whirl: 130 },
   cancelFrom: 20, cancelInto: CANCEL.heavy, sound: 'slash', weight: 0.5, afterimage: true, trail: tr(16) });
 const plant = addMove({ id: 'st_plant', family: 'st_plant', name: 'Plant Slam', tags: ['light', 'down'],
   startup: 9, active: 3, recovery: 18, damage: 10, hitstun: 30, kbX: 280, kbY: -430, hitstop: 6, shake: 9, zoom: 0.2, poise: 1.5,
@@ -55,6 +55,11 @@ const plantH = addMove({ id: 'st_plantH', family: 'st_plant', name: 'Earth Split
   startup: 13, active: 3, recovery: 22, damage: 14, hitstun: 36, kbX: 440, kbY: -500, hitstop: 8, shake: 14, zoom: 0.45, poise: 2.5,
   hitbox: { x: 0, y: 30, r: 0 }, aoe: 270, reach: 90, maxTargets: 10, knockdown: true, plant: { radius: 320, damage: 7, x: 80 },
   cancelInto: CANCEL.heavy, sound: 'stomp', weight: 0.95, afterimage: true, trail: tr(18) });
+const toss = addMove({ id: 'st_toss', name: 'Staff Boomerang', tags: ['heavy'],
+  startup: 10, active: 3, recovery: 16, damage: 9, hitstun: 30, kbX: 320, kbY: -300, hitstop: 4, shake: 6, zoom: 0.2, poise: 1.6,
+  hitbox: { x: 40, y: 96, r: 1 }, reach: 300, ranged: 640, dash: false, aimCone: 75, maxTargets: 12,
+  toss: { speed: 1350, range: 560, radius: 46 }, grid: 1, cancelFrom: 3, cancelInto: CANCEL.heavy,
+  sound: 'slash', weight: 0.7, afterimage: true, trail: tr(16) });
 // air
 const aswing = addMove({ id: 'st_aswing', family: 'st_aswing', name: 'Air Arc', tags: ['air', 'light'],
   startup: 5, active: 5, recovery: 13, damage: 7, hitstun: 32, kbX: 150, kbY: -360, hitstop: 4, shake: 3,
@@ -74,7 +79,7 @@ const arise = addMove({ id: 'st_arise', name: 'Rising Spin', tags: ['air', 'ligh
   sound: 'launch', weight: 0.55, afterimage: true, trail: tr(16) });
 const aheli = addMove({ id: 'st_aheli', name: 'Air Helicopter', tags: ['air', 'light'],
   startup: 6, active: 12, recovery: 14, damage: 3, hitstun: 30, kbX: 120, kbY: -380, hitstop: 2, shake: 3,
-  hitbox: { x: 0, y: 80, r: 106 }, reach: 50, maxTargets: 6, multiHit: { interval: 4, count: 3 }, deflect: true, selfVY: -260,
+  hitbox: { x: 0, y: 80, r: 106 }, reach: 50, maxTargets: 6, multiHit: { interval: 4, count: 3 }, deflect: true, selfVY: -260, fx: { whirl: 100 },
   cancelFrom: 12, cancelInto: CANCEL.air, sound: 'slash', weight: 0.35, trail: tr() });
 const plunge = addMove({ id: 'st_plunge', family: 'spike', name: 'Staff Plunge', tags: ['air', 'down', 'light'],
   startup: 6, active: 3, recovery: 18, damage: 12, hitstun: 40, kbX: 260, kbY: 1750, hitstop: 8, shake: 12, zoom: 0.45, poise: 2,
@@ -120,6 +125,10 @@ const anims = [
     hit: { ...LOW, rootY: -24, aU: 3.05, aL: 0.05, bU: 2.4, bL: 0.6, lean: 0.1, spin: 0.12, head: -0.35 },
     hit2: { ...LOW, rootY: -24, aU: 2.3, aL: 0.2, bU: 3.05, bL: 0.05, lean: 0.1, spin: -0.12, head: -0.35 },
     follow: [{ ...LOW, aU: 2.7, aL: 0.3, bU: 2.5, bL: 0.4, spin: 0.3 }, { ...LOW, ...GRIP }] }),
+  strikeAnim('st_toss', toss, { strike: 'arm', smear: ['handA'],
+    antic: [{ ...LOW, ...GRIP, spin: -0.2, rootX: -6 }, { ...LOW, lean: -0.1, aU: -1.2, aL: 0.4, bU: -1.0, bL: 0.6, spin: -0.4, rootX: -12, flex: 6, stretch: 0.94 }],
+    hit: { ...LOW, lean: 0.8, rootX: 16, aU: 1.9, aL: 0.0, bU: 0.4, bL: 1.6, footA: 52, footB: -44, head: -0.3, spin: 0.15, stretch: 1.1 },
+    follow: [{ ...LOW, lean: 0.6, rootX: 12, aU: 1.6, aL: 0.3, bU: 0.5, bL: 1.8 }, { ...LOW, aU: 1.3, aL: 1.0, bU: 0.6, bL: 2.0 }] }),
   strikeAnim('st_plant', plant, { strike: 'arm', smear: ['handA'],
     antic: [{ ...LOW, rootY: -10, lean: 0.1, aU: 2.8, aL: 0.2, bU: 2.6, bL: 0.4, head: -0.2 }, { rootY: 0, lean: -0.1, aU: 3.1, aL: 0.1, bU: 3.0, bL: 0.2, footA: 30, footB: -30, liftA: 10, head: -0.3 }],
     hit: { ...LOW, rootY: -50, lean: 0.85, aU: 0.9, aL: 0.0, bU: 0.6, bL: 0.2, footA: 50, footB: -44, head: 0.1, stretch: 1.08 },
@@ -171,6 +180,7 @@ const line6 = new Float32Array(6);
 
 /** Held staff: one long line through both hands. During the vault it is planted upright in the floor (reference 36-42). */
 function heldStaff(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, col: string, wpp: number): void {
+  if (f.weaponOut) return; // thrown: the weapon FX draws it spinning
   ctx.strokeStyle = col; ctx.lineWidth = 2.4 * wpp + 0.8; ctx.lineCap = 'round';
   const a = f.anim, cur = a.cur;
   ctx.beginPath();
@@ -187,10 +197,10 @@ function heldStaff(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, c
 export const staff: WeaponDef = {
   id: 'staff',
   name: 'Staff',
-  desc: 'Reach and crowd control: wide sweeps, a pole-vault launcher, a dart-blocking spin.',
+  desc: 'Reach and crowd control: wide sweeps, a pole-vault launcher, a dart-blocking spin, a boomerang throw.',
   ground: {
     side: { light: 'st_twirl1', heavy: 'st_spin' },
-    upDiag: { light: 'st_heli', heavy: 'st_heliH' },
+    upDiag: { light: 'st_heli', heavy: 'st_toss' },
     up: { light: 'st_vault', heavy: 'st_vaultH' },
     downDiag: { light: 'st_heli', heavy: 'st_heliH' },
     down: { light: 'st_plant', heavy: 'st_plantH' },
@@ -208,10 +218,10 @@ export const staff: WeaponDef = {
   smears: {
     st_twirl1: { radius: 1.35, sweep: 1 }, st_twirl2: { radius: 1.35 }, st_twirl3: { chain: 4, radius: 1.45 },
     st_spin: { chain: 4, radius: 1.6, density: [1, 0.85, 0.6, 0.35] }, st_heli: { chain: 3, radius: 1.5 }, st_heliH: { chain: 4, radius: 1.6 },
-    st_vault: { chain: 4 }, st_vaultH: { chain: 4 }, st_plant: { radius: 1.4 }, st_plantH: { chain: 4, radius: 1.5 },
+    st_vault: { chain: 4 }, st_vaultH: { chain: 4 }, st_toss: { chain: 3 }, st_plant: { radius: 1.4 }, st_plantH: { chain: 4, radius: 1.5 },
     st_aswing: { radius: 1.4 }, st_aswing2: { radius: 1.4 }, st_aswingH: { chain: 4, radius: 1.5 }, st_arise: { radius: 1.4 }, st_aheli: { radius: 1.5 }, st_plunge: { chain: 4, radius: 1.4 },
   },
-  tips: ['→ 3-hit twirl · heavy: spinning sweep (trips)', '↑ POLE VAULT launcher', '↗ ↘ helicopter spin (blocks darts)', '↓ plant slam shockwave'],
+  tips: ['→ 3-hit twirl · heavy: spinning sweep (trips)', '↑ POLE VAULT launcher', '↗ ↘ helicopter spin (blocks darts)', '↗ heavy: boomerang throw', '↓ plant slam shockwave'],
   icon(ctx, x, y, s, col) {
     ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.5, s * 0.08); ctx.lineCap = 'round';
     ctx.beginPath();

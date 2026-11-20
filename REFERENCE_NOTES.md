@@ -46,10 +46,11 @@ New material: `sheet_000-024.png` (the opening frames, not seen before) and `gif
 |---|---|---|
 | 000-024, gif2 0-30 | A polearm fighter: low wide crouch with the pole diagonal, big **filled crescent smears** traced by the weapon tip, a ground spin with several crescents, an air spin with two crescents in a Z | **Staff:** a weapon-sweep smear (`WeaponDef.sweep` + `weaponCrescent` in `render/inkFx.ts`) fills the area the staff itself swept between drawings with grip-to-tip hatch and a heavy rim, thinning over the smear chain. The spinning sweep and helicopter now rotate the staff with the arms instead of spinning the whole body |
 | gif2 36-46 | **Pole vault:** the pole planted upright in the floor, the hero perched at its top, then swinging over with a crescent | **Staff vault:** during the plant and launch drawings the staff is drawn upright from the floor to the hands, the hero is redrawn high on the pole with legs tucked, then kicking over |
-| gif2 54-58 | The weapon thrown, spinning away | Not used yet (a staff throw would need a projectile weapon move) |
+| gif2 54-58 | The weapon thrown, spinning away | **Staff boomerang** (↗ heavy): the staff spins out with two trailing crescents and returns |
 | gif2 76-82 | Energy beam across the screen as a chain of **cursive loops** with debris flicking off | **Laser:** beams are now a prolate cycloid (loops written along the line, crawling forward per drawing) over a straight core, with debris strokes |
-| gif2 94, 104, 288-298, 322, 350 | Inverted impact frames on the biggest hits, a white crescent on black | Already covered by the inverted impact frame (heavy hits, charged beam) |
-| gif2 158-170 | Jagged lightning and a hatched whirlwind ball | Not used yet |
-| gif2 200-238 | A stretched arm grabbing and dragging, held upside down, then thrown | Confirms the Hook pull and the Throw hold/release; no change |
-| gif2 262-284 | Close grappling into an over-the-shoulder throw with a smear | Matches the Throw heave; no change |
+| gif2 94, 104, 288-298, 322, 350 | Inverted impact frames on the biggest hits, a white crescent on black | **White-crescent impact frame** on finishers, weapon slow-mo moments and `fx.crescent` moves |
+| gif2 158-170 | Jagged lightning and a hatched whirlwind ball | **Lightning** (Nova, Crater Yank, JUMPSHOT finisher) and a **whirlwind** around the helicopters and the Flurry |
+| gif2 200-238 | A stretched arm grabbing and dragging, held upside down, then thrown | **Throw: Long Arm** (↑ heavy): the arm stretches, grabs and drags; Fists v2 jabs get a rubbery reach |
+| gif2 262-284 | Close grappling into an over-the-shoulder throw with a smear | **Over-the-shoulder slam** after the Long Arm (released behind the hero) |
 | gif2 336-356 | Dizzy stars around a stunned fighter | The stunned stars already exist |
+| sheet_000-024 + all | Low crouches, coiled extremes, held contact drawings, crescent smears on limbs | **Fists Reference v2** set (Legacy kept as a setting) |

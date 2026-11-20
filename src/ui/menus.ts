@@ -196,6 +196,7 @@ export class Menus {
       row.appendChild(span); row.appendChild(inp);
       p.appendChild(row);
     }
+    select('Fists animation (Hand-Drawn)', 'set-fistAnims', [['v2', 'Reference v2 (new)'], ['legacy', 'Legacy']], () => settings.fistAnims, (v) => { settings.fistAnims = v as 'v2' | 'legacy'; });
     select('Attack smoothness (Hand-Drawn)', 'set-attackSmooth', [['low', 'Low (key drawings only)'], ['normal', 'Normal (+1 in-between)'], ['high', 'High (+2, strikes on ones)']], () => settings.attackSmooth, (v) => { settings.attackSmooth = v as 'low' | 'normal' | 'high'; });
     select('Paper page', 'set-page', [['auto', 'Auto (changes with waves)'], ['blank', 'Blank Page'], ['lined', 'Lined Notebook'], ['graph', 'Graph Paper'], ['sketch', 'Sketchbook'], ['kraft', 'Kraft Paper']], () => settings.page, (v) => { settings.page = v as typeof settings.page; });
     select('Look', 'set-look', [['pixel', 'Pixel (ink page, 1-bit)'], ['crisp', 'Crisp (ink page, full res)'], ['smooth', 'Smooth (previous neon look)']], () => settings.look, (v) => { settings.look = v as 'pixel' | 'crisp' | 'smooth'; });

@@ -6,6 +6,7 @@ import { effects } from './effects';
 import { audio } from '../core/audio';
 import { ANIM, JUICE, PLAYER, STYLE, WORLD } from '../data/tuning';
 import { setAnimSfx } from './animator';
+import { crescentFlash, lightning } from './weaponFx';
 import { settings } from '../core/settings';
 import type { Fighter } from '../sim/fighter';
 
@@ -34,6 +35,9 @@ export class FxDirector {
     setAnimSfx((sfx) => { if (sfx === 'step') audio.step(); else if (sfx === 'land') audio.step(true); });
     ev.on('hit', (e) => {
       const m = e.move;
+      // Reference FX: lightning strikes, the white-crescent impact frame.
+      if (m?.fx?.lightning && e.attacker.team === 'player') { lightning(e.victim.cx, e.victim.cy, e.victim.id * 97 + e.combo); if (!settings.reduceFlashes) effects.invert = ANIM.invertSec; this.cam.shake(10, 0, 1, 0.3); }
+      if ((m?.fx?.crescent || e.kind === 'finisher') && e.attacker.team === 'player' && !settings.reduceFlashes) { crescentFlash(e.x, e.y, e.dirX); effects.invert = Math.max(effects.invert, ANIM.invertSec * 1.5); }
       const weight = e.weight;
       const color = e.kind === 'armor' ? '#c9b6ff' : m ? m.trail.color : e.kind === 'bowl' ? '#ffd23f' : e.kind === 'shock' ? '#9fd8ff' : e.kind === 'reflect' ? '#3fe0ff' : '#ffffff';
       effects.hitSpark(e.x, e.y, e.dirX, e.dirY * 0.8, weight, color, e.crit);
@@ -159,12 +163,12 @@ export class FxDirector {
     ev.on('overheat', (e) => { audio.weapon('overheat'); effects.text('OVERHEAT', e.x, e.y - 120, '#ff5050', 22, 0.9); });
     ev.on('grab', () => audio.weapon('grab'));
     ev.on('throw', (e) => { audio.weapon('throw'); if (e.heavy) this.cam.shake(6, 0, -1, 0.2); });
-    ev.on('hookFire', (e) => { audio.weapon('hookFire'); if (e.hit) audio.weapon('hookHit'); });
+    ev.on('hookFire', (e) => { if (w.weapon.ropeStyle === 'arm') { audio.weapon('throw'); if (e.hit) audio.weapon('grab'); return; } audio.weapon('hookFire'); if (e.hit) audio.weapon('hookHit'); });
     ev.on('pullArrive', () => audio.weapon('reel'));
     ev.on('deflect', (e) => { audio.weapon('deflect'); effects.text('DEFLECT', e.x, e.y - 60, '#9fd8ff', 16, 0.6); });
     ev.on('weaponSwap', () => audio.weapon('swap'));
     // Each weapon's signature moment gets the slow-mo treatment (TimeControl; locked off in Rhythm Mode).
-    ev.on('weaponMoment', (e) => { this.time.slowmo(e.scale, e.sec); this.cam.focus(0.2, 0.5); });
+    ev.on('weaponMoment', (e) => { this.time.slowmo(e.scale, e.sec); this.cam.focus(0.2, 0.5); if (!settings.reduceFlashes) { crescentFlash(e.x, e.y, 1); effects.invert = Math.max(effects.invert, ANIM.invertSec * 1.5); } });
     ev.on('burst', (e) => {
       const r = effects.spawn(2, e.x, e.y, 0, 0, 0.4, 20, '#ff5050'); r.size2 = 200;
       effects.text('BURST!', e.x, e.y - 80, '#ff5050', 28, 0.8);

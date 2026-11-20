@@ -78,6 +78,7 @@ export class World {
     this.weapon = weaponById(id);
     this.wpn.reset();
     this.player.weapon = this.weapon.id;
+    this.player.weaponOut = false;
     this.events.emit('weaponSwap', { id: this.weapon.id });
   }
 

@@ -45,7 +45,7 @@ add({ ...ranged, id: 'hk_slam', family: 'hk_slam', name: 'Slam Yank', tags: ['li
   damage: 11, hitstun: 40, kbX: 120, kbY: 1800, spike: true, hitstop: 7, shake: 11, zoom: 0.4, poise: 2, aimCone: 118,
   tether: { mode: 'slam', frames: 10 }, grid: 1, cancelInto: CANCEL.light, sound: 'spike', weight: 0.85, afterimage: true, trail: tr() });
 add({ ...ranged, id: 'hk_slamH', family: 'hk_slam', name: 'Crater Yank', tags: ['heavy', 'down'], startup: 11, active: 3, recovery: 20,
-  damage: 14, hitstun: 44, kbX: 120, kbY: 2100, spike: true, impactShock: { radius: 220, damage: 9 }, hitstop: 8, shake: 14, zoom: 0.5, poise: 2.4, aimCone: 118,
+  damage: 14, hitstun: 44, kbX: 120, kbY: 2100, spike: true, impactShock: { radius: 220, damage: 9 }, fx: { lightning: true }, hitstop: 8, shake: 14, zoom: 0.5, poise: 2.4, aimCone: 118,
   tether: { mode: 'slam', frames: 12 }, grid: 1, slowmo: { scale: 0.35, sec: 0.25 }, cancelInto: CANCEL.heavy, sound: 'spike', weight: 0.95, afterimage: true, trail: tr() });
 add({ ...ranged, id: 'hk_swing', family: 'hk_swing', name: 'Swing', tags: ['light'], startup: 7, active: 16, recovery: 12,
   damage: 10, hitstun: 32, kbX: 520, kbY: -380, hitstop: 4, shake: 5, hitbox: { x: 20, y: 60, r: 76 }, reach: 60, maxTargets: 6,

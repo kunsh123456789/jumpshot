@@ -280,3 +280,15 @@ Particles advance on the drawing step in Hand-Drawn mode, so FX move in the same
 ## After pass 7: the second reference upload
 
 See `REFERENCE_NOTES.md` ("Second upload"). The biggest change is a **weapon-sweep smear**: a weapon can expose its striking segment, and smeared drawings then fill the area the weapon swept with a hatched crescent (the reference's signature polearm look). Staff spin/helicopter drawings now turn the staff with the arms rather than rotating the whole body, the vault plants the staff upright with the hero on top, and laser beams are written as cursive loops. Not used yet: thrown weapons, lightning/whirlwind FX.
+
+## Reference pass 2, part 2: everything from the second upload
+
+**Fists Reference v2 + Legacy toggle.** Fists gameplay is unchanged (Classic fingerprint identical); only the drawings changed, and the previous drawings are kept as **Legacy** (Settings → Fists animation). v2 is built from the Legacy drawings by one consistent pass (deeper crouches, a coiled extreme before contact, more stretch/lean on contact, the contact drawing held up to 2 ticks longer by borrowing from the next drawing) plus per-move touches (rubbery reach on the jabs and cross, a taller launcher, more spin on the spike and spinning kicks). Contact frames and lengths are untouched: contacts still latch on the exact tick (14/14 at Low and High, both sets). Heavies and kicks get **limb crescents**: the area the forearm/shin swept is filled with grip-to-tip hatch, the same technique as the staff. The finishers get the new FX in v2 only, so Legacy looks exactly as before.
+
+**Not a Fists move: the arm-stretch grab.** Adding a grab to Fists would change how Fists plays, which every brief has asked to keep. The stretched arm went to the **Throw** weapon instead (↑ heavy, replacing the near-duplicate "Sky Toss"; ↑ light is still the launcher starter), and the v2 jabs/cross get the rubbery reach visually.
+
+**Thrown weapon.** The Staff's ↗ heavy (previously the same helicopter as ↘ heavy) is now a boomerang: the staff spins out along the aim with two trailing crescents, returns to the hand, and hits everything once per leg. The hero's hands are empty while it is out; any other move recalls it instantly, so there is no unarmed state to manage.
+
+**Over-the-shoulder throw.** `grab.behind` releases the body behind the hero; the Long Arm drags the enemy in (the hook's pull, drawn as a stretched arm via `ropeStyle: 'arm'`) and auto-chains into the over-the-shoulder slam (spike + shockwave + ground bounce).
+
+**FX.** Lightning (jagged bolts with a branch, from the top of the page to each victim) on the laser Nova, the Crater Yank and the JUMPSHOT finisher (v2). A whirlwind ball (rotating hatched spiral) around the hero during the helicopters and the Flurry (v2). The white-crescent impact frame: drawn in ink on the world layer during the inverted frame, so it reads white on black; triggered by finishers, every weapon slow-mo moment and moves flagged `fx.crescent`. All are presentation-only (`MoveDef.fx`), respect Reduce flashes, and are pooled.

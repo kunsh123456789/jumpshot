@@ -257,11 +257,25 @@ const seg4 = new Float32Array(4);
  */
 function weaponCrescent(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, col: string, wpp: number): void {
   const wd = weaponById(f.weapon);
-  if (!wd.sweep) return;
+  if (wd.sweep) { crescent(ctx, f, j, col, wpp, wd.sweep, 0); return; }
+  // Limb crescents (Fists Reference v2): the swept area from the elbow/knee to past the fist/foot.
+  if (!f.anim.smearCfg.crescent) return;
+  for (const [bit, endJ, midJ] of LIMBS) {
+    if (!(f.anim.dSmear & bit)) continue;
+    limbEnd = endJ; limbMid = midJ;
+    crescent(ctx, f, j, col, wpp, limbSeg, bit);
+  }
+}
+let limbEnd = 0, limbMid = 0;
+function limbSeg(jj: Float32Array, _s: number, out: Float32Array): void {
+  const ex = jj[limbEnd * 2], ey = jj[limbEnd * 2 + 1], mx = jj[limbMid * 2], my = jj[limbMid * 2 + 1];
+  out[0] = mx; out[1] = my; out[2] = ex + (ex - mx) * 0.35; out[3] = ey + (ey - my) * 0.35;
+}
+function crescent(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, col: string, wpp: number, seg: (j: Float32Array, s: number, out: Float32Array) => void, salt: number): void {
   const a = f.anim, sc = f.scale;
   for (let i = 0; i < CS; i++) {
-    if (i === CS - 1) wd.sweep(j, sc, seg4);
-    else { lerpPose(a.arcFrom, a.arcTo, i / (CS - 1), smPose); computeJoints(smPose, a.dX, a.dY, a.dFace, sc, WORLD.groundY, smJ, a.rig); wd.sweep(smJ, sc, seg4); }
+    if (i === CS - 1) seg(j, sc, seg4);
+    else { lerpPose(a.arcFrom, a.arcTo, i / (CS - 1), smPose); computeJoints(smPose, a.dX, a.dY, a.dFace, sc, WORLD.groundY, smJ, a.rig); seg(smJ, sc, seg4); }
     cBX[i] = seg4[0]; cBY[i] = seg4[1]; cTX[i] = seg4[2]; cTY[i] = seg4[3];
   }
   const sweep = Math.hypot(cTX[CS - 1] - cTX[0], cTY[CS - 1] - cTY[0]);
@@ -269,7 +283,7 @@ function weaponCrescent(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Arr
   const step = a.chainStep;
   const dens = [1, 0.6, 0.35, 0.2][Math.min(3, step)];
   const k0 = step === 0 ? 0 : 0.15 * step;
-  seed = a.dSeed ^ 0x9e3779b1 ^ (step * 7919);
+  seed = a.dSeed ^ 0x9e3779b1 ^ (step * 7919) ^ (salt * 31337);
   ctx.strokeStyle = col; ctx.lineCap = 'round';
   // hatch: radial strokes across the swept band (denser toward the tip, like a brushed crescent)
   const n = Math.round((16 + Math.min(40, sweep / (6 * sc))) * dens);

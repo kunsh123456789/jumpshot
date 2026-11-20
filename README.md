@@ -94,14 +94,15 @@ You carry **one weapon** at a time. All five are unlocked from the start. Pick o
 |---|---|---|---|---|---|---|
 | **Fists** | Balanced, fast | Jab string · heavy: spinning backfist | JUMPSHOT launcher | Rising hook / leg sweep | Quake stomp · air: spike | Dodge |
 | **Grappling Hook** | Mobility and control | **Yank** the enemy in (+ an automatic punch) · heavy: **Zip** to them with a flying kick | **Air Hook**: launch and zip up after them | **Swing** around the target, kicking everything on the way | **Slam Yank** into the floor (ground bounce, crack) | Hook-zip dodge (longer) |
-| **Throw** | Crowd damage through bowling | Dash, **grab**, quick toss · heavy: overhead heave (wall bounce) | **Toss Up** | **Bowling throws** (high lob / flat into the crowd) | **Pile-driver** with a shockwave | Dodge |
-| **Staff** | Reach and crowd control | 3-hit twirl · heavy: spinning sweep that trips everyone around | **Pole Vault** launcher | **Helicopter** spin (hits all around, deflects darts) | Plant slam shockwave | Dodge |
+| **Throw** | Crowd damage through bowling | Dash, **grab**, quick toss · heavy: overhead heave (wall bounce) | **Toss Up** · heavy: **Long Arm** (the arm stretches out, drags them in, over-the-shoulder slam) | **Bowling throws** (high lob / flat into the crowd) | **Pile-driver** with a shockwave | Dodge |
+| **Staff** | Reach and crowd control | 3-hit twirl · heavy: spinning sweep that trips everyone around | **Pole Vault** launcher | **Helicopter** spin (hits all around, deflects darts) · ↗ heavy: **boomerang** throw | Plant slam shockwave | Dodge |
 | **Laser Blast** | Safe ranged damage | Bolt · heavy: **charged piercing beam** | **Sky Blast** (heavy: a barrage that keeps them aloft) | Rising bolt / leg shot (trips) | Ground blast · air: **down beam** spike | Dodge |
 
 - **Throw:** the swipe direction is the throw direction. Thrown enemies are live projectiles that bowl through everyone they hit, and you can swipe at a flying body to re-grab it and throw it again. Shields can be grabbed through their guard; a Brute keeps its footing until its poise is broken.
 - **Hook and Laser** are ranged: they don't dash you up close; they fire at the best target in the swipe direction (generous auto-aim).
 - **Laser heat:** every shot adds heat, and full heat overheats the blaster for about a second (swipes become a melee bash while it cools). Heat drains fast; in Rhythm Mode a Perfect-timed shot vents heat.
 - Each weapon has a slow-motion moment: the hook yank, the big throws, the charged beam, the staff vault apex.
+- The biggest hits get a white-crescent impact frame; Nova and Crater Yank call down lightning; the helicopter spins a whirlwind.
 
 ## Look and animation (Hand-Drawn ink page)
 
@@ -124,6 +125,7 @@ Animation is **stepped drawings with holds**, not interpolation.
 |---|---|
 | Animation style | **Hand-Drawn** (stepped drawings, default) / Smooth (the previous interpolated pose-to-pose system) |
 | Hand-Drawn step rate | 8–20 fps (default 12). It paces looping drawings (idle, run, tumbles) and the stepped root travel. Attack and reaction drawings always change on their authored frames |
+| Fists animation | **Reference v2** (deeper crouches, held contact drawings, crescent smears on heavies, lightning/whirlwind/crescent impact FX on the finishers) / Legacy (the pass 5-7 drawings) |
 | Attack smoothness | **Low** / Normal / High: how many generated in-between drawings attacks get and how long their smear chains are (Hand-Drawn only; Smooth ignores it) |
 | Paper page | **Auto** (changes with waves) or a fixed Blank / Lined / Graph / Sketchbook / Kraft page |
 | Line boil | Background doodles re-drawn at ~7 fps, like a hand-drawn cartoon (on by default) |

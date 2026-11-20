@@ -32,6 +32,7 @@ import { RHYTHM } from './data/rhythm';
 import { SONGS } from './data/songs';
 import { weaponById } from './data/weapons';
 import { WEAPON_T } from './data/weapons/tuning';
+import { updateRefFx } from './render/weaponFx';
 
 type GState = 'title' | 'tutorial' | 'countdown' | 'playing' | 'breather' | 'gameover';
 
@@ -518,6 +519,7 @@ export class Game {
     }
     this.updateState(realDt);
     effects.update(dt);
+    updateRefFx(dt);
     effects.paperText = DRAW.ink;
     inkFx.update(dt);
     paper.update(realDt);

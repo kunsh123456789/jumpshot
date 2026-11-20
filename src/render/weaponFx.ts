@@ -33,8 +33,20 @@ export function drawWeaponFx(ctx: CanvasRenderingContext2D, w: World, alpha: num
   ctx.save();
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-  // ---- Rope: chain links along the verlet points ----
-  if (ws.ropeVisible) {
+  // ---- Rope: chain links along the verlet points (or a stretched arm for the long-arm grab) ----
+  if (ws.ropeVisible && w.weapon.ropeStyle === 'arm') {
+    const R = ws.rope;
+    const px = p.px + (p.x - p.px) * alpha, py = p.py + (p.y - p.py) * alpha;
+    const sx = px + p.facing * 14 * p.scale, sy = py - 100 * p.scale;
+    // gif2 212-230: one long rubbery arm, drawn as the hero's own limb line, with a fist at the end
+    ctx.strokeStyle = ink; ctx.lineWidth = 3.4 * wpp + 1;
+    ctx.beginPath(); ctx.moveTo(sx, sy);
+    for (let i = 1; i < R.length; i++) ctx.lineTo(R[i].x, R[i].y);
+    ctx.stroke();
+    const ex = R[R.length - 1].x, ey = R[R.length - 1].y;
+    ctx.fillStyle = DRAW.ink ? INK.paper : '#05060c';
+    ctx.beginPath(); ctx.arc(ex, ey, 7 * p.scale, 0, TAU); ctx.fill(); ctx.stroke();
+  } else if (ws.ropeVisible) {
     const R = ws.rope;
     const px = p.px + (p.x - p.px) * alpha, py = p.py + (p.y - p.py) * alpha;
     const hx = px + p.facing * 24 * p.scale, hy = py - 96 * p.scale;
@@ -62,6 +74,28 @@ export function drawWeaponFx(ctx: CanvasRenderingContext2D, w: World, alpha: num
       ctx.moveTo(ax, ay);
       ctx.quadraticCurveTo(ax + Math.cos(a + s * 0.9) * 10, ay + Math.sin(a + s * 0.9) * 10, ax + Math.cos(a + s * 2.2) * 9, ay + Math.sin(a + s * 2.2) * 9);
     }
+    ctx.stroke();
+  }
+
+  // ---- Thrown weapon: the staff spinning end over end with two trailing crescents (gif2 54-58) ----
+  if (ws.tossLeg) {
+    const L = 84 * p.scale, a = ws.tossSpin, x = ws.tossX, y = ws.tossY;
+    const cx = Math.cos(a), sy = Math.sin(a);
+    ctx.strokeStyle = ink; ctx.lineWidth = 2.6 * wpp + 0.8;
+    ctx.beginPath(); ctx.moveTo(x - cx * L, y - sy * L); ctx.lineTo(x + cx * L, y + sy * L); ctx.stroke();
+    seed = step * 211 + 5;
+    ctx.lineWidth = 1.5 * wpp + 0.4;
+    ctx.beginPath();
+    for (const end of [0, Math.PI]) {
+      for (let i = 0; i < 12; i++) {
+        const t = rnd(), ang = a + end - t * 1.1, r0 = L * (0.45 + rnd() * 0.25), r1 = L * (0.95 + rnd() * 0.12);
+        ctx.moveTo(x + Math.cos(ang) * r0, y + Math.sin(ang) * r0); ctx.lineTo(x + Math.cos(ang) * r1, y + Math.sin(ang) * r1);
+      }
+    }
+    ctx.stroke();
+    ctx.lineWidth = 2.4 * wpp + 0.6;
+    ctx.beginPath();
+    for (const end of [0, Math.PI]) ctx.arc(x, y, L, a + end - 1.1, a + end);
     ctx.stroke();
   }
 
@@ -155,5 +189,108 @@ export function drawHeatBar(ctx: CanvasRenderingContext2D, w: World, x: number, 
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillStyle = over ? '#e22424' : ink;
   ctx.fillText(over ? 'OVERHEAT' : 'heat', x + width + 6 * u, y + h / 2);
+  ctx.restore();
+}
+
+// ------------------------------------------------------------ reference FX (second upload)
+/**
+ * Lightning (gif2 158-166): jagged bolts from the top of the page to a victim,
+ * with a branch, held for a few drawings. Pooled.
+ */
+const MAXL = 6;
+const bolts = Array.from({ length: MAXL }, () => ({ x: 0, y: 0, t: 0, life: 0, seed: 0 }));
+export function lightning(x: number, y: number, seed: number): void {
+  let b = bolts[0];
+  for (const c of bolts) if (c.t >= c.life) { b = c; break; }
+  b.x = x; b.y = y; b.t = 0; b.life = 0.28; b.seed = seed | 1;
+}
+/** White-crescent impact frame (gif2 322): drawn in ink on the world layer during the inverted frame, so it reads white on black. */
+const cres = { x: 0, y: 0, dir: 1, t: 0, life: 0 };
+export function crescentFlash(x: number, y: number, dir: number): void { cres.x = x; cres.y = y; cres.dir = dir || 1; cres.t = 0; cres.life = 0.16; }
+
+export function updateRefFx(dt: number): void {
+  for (const b of bolts) if (b.t < b.life) b.t += dt;
+  if (cres.t < cres.life) cres.t += dt;
+}
+
+export function drawRefFx(ctx: CanvasRenderingContext2D, w: World, alpha: number, time: number, wpp: number, inverted: boolean): void {
+  const ink = DRAW.ink ? INK.ink : '#e8eefc';
+  const step = DRAW.stepped ? Math.floor((time * 60) / DRAW.stepTicks) : Math.floor(time * 30);
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // ---- lightning ----
+  for (const b of bolts) {
+    if (b.t >= b.life) continue;
+    seed = b.seed + step * 17;
+    const top = b.y - 760;
+    ctx.strokeStyle = ink;
+    for (let pass = 0; pass < 2; pass++) {
+      ctx.lineWidth = (pass === 0 ? 5 : 2) * wpp + (pass === 0 ? 1.5 : 0.5);
+      if (pass === 1) ctx.strokeStyle = DRAW.ink ? INK.paper : '#ffffff';
+      ctx.beginPath();
+      let x = b.x + (rnd() - 0.5) * 120, y = top;
+      ctx.moveTo(x, y);
+      const n = 11;
+      let bx = 0, by = 0;
+      for (let i = 1; i <= n; i++) {
+        const k = i / n;
+        x = b.x + (rnd() - 0.5) * 90 * (1 - k) + (i === n ? 0 : (rnd() - 0.5) * 30);
+        y = top + (b.y - top) * k;
+        ctx.lineTo(x, y);
+        if (i === 4) { bx = x; by = y; }
+      }
+      // one branch
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx + (rnd() - 0.5) * 140, by + 90);
+      ctx.lineTo(bx + (rnd() - 0.5) * 200, by + 170);
+      ctx.stroke();
+      if (!DRAW.ink) break;
+    }
+  }
+  // ---- whirlwind ball around the hero during whirl moves (gif2 122-124, 168-170) ----
+  const p = w.player, m = p.state === 'move' ? p.move : null;
+  if (m && m.fx?.whirl && p.moveFrame >= p.effStartup && p.moveFrame < p.effStartup + m.active) {
+    const px = p.px + (p.x - p.px) * alpha, py = p.py + (p.y - p.py) * alpha;
+    const cx = px, cy = py - 70 * p.scale, R = m.fx.whirl * p.scale;
+    seed = (p.moveSerial * 977) ^ (step * 131);
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 1.6 * wpp + 0.5;
+    ctx.beginPath();
+    const rot = step * 1.3;
+    for (let r = 0; r < 5; r++) {
+      const rr = R * (0.45 + r * 0.13);
+      const a0 = rot + r * 1.1 + rnd() * 0.5, a1 = a0 + 2.2 + rnd() * 1.2;
+      for (let i = 0; i <= 10; i++) {
+        const a = a0 + ((a1 - a0) * i) / 10, rj = rr * (1 + (rnd() - 0.5) * 0.08);
+        const x = cx + Math.cos(a) * rj, y = cy + Math.sin(a) * rj * 0.62;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+    }
+    // hatch on the leading edge
+    for (let i = 0; i < 14; i++) {
+      const a = rot + rnd() * TAU, r0 = R * (0.5 + rnd() * 0.3), r1 = r0 + R * 0.35;
+      ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0 * 0.62);
+      ctx.lineTo(cx + Math.cos(a + 0.25) * r1, cy + Math.sin(a + 0.25) * r1 * 0.62);
+    }
+    ctx.stroke();
+  }
+  // ---- white crescent (only during the inverted impact frame) ----
+  if (inverted && cres.t < cres.life) {
+    const R = 150, x = cres.x, y = cres.y, d = cres.dir;
+    ctx.fillStyle = DRAW.ink ? INK.ink : '#000000';
+    ctx.save();
+    ctx.translate(x, y); ctx.scale(d, 1);
+    ctx.beginPath();
+    ctx.arc(0, 0, R, -Math.PI * 0.75, Math.PI * 0.75, false);
+    ctx.arc(R * 0.42, -R * 0.12, R * 0.82, Math.PI * 0.68, -Math.PI * 0.68, true);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    // a small spark at the horn
+    ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) { const a = (i * Math.PI) / 4; ctx.moveTo(x - d * R * 0.6 - Math.cos(a) * 16, y - R * 0.55 - Math.sin(a) * 16); ctx.lineTo(x - d * R * 0.6 + Math.cos(a) * 16, y - R * 0.55 + Math.sin(a) * 16); }
+    ctx.stroke();
+  }
   ctx.restore();
 }

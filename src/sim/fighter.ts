@@ -122,6 +122,8 @@ export class Fighter {
   dodgeLen = 0;
   /** Equipped weapon id (drives the held-object drawing). */
   weapon = 'fists';
+  /** The weapon has been thrown and is out of the hero's hands (staff toss). */
+  weaponOut = false;
 
   // ---- AI state ----
   ai = {

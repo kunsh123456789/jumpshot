@@ -1,8 +1,9 @@
 import { settings } from '../core/settings';
-import { useHandDrawn } from '../data/anims';
+import { useHandDrawn, useVariant } from '../data/anims';
+import { useFistFx } from '../data/anims/fistsV2';
 import { SMOOTH, setAttackish } from './animPlayer';
 import { SMOOTH_CHAIN } from './animator';
-import { ATTACKISH, SMOOTHNESS, type SmoothLevel } from '../data/smears';
+import { ATTACKISH, SMOOTHNESS, smearVariant, type SmoothLevel } from '../data/smears';
 
 setAttackish((def) => def.contact >= 0 || ATTACKISH.has(def.id));
 const LEVELS: SmoothLevel[] = ['low', 'normal', 'high'];
@@ -29,6 +30,9 @@ export function syncDrawStyle(): void {
   DRAW.stepTicks = Math.max(3, Math.min(8, Math.round(60 / Math.max(8, Math.min(20, settings.stepRate)))));
   DRAW.ink = settings.look !== 'smooth';
   useHandDrawn(DRAW.stepped);
+  useVariant(settings.fistAnims !== 'legacy');
+  smearVariant.on = settings.fistAnims !== 'legacy';
+  useFistFx(settings.fistAnims !== 'legacy');
   const lv = Math.max(0, LEVELS.indexOf(settings.attackSmooth));
   const cfg = SMOOTHNESS[LEVELS[lv]];
   SMOOTH.level = lv; SMOOTH.bonus = cfg.bonus; SMOOTH.strikeOnes = cfg.strikeOnes;

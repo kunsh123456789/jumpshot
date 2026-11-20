@@ -50,6 +50,31 @@ for (const [file, mod] of [['locomotion', loco], ['playerGround', ground], ['pla
 }
 for (const id of HAND_AUTHORED) ANIM_FILE[id] = 'handDrawn (Hand-Drawn) / ' + (ANIM_FILE[id] ?? '?') + ' (Smooth)';
 
+/**
+ * Alternate Hand-Drawn sets for some ids (the Fists "Reference v2" set vs the
+ * Legacy drawings). `defineVariant` builds the alternate from the current
+ * Hand-Drawn def; `useVariant` swaps it in or out.
+ */
+const LEGACY: Record<string, AnimDef> = {};
+const VARIANT: Record<string, AnimDef> = {};
+let variantOn = false;
+export function defineVariant(ids: string[], make: (d: AnimDef) => AnimDef): void {
+  for (const id of ids) {
+    if (!HAND[id]) continue;
+    LEGACY[id] = HAND[id];
+    VARIANT[id] = make(HAND[id]);
+  }
+}
+export function useVariant(on: boolean): void {
+  if (on === variantOn) return;
+  variantOn = on;
+  for (const id of Object.keys(VARIANT)) {
+    HAND[id] = on ? VARIANT[id] : LEGACY[id];
+    if (handActive) ANIMS[id] = HAND[id];
+  }
+}
+export function variantOf(id: string): AnimDef | undefined { return VARIANT[id]; }
+
 /** Register animations owned by a weapon: one drawn set serves both styles; the Lab lists them under `file`. */
 export function registerAnims(defs: AnimDef[], file: string): void {
   for (const d of defs) {

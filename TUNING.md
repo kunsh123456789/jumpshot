@@ -341,10 +341,12 @@ Weapon moves are ordinary `MoveDef`s (`addMove`) with these generic hooks, all r
 | ranged | No magnetism dash; the target is picked within this range |
 | aimCone | Aim along the swipe direction, snapped onto the target when it is inside this cone (degrees) |
 | beam | `{ len, width, pierce, color }`: hitscan line from the hand. Not piercing = first enemy only |
-| grab | `{ bowl, hold, respectPoise }`: catch the target when the dash arrives, hold/wind up for `hold` frames, throw at contact. `bowl` multiplies bowling damage while the body flies |
+| grab | `{ bowl, hold, respectPoise, behind? }` (`behind`: over-the-shoulder, released behind the hero): catch the target when the dash arrives, hold/wind up for `hold` frames, throw at contact. `bowl` multiplies bowling damage while the body flies |
 | tether | `{ mode: pull / zip / swing / slam / air, frames }`: grappling hook |
 | plant | `{ radius, damage, x }`: floor shockwave + crack at contact |
 | deflect | Enemy darts bounce off while the move is active |
+| toss | `{ speed, range, radius }`: the weapon is thrown, spins out along the aim and returns, hitting everything once per leg (staff boomerang). Any other move recalls it |
+| fx | Presentation only: `lightning` (bolts strike the victims), `whirl` (whirlwind radius while active), `crescent` (white-crescent impact frame) |
 | heat | Laser heat added per shot (0..1) |
 | slowmo | `{ scale, sec, at? }`: the weapon's slow-mo moment, at contact or at the apex of the follow leap |
 | grid | Rhythm Mode: coarsest grid the contact snaps to (1 = beat, 2 = 8th, 4 = 16th) |
@@ -364,5 +366,9 @@ Weapon moves are ordinary `MoveDef`s (`addMove`) with these generic hooks, all r
 | beamWallReflect | Stretch goal: piercing beams reflect once off the arena walls (off) |
 | beamFrames, beamHeavyFrames | Beam flash length |
 | tipMs | First-time weapon tooltip duration |
+
+**`WeaponDef` extras:** `sweep(j, scale, out)` returns the weapon's striking segment; smeared drawings then fill the area it swept with a hatched crescent. `ropeStyle: 'arm'` draws the tether as a stretched arm (Throw's long arm) instead of a chain.
+
+**Fists Reference v2** (`data/anims/fistsV2.ts`): `FIST_IDS` are rebuilt from the Legacy drawings by `refine()` (deeper crouches ×1.16, coiled pre-contact drawing, +0.06 stretch on contact, contact held up to 2 ticks longer); `CONTACT` holds per-move touches; `CRESCENT` lists moves with limb crescents (`SmearCfg.crescent`); `FIST_FX` the finisher FX. Setting `fistAnims` ('v2' | 'legacy').
 
 **Authoring drawings:** `author.ts` `strikeAnim(id, move, { antic, hit, hit2?, follow, smear, inbetweens, ones })` spreads the drawings over the move's frame data so the contact drawing starts exactly on the first active frame. Weapon animations are listed per weapon in the Animation Lab (`weapon: <name>`), with the held weapon drawn.

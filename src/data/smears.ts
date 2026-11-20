@@ -27,6 +27,8 @@ export interface SmearCfg {
   minSweep: number;
   /** Colour override (default: the fighter's ink colour). */
   color?: string;
+  /** Also fill the area the striking limb swept with a hatched crescent (Fists Reference v2 heavies). */
+  crescent?: boolean;
 }
 
 export const SMEAR_DEFAULT: SmearCfg = {
@@ -48,9 +50,15 @@ export const SMEAR_BY_ANIM: Record<string, Partial<SmearCfg>> = {
   jab1: { chain: 3 }, jab2: { chain: 3 }, ePunch: { chain: 3 },
 };
 
+/** Overrides that apply only while the alternate animation set (Fists Reference v2) is active. */
+export const SMEAR_VARIANT: Record<string, Partial<SmearCfg>> = {};
+export const smearVariant = { on: false };
+
 export function smearCfg(id: string): SmearCfg {
   const o = SMEAR_BY_ANIM[id];
-  return o ? { ...SMEAR_DEFAULT, ...o } : SMEAR_DEFAULT;
+  const v = smearVariant.on ? SMEAR_VARIANT[id] : undefined;
+  if (!o && !v) return SMEAR_DEFAULT;
+  return { ...SMEAR_DEFAULT, ...o, ...v };
 }
 
 /** Attack Smoothness levels: generated in-betweens per moving attack segment, chain cap, strike on ones. */
