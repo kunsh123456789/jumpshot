@@ -26,6 +26,9 @@ export class PlayerController {
   latency = 0;
   /** Debug: buffer description. */
   bufDesc = '';
+  /** Mid-air jumps left, and the frame of the last tap (double-tap = dodge when tap jumps). */
+  private airJumps = PLAYER.airJumps;
+  private lastTap = -999;
 
   constructor() {
     for (let i = 0; i < 8; i++) this.pool.push({ ev: null as unknown as SwipeEvent, age: 0, heavy: false, used: false });
@@ -52,6 +55,11 @@ export class PlayerController {
         this.buf.push(b);
       }
       b.ev = ev; b.age = 0; b.heavy = ev.heavy; b.used = false;
+      // Tap = jump: a second tap soon after (or Shift+Space / F, sent as a heavy tap) dodges & parries instead.
+      if (ev.kind === 'tap' && w.tapJump) {
+        if (w.frame - this.lastTap <= INPUT.doubleTapFrames) b.heavy = true;
+        this.lastTap = w.frame;
+      }
       this.lastCommitFrame = w.frame;
     }
   }
@@ -139,6 +147,7 @@ export class PlayerController {
     const p = w.player;
     if (b.ev.kind === 'tap') {
       if (!this.canAct(p, null, true)) return false;
+      if (w.tapJump && !b.heavy) { this.jump(w); return true; }
       this.startDodge(w);
       if (w.rhythm) w.rhythm.onTap(w, b.ev);
       return true;
@@ -147,7 +156,7 @@ export class PlayerController {
     if (!plan) return false;
     if (!this.canAct(p, plan.move.tags, false)) return false;
     this.curEv = b.ev;
-    this.startMove(w, plan.move, plan.target, b.ev.dir, plan.crossUp, b.ev.segId);
+    this.startMove(w, plan.move, plan.target, b.ev.dir, plan.crossUp || (!!plan.move.behind && !!plan.target), b.ev.segId);
     this.curEv = null;
     return true;
   }
@@ -408,7 +417,7 @@ export class PlayerController {
             return;
           }
         }
-      } else if (m.beam || m.grab || m.tether || m.plant || m.toss) {
+      } else if (m.beam || m.grab || m.tether || m.plant || m.toss || m.shoot || m.spikes) {
         // Weapon hooks resolve on the contact frame; a grab that caught nothing (or a swing) strikes normally.
         if (fr === S) { if (!w.wpn.contact(w, p, m, false)) this.checkHits(w, m, false); }
         else if ((m.grab && !p.moveHit) || m.tether?.mode === 'swing' || (m.plant && !m.beam)) this.checkHits(w, m, false);
@@ -459,6 +468,23 @@ export class PlayerController {
   }
 
   // ---------------------------------------------------------------------
+  /** Jump (tap / Space): from the ground, or one extra jump in the air. Air moves are available at once. */
+  private jump(w: World): void {
+    const p = w.player;
+    let vy: number;
+    if (p.grounded) vy = PLAYER.jumpVel;
+    else if (this.airJumps > 0) { this.airJumps--; vy = PLAYER.airJumpVel; }
+    else return;
+    if (p.move) w.wpn.endMove(p);
+    p.move = null;
+    p.grounded = false;
+    p.vy = vy;
+    p.stall = 0; p.stallCount = 0;
+    p.setState('jumpFollow');
+    w.events.emit('jump', { x: p.x, y: p.y, air: vy !== PLAYER.jumpVel });
+    w.events.emit('afterimage', { fighter: p });
+  }
+
   private startDodge(w: World): void {
     const p = w.player;
     if (p.move) w.wpn.endMove(p);
@@ -479,6 +505,8 @@ export class PlayerController {
     if (threat) p.facing = -away;
     p.dodgeFromX = p.x;
     p.dodgeToX = clamp(p.x + away * D.distance, WORLD.wallMargin, WORLD.arenaW - WORLD.wallMargin);
+    if (D.parry) p.parryWindow = D.parry;
+    if (D.blink) { p.x = p.dodgeFromX = p.dodgeToX; w.events.emit('bossBlink', { x1: p.dodgeFromX - away * D.distance, x2: p.x, y: p.cy }); }
     if (D.rope) w.wpn.dodgeRope(p, p.dodgeToX);
     if (!p.grounded) { p.vy = Math.min(p.vy, -120); p.stall = 10; }
     p.vx = 0;
@@ -550,6 +578,7 @@ export class PlayerController {
         p.stallCount = 0;
         p.followTarget = null;
         w.combo.onPlayerLanded();
+        this.airJumps = PLAYER.airJumps;
         w.events.emit('groundImpact', { x: p.x, y: p.y, power: 0.25, fighter: p, bounce: false });
         p.anim.impulseSquash(0.12, -0.2);
         if (p.state === 'ko') p.setState('knockdown', 99999);

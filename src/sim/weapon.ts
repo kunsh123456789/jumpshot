@@ -7,6 +7,7 @@ import { WEAPON_T } from '../data/weapons/tuning';
 import { isBoss } from '../data/enemies';
 import { clamp } from '../core/math';
 import { playerHit, shockwave } from './combat';
+import { WeaponExtra } from './weaponExtra';
 
 /** One rope point (verlet). */
 interface RopePt { x: number; y: number; ox: number; oy: number }
@@ -29,6 +30,8 @@ interface RopePt { x: number; y: number; ox: number; oy: number }
 export class WeaponSim {
   /** Aim direction of the current move (unit vector, screen space: +y down). */
   aimX = 1; aimY = 0;
+  /** Projectiles, ground spikes, statuses and chain lightning (third weapon batch). */
+  readonly x = new WeaponExtra();
   /** Laser heat 0..1 and remaining overheat frames. */
   heat = 0;
   overheat = 0;
@@ -53,12 +56,16 @@ export class WeaponSim {
   readonly rope: RopePt[] = [];
   /** Thrown weapon (staff toss): position, velocity, leg (1 = out, 2 = returning, 0 = in hand), spin. */
   tossX = 0; tossY = 0; tossVX = 0; tossVY = 0; tossLeg = 0; tossDist = 0; tossSpin = 0;
+  /** How the thrown weapon is drawn. */
+  tossDraw: 'staff' | 'shield' | 'yoyo' | 'scythe' = 'staff';
   private tossMove: MoveDef | null = null;
   private tossHits = new Int32Array(16); private tossN = 0;
   /** Beam flash for rendering (world coords), frames left and max. */
   beamX1 = 0; beamY1 = 0; beamX2 = 0; beamY2 = 0; beamW = 0; beamT = 0; beamMax = 1; beamColor = '#e22424';
   /** Reflected segment end (NaN = no reflection). */
   beamX3 = NaN; beamY3 = 0;
+  /** How the current beam is drawn (laser, whip lash, lightning, ice, ink, scythe reach). */
+  beamStyle: 'laser' | 'whip' | 'lightning' | 'ice' | 'ink' | 'scythe' = 'laser';
 
   constructor() {
     for (let i = 0; i < WEAPON_T.ropePoints; i++) this.rope.push({ x: 0, y: 0, ox: 0, oy: 0 });
@@ -69,6 +76,7 @@ export class WeaponSim {
     this.drop(null);
     this.tied = null; this.tetherMode = ''; this.ownsPlayer = false; this.hookOut = 0; this.beamT = 0; this.apexMoment = null;
     this.tossLeg = 0; this.tossMove = null;
+    this.x.reset();
   }
 
   // ------------------------------------------------------------------ aiming
@@ -135,6 +143,8 @@ export class WeaponSim {
     if (m.plant && p.moveFrame === p.effStartup) this.plant(w, p, m);
     if (m.beam) { this.fireBeam(w, p, m, multi); return true; }
     if (m.toss) { this.throwWeapon(w, p, m); return true; }
+    if (m.shoot) { this.x.fire(w, p, m, this.aimX, this.aimY); if (!m.spikes) return true; }
+    if (m.spikes) { this.x.plantSpikes(p, m); return true; }
     if (m.grab) {
       if (!this.held) return false; // whiffed or unthrowable: the move strikes instead
       this.release(w, p, m);
@@ -196,7 +206,7 @@ export class WeaponSim {
     }
     for (let i = 0; i < n; i++) hitBuf[i] = null as unknown as Fighter;
     this.beamX1 = ox; this.beamY1 = oy; this.beamX2 = ox + ax * end; this.beamY2 = oy + ay * end;
-    this.beamW = b.width; this.beamColor = b.color;
+    this.beamW = b.width; this.beamColor = b.color; this.beamStyle = b.style ?? 'laser';
     this.beamMax = this.beamT = m.tags.includes('heavy') ? WEAPON_T.beamHeavyFrames : WEAPON_T.beamFrames;
     w.events.emit('beam', { x1: ox, y1: oy, x2: this.beamX2, y2: this.beamY2, width: b.width, heavy: m.tags.includes('heavy'), color: b.color, hit: count > 0 });
     if (this.beamY2 >= WORLD.groundY - 2) w.events.emit('groundImpact', { x: this.beamX2, y: WORLD.groundY, power: m.tags.includes('heavy') ? 0.9 : 0.4, fighter: p, bounce: false });
@@ -340,6 +350,7 @@ export class WeaponSim {
   private throwWeapon(w: World, p: Fighter, m: MoveDef): void {
     const T = m.toss!;
     this.tossMove = m;
+    this.tossDraw = T.draw ?? 'staff';
     this.tossX = p.x + p.facing * 30 * p.scale; this.tossY = p.y - 96 * p.scale;
     this.tossVX = this.aimX * T.speed; this.tossVY = this.aimY * T.speed;
     this.tossLeg = 1; this.tossDist = 0; this.tossN = 0;
@@ -358,6 +369,7 @@ export class WeaponSim {
     this.tossSpin += 0.55;
     if (this.tossLeg === 1) {
       this.tossX += this.tossVX / 60; this.tossY += this.tossVY / 60;
+      if (T.floor) { this.tossY = WORLD.groundY - 18; this.tossVY = 0; }
       this.tossDist += T.speed / 60;
       const out = this.tossX < WORLD.wallMargin || this.tossX > WORLD.arenaW - WORLD.wallMargin || this.tossY > WORLD.groundY - 10;
       if (this.tossDist >= T.range || out) { this.tossLeg = 2; this.tossN = 0; }
@@ -379,6 +391,24 @@ export class WeaponSim {
       if (dx * dx + dy * dy > rr * rr) continue;
       if (this.tossN < this.tossHits.length) this.tossHits[this.tossN++] = e.id;
       playerHit(w, m, e, true);
+      // Bouncing throw (shield): ricochet to the nearest enemy not hit yet, then come back.
+      if (this.tossLeg === 1 && T.bounce) {
+        let next: Fighter | null = null, bd = 520 * 520;
+        for (const o of w.enemies) {
+          if (!o.canBeHit) continue;
+          let hit = false;
+          for (let i = 0; i < this.tossN; i++) if (this.tossHits[i] === o.id) { hit = true; break; }
+          if (hit) continue;
+          const ddx = o.cx - this.tossX, ddy = o.cy - this.tossY, d = ddx * ddx + ddy * ddy;
+          if (d < bd) { bd = d; next = o; }
+        }
+        if (next && this.tossN <= T.bounce) {
+          const ddx = next.cx - this.tossX, ddy = next.cy - this.tossY, d = Math.hypot(ddx, ddy) || 1;
+          this.tossVX = (ddx / d) * T.speed; this.tossVY = (ddy / d) * T.speed; this.tossDist = 0;
+          w.events.emit('deflect', { x: this.tossX, y: this.tossY });
+        } else { this.tossLeg = 2; }
+        break;
+      }
     }
   }
 
@@ -402,6 +432,7 @@ export class WeaponSim {
     }
     if (this.beamT > 0) this.beamT--;
     this.updateToss(w);
+    this.x.update(w);
     // A held body is only valid inside a grab move.
     if (this.held && (p.state !== 'move' || !p.move?.grab || !this.held.alive)) this.drop(p);
     // Pull: reel the victim to just in front of the player, then hand it to the follow-up.

@@ -31,6 +31,8 @@ export interface Settings {
   fistAnims: 'v2' | 'legacy';
   /** Sound effects: recorded samples (CC0, Freesound) or the original synthesized set. */
   sfxStyle: 'recorded' | 'synth';
+  /** What a tap / Space does: jump (double-tap or Shift+Space / F = dodge & parry), or the original dodge & parry. */
+  tapAction: 'jump' | 'dodge';
   /** Cheats (all off by default; runs with any cheat on don't set high scores). */
   cheatGod: boolean;
   cheatRayGun: boolean;
@@ -66,6 +68,7 @@ export const settings: Settings = {
   attackSmooth: 'low',
   fistAnims: 'v2',
   sfxStyle: 'recorded',
+  tapAction: 'jump',
   cheatGod: false,
   cheatRayGun: false,
   cheatNuke: false,

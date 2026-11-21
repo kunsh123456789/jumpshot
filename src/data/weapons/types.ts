@@ -27,6 +27,10 @@ export interface DodgeSpec {
   frames: number;
   /** Draw a rope to the wall while dodging (grappling hook). */
   rope: boolean;
+  /** Teleport instead of sliding (daggers). */
+  blink?: boolean;
+  /** Parry window override (frames): a block that stands its ground (shield: distance 0). */
+  parry?: number;
 }
 
 export interface HeatSpec {

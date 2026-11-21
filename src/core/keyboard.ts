@@ -5,7 +5,7 @@ import { classifyDir, type DrawPad } from '../ui/pad';
  * Keyboard fallback.
  *  - Move:   A / D  or  ← / →   (held; analog-style axis)
  *  - Attack: I / J / K / L = up / left / down / right; press two together for diagonals
- *  - Shift = heavy, Space = tap (dodge/parry)
+ *  - Shift = heavy, Space = tap (jump; Shift+Space or F = dodge/parry)
  *  - 1-5 = pick a weapon (loadout screen, or swap during the between-wave breather)
  *  - ` = debug overlay, Esc/P = pause, [ = 0.1x slow-mo, ] = freeze + step one frame, \ = resume
  * Diagonal chords are resolved by polling (no timers): poll() runs every sim tick.
@@ -77,9 +77,11 @@ export class Keyboard {
       if (this.pendingSince < 0) this.pendingSince = e.timeStamp || performance.now();
       return;
     }
+    if (e.code === 'KeyF') { e.preventDefault(); if (!e.repeat) this.pad.inject('tap', -1, true, e.timeStamp || performance.now()); return; }
     if (e.code === 'Space') {
       e.preventDefault();
-      if (!e.repeat) this.pad.inject('tap', -1, false, e.timeStamp || performance.now());
+      // Space = tap (jump by default); Shift+Space = dodge & parry.
+      if (!e.repeat) this.pad.inject('tap', -1, e.shiftKey, e.timeStamp || performance.now());
     }
   }
 

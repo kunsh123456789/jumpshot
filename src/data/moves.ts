@@ -78,7 +78,17 @@ export interface MoveDef {
   plant?: { radius: number; damage: number; x: number };
   /** Thrown weapon (reference gif2 54-58): the weapon spins out along the aim for `range`, then returns,
    *  hitting everything it passes once per leg. The held weapon is hidden while it is out. */
-  toss?: { speed: number; range: number; radius: number };
+  toss?: { speed: number; range: number; radius: number; bounce?: number; floor?: boolean; draw?: 'staff' | 'shield' | 'yoyo' | 'scythe' };
+  /** Player projectiles fired along the aim (see sim/weaponExtra.ts). */
+  shoot?: ShootSpec;
+  /** Ground spikes erupting one after another in front of the hero. */
+  spikes?: { count: number; spacing: number; start: number; delay: number };
+  /** Status applied to victims: bleed (damage over time), freeze (next hit shatters), bubble (floats; next hit pops), snare. */
+  status?: { kind: 'bleed' | 'freeze' | 'bubble' | 'snare'; frames: number };
+  /** Chain lightning from the victim to nearby enemies (`dmg` = fraction of the hit's damage). */
+  chain?: { arcs: number; dmg: number };
+  /** The magnetism dash lands behind the target (daggers' blink-slash). */
+  behind?: boolean;
   /** Blocks enemy projectiles while active. */
   deflect?: boolean;
   /** Weapon slow-mo moment (time scale, seconds): at contact, or at the apex of the follow leap. */
@@ -95,7 +105,13 @@ export interface MoveDef {
   poses?: { antic: Float32Array; strike: Float32Array; follow: Float32Array; strikeAlt?: Float32Array };
 }
 
-export interface BeamSpec { len: number; width: number; pierce: boolean; color: string; hits?: number }
+export interface BeamSpec { len: number; width: number; pierce: boolean; color: string; hits?: number; style?: 'laser' | 'whip' | 'lightning' | 'ice' | 'ink' | 'scythe' }
+export interface ShootSpec {
+  kind: 'blob' | 'plane' | 'fist' | 'bubble' | 'shard';
+  speed: number; count: number; spread: number; gravity: number; homing: number; pierce: number; life: number; radius: number;
+  /** Rain down from the top of the page instead (paper-plane dive bomb). */
+  fromSky?: boolean;
+}
 export interface GrabSpec {
   /** Thrown body: bowling damage multiplier and whether it bounces off walls. */
   bowl: number;

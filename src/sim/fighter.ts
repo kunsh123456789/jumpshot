@@ -88,6 +88,8 @@ export class Fighter {
   bowlIds = new Int32Array(8);
   /** Thrown body: bowling damage multiplier while it flies (0 = not thrown). */
   thrown = 0;
+  /** Weapon statuses (frames left): bleed, frozen in ice, floating in a bubble, snared in ink. */
+  bleed = 0; frozen = 0; bubble = 0; snare = 0;
   bowlCount = 0;
   lastHitBy = 0;
   koLaunched = false;

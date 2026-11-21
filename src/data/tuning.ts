@@ -157,6 +157,8 @@ export const INPUT = {
   bufferSize: 2,
   /** Buffered swipe lifetime in sim frames (~200 ms). Does not age during hitstop. */
   bufferFrames: 12,
+  /** Two taps within this many frames = dodge / parry (when tap is set to jump). */
+  doubleTapFrames: 16,
   /** Keyboard: wait this long for a second key to form a diagonal. */
   keyChordMs: 34,
 } as const;
@@ -189,6 +191,10 @@ export const PLAYER = {
   /** Max stalls per airtime before the player starts to fall normally. */
   maxAirStalls: 16,
   landingRecovery: 4,
+  /** Jump (tap / Space): take-off speed, mid-air jumps allowed, and the air jump's speed. */
+  jumpVel: -1150,
+  airJumps: 1,
+  airJumpVel: -950,
   hpRegenSRank: 1.2, // hp per second while at S rank or higher
   scale: 1.1,
 } as const;

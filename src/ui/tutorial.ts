@@ -1,3 +1,4 @@
+import { settings } from '../core/settings';
 import type { World } from '../sim/world';
 import type { DrawPad } from './pad';
 import type { Menus } from './menus';
@@ -12,7 +13,7 @@ const STEPS: Step[] = [
   { text: 'SWIPE UP ↑ — JUMPSHOT!', sub: 'the launcher sends them skyward and you leap after them', hint: 2, label: 'SWIPE ↑' },
   { text: 'LAUNCH ↑ THEN SWIPE → IN THE AIR', sub: 'juggle them: each air hit keeps you both floating (3 air hits in one jump)', hint: 0, label: '↑  then  → → →' },
   { text: 'LAUNCH ↑ THEN SWIPE DOWN ↓', sub: 'spike them into the ground from the air', hint: 6, label: '↑  then  ↓' },
-  { text: 'TAP JUST BEFORE THE RED FLASH HITS', sub: 'tap = dodge · tap at the last moment = PERFECT PARRY', hint: -2, label: 'TAP', dummyAttacks: true },
+  { text: 'DODGE JUST BEFORE THE RED FLASH HITS', sub: 'tap = jump · double-tap (Shift+Space / F) = dodge · dodge at the last moment = PERFECT PARRY', hint: -2, label: 'DOUBLE-TAP', dummyAttacks: true },
   { text: 'ZIG-ZAG FAST TO CHAIN A 10-HIT COMBO', sub: 'each sharp, fast turn fires another attack — no need to lift your finger', hint: -1, label: '' },
 ];
 
@@ -66,9 +67,11 @@ export class Tutorial {
   private show(w: World): void {
     const s = STEPS[this.step];
     this.pad.hint = s.hint;
-    this.pad.hintLabel = s.label;
+    // Original tap mode: the dodge step reads as a single tap again.
+    const tapDodge = settings.tapAction === 'dodge' && s.label === 'DOUBLE-TAP';
+    this.pad.hintLabel = tapDodge ? 'TAP' : s.label;
     w.dummyAttacks = !!s.dummyAttacks;
-    this.menus.tutorialText(s.text, s.sub, this.textTop(), () => this.finish());
+    this.menus.tutorialText(s.text, tapDodge ? 'tap = dodge · tap at the last moment = PERFECT PARRY' : s.sub, this.textTop(), () => this.finish());
   }
 
   update(w: World, dt: number): void {

@@ -339,6 +339,7 @@ export class Game {
     this.menus.closeAll();
     this.world.reset();
     this.world.setWeapon('fists'); // the tutorial teaches the base moveset
+    this.world.tapJump = settings.tapAction === 'jump';
     this.effectsReset();
     this.renderer.bg.set('dojo');
     this.pad.demo = false;
@@ -374,6 +375,7 @@ export class Game {
     this.menus.setPlayButtons(true);
     this.effectsReset();
     this.equip(save.weapon, false);
+    this.world.tapJump = settings.tapAction === 'jump';
     this.cheated = settings.cheatGod || settings.cheatNuke || this.world.weapon.id === 'raygun';
     if (settings.rhythmMode) this.startRhythm();
     else { this.endRhythm(); audio.startMusic(); }

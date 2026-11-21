@@ -167,6 +167,11 @@ export class FxDirector {
     ev.on('pullArrive', () => audio.weapon('reel'));
     ev.on('deflect', (e) => { audio.weapon('deflect'); effects.text('DEFLECT', e.x, e.y - 60, '#9fd8ff', 16, 0.6); });
     ev.on('weaponSwap', () => audio.weapon('swap'));
+    ev.on('shatter', (e) => { effects.embers(e.x, e.y, 14, '#2436e6'); effects.text('SHATTER!', e.x, e.y - 90, '#2436e6', 20, 0.7); audio.weapon('deflect'); audio.boom(); this.cam.shake(8, 0, 0, 0.3); });
+    ev.on('pop', (e) => { effects.embers(e.x, e.y, 10, '#2436e6'); effects.text('POP!', e.x, e.y - 90, '#2436e6', 18, 0.6); audio.weapon('deflect'); });
+    ev.on('chainArc', () => audio.weapon('zap'));
+    ev.on('jump', (e) => { if (!e.air) effects.dust(e.x, e.y, 0.35); audio.whoosh(e.air ? 0.4 : 0.25); });
+    ev.on('splat', (e) => { if (e.kind === 'blob') effects.dust(e.x, e.y, 0.3); if (e.kind === 'fist') audio.hit(0.6, 1, 'heavy'); });
     ev.on('bossBlink', (e) => {
       // Ink poof at both ends of the teleport.
       for (const x of [e.x1, e.x2]) { effects.dust(x, WORLD.groundY, 0.7); effects.embers(x, e.y, 10, '#2436e6'); }

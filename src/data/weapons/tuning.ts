@@ -18,6 +18,15 @@ export const WEAPON_T = {
   /** Beam flash length (frames), light and heavy. */
   beamFrames: 6,
   beamHeavyFrames: 14,
+  /** Status effects and extra hooks (third weapon batch). */
+  shatterMult: 1.6,
+  popMult: 1.35,
+  chainRange: 330,
+  bleedEvery: 20,
+  bleedDamage: 2,
+  bubbleHeight: 250,
+  spikeWidth: 48,
+  spikeFrames: 14,
   /** Breather weapon-swap prompt and the first-time tooltip (ms). */
   tipMs: 6000,
 } as const;

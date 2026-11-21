@@ -40,6 +40,8 @@ export class World {
   wave = 0;
   /** Rhythm Mode hooks; null in Classic Mode (every use is guarded). */
   rhythm: RhythmSim | null = null;
+  /** Tap = jump (true) or the original tap = dodge & parry (false); set per run from settings. */
+  tapJump = false;
   /** Horizontal movement input this tick (-1..1), from the pad stick or keyboard. */
   moveAxis = 0;
 

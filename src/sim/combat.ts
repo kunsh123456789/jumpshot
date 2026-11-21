@@ -69,6 +69,7 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   let crit = false;
   if (p.critTimer > 0) { crit = true; p.critTimer = 0; }
   let dmg = m.damage * combo.scale() * combo.repeatMult(m.family);
+  dmg *= w.wpn.x.preHit(w, v); // frozen victims shatter, bubbled ones pop
   if (crit) dmg *= PLAYER.critMult;
   if (w.rhythm) dmg *= w.rhythm.damageMult(w);
   dmg = Math.max(1, dmg);
@@ -198,6 +199,7 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
     air, multi, bounce: false, finisher, launcher: m.launch !== 0, bowl: false, ko: v.hp <= 0,
   });
   emitHit(w, p, v, m, dmg, crit, kind, dirX, v.hitDirY, m.weight);
+  if (m.status || m.chain) w.wpn.x.postHit(w, m, v, dmg);
 
   if (v.hp <= 0) ko(w, v, dirX);
 }

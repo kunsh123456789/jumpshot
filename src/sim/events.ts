@@ -59,6 +59,13 @@ export interface SimEvents {
   /** A weapon's signature slow-mo moment (hook yank, big throw, charged beam, vault apex). */
   weaponMoment: { scale: number; sec: number; x: number; y: number };
   weaponSwap: { id: string };
+  jump: { x: number; y: number; air: boolean };
+  // ---- third weapon batch ----
+  shatter: { x: number; y: number };
+  pop: { x: number; y: number };
+  chainArc: { x1: number; y1: number; x2: number; y2: number };
+  bleed: { x: number; y: number };
+  splat: { x: number; y: number; kind: string };
   /** A boss teleported (the witch). */
   bossBlink: { x1: number; x2: number; y: number };
   /** Cheat: everything on the page was KO'd. */

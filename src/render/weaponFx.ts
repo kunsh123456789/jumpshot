@@ -3,6 +3,7 @@ import type { Fighter } from '../sim/fighter';
 import { weaponById } from '../data/weapons';
 import { DRAW } from './drawStyle';
 import { INK } from './ink';
+import { drawToss, drawStyledBeam } from './weaponFx2';
 
 /**
  * Weapon visuals in world space (revision pass 7), shared by every look:
@@ -78,7 +79,8 @@ export function drawWeaponFx(ctx: CanvasRenderingContext2D, w: World, alpha: num
   }
 
   // ---- Thrown weapon: the staff spinning end over end with two trailing crescents (gif2 54-58) ----
-  if (ws.tossLeg) {
+  if (ws.tossLeg && ws.tossDraw !== 'staff') drawToss(ctx, w, ink, wpp, step);
+  else if (ws.tossLeg) {
     const L = 84 * p.scale, a = ws.tossSpin, x = ws.tossX, y = ws.tossY;
     const cx = Math.cos(a), sy = Math.sin(a);
     ctx.strokeStyle = ink; ctx.lineWidth = 2.6 * wpp + 0.8;
@@ -100,7 +102,8 @@ export function drawWeaponFx(ctx: CanvasRenderingContext2D, w: World, alpha: num
   }
 
   // ---- Beam ----
-  if (ws.beamT > 0) {
+  if (ws.beamT > 0 && ws.beamStyle !== 'laser') drawStyledBeam(ctx, w, ink, wpp, step);
+  else if (ws.beamT > 0) {
     const k = ws.beamT / ws.beamMax;
     const x1 = ws.beamX1, y1 = ws.beamY1, x2 = ws.beamX2, y2 = ws.beamY2;
     const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;

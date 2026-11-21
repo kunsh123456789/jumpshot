@@ -42,7 +42,8 @@ The **bottom half of the screen** is the touch area. It is transparent, so you c
 | **Flick** in a direction | **Attack** that way. Keep dragging after a flick to keep running |
 | **Long, fast flick** | The **heavy** version of the attack |
 | **Fast zig-zag** | Each sharp turn fires the next attack |
-| **Tap** | Dodge. Tap just before a red-flashing attack lands for a **PERFECT PARRY** |
+| **Tap** | **Jump** (tap again in the air for a second jump; air attacks work straight away) |
+| **Double-tap** | Dodge. Dodge just before a red-flashing attack lands for a **PERFECT PARRY** (Settings → Tap / Space can switch tap back to dodge) |
 
 These are the **Fists** moves (the default weapon). Other weapons replace the moveset: see **Weapons** below.
 
@@ -70,7 +71,8 @@ These are the **Fists** moves (the default weapon). Other weapons replace the mo
 | **A / D** or **← / →** | Move (hold) |
 | **I / J / K / L** | Attack up / left / down / right. Press two at once for a diagonal, for example I+L = ↗ |
 | **Shift** + attack | Heavy |
-| **Space** | Tap (dodge/parry) |
+| **Space** | Jump (again in the air for a double jump) |
+| **Shift+Space** or **F** | Dodge / parry |
 | **1–5** | Pick a weapon (loadout screen), or swap weapons during the between-wave breather |
 | **Enter / Esc** | Close the loadout screen |
 | **Esc / P** | Pause |
