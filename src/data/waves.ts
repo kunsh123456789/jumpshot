@@ -1,4 +1,4 @@
-import type { EnemyKind } from './enemies';
+import { bossForWave, type EnemyKind } from './enemies';
 
 /**
  * Wave composition. Waves 1-10 are hand-authored to introduce enemies;
@@ -49,7 +49,7 @@ export function waveDef(wave: number, rand: () => number): WaveDef {
   if (wave <= AUTHORED.length) return { enemies: AUTHORED[wave - 1].slice(), elite, boss };
   let budget = WAVE_GEN.baseBudget + wave * WAVE_GEN.budgetPerWave;
   const list: EnemyKind[] = [];
-  if (boss) { list.push('boss'); budget *= 0.35; }
+  if (boss) { list.push(bossForWave(wave)); budget *= 0.35; }
   else if (elite) { list.push('elite'); budget -= 4; }
   const avail = POOL.filter((p) => p.from <= wave);
   while (budget > 0.9 && list.length < WAVE_GEN.maxEnemies) {

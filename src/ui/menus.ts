@@ -3,6 +3,7 @@ import { audio } from '../core/audio';
 import { WEAPONS, availableWeapons, type WeaponDef, type WeaponId } from '../data/weapons';
 import { MOVES } from '../data/moves';
 import { MovePreview } from './preview';
+import { anyUnlocked, isUnlocked, enterCode } from './cheats';
 import { STYLE } from '../data/tuning';
 
 /** DOM overlays for menus (title, pause, settings, loadout, results, banners). */
@@ -82,6 +83,18 @@ export class Menus {
     // Hand-lettered logo + a doodled stick figure doing a jumpshot flip.
     el.innerHTML = `<h1 class="title-logo">JUMPSHOT</h1><div class="subtitle">swipe · launch · juggle · spike</div>
       <svg class="title-doodle" viewBox="0 0 120 80" aria-hidden="true"><circle cx="70" cy="20" r="7"/><path d="M66 26 L52 46 M60 36 L44 30 M60 36 L74 44 M52 46 L36 58 M52 46 L62 64 M80 12 Q96 18 98 34 M98 34 L93 29 M98 34 L101 28 M20 70 L100 70"/></svg>`;
+    // Easter egg: tap the logo 5 times for a cheat-code box (touch devices; keyboards can just type).
+    const logo = el.querySelector('.title-logo') as HTMLElement | null;
+    if (logo) {
+      let taps = 0, last = 0;
+      logo.style.pointerEvents = 'auto';
+      logo.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const now = performance.now();
+        taps = now - last < 600 ? taps + 1 : 1; last = now;
+        if (taps >= 5) { taps = 0; this.codePrompt(); }
+      });
+    }
     const spacer = document.createElement('div');
     spacer.style.flex = '1';
     el.appendChild(spacer);
@@ -240,14 +253,16 @@ export class Menus {
     check('Reduce flashes', 'reduceFlashes');
     check('Line boil (doodles re-drawn ~7 fps)', 'boil');
     check('High contrast (plain page, bolder lines)', 'highContrast', () => window.dispatchEvent(new Event('jumpshot-look')));
-    // Cheats: all off by default; a run with any of them on doesn't set high scores.
-    const cheats = document.createElement('div');
-    cheats.className = 'sec';
-    cheats.textContent = 'CHEATS (runs with cheats don\'t count for high scores)';
-    p.appendChild(cheats);
-    check('Never die (god mode)', 'cheatGod');
-    check('Ray gun in the loadout (wipes a wave in seconds)', 'cheatRayGun');
-    check('Nuke button in play (also the N key)', 'cheatNuke');
+    // Easter-egg cheats: this section only appears once a code has unlocked something.
+    if (anyUnlocked()) {
+      const cheats = document.createElement('div');
+      cheats.className = 'sec';
+      cheats.textContent = 'CHEATS (runs with cheats don\'t count for high scores)';
+      p.appendChild(cheats);
+      if (isUnlocked('cheatGod')) check('Never die', 'cheatGod');
+      if (isUnlocked('cheatRayGun')) check('Ray gun in the loadout', 'cheatRayGun');
+      if (isUnlocked('cheatNuke')) check('Nuke button in play (also the N key)', 'cheatNuke');
+    }
     check('Rhythm Mode (off = Classic; applies to the next run)', 'rhythmMode', () => window.dispatchEvent(new Event('jumpshot-mode')));
     check('Beat-track HUD (Rhythm Mode)', 'beatHud');
     {
@@ -387,6 +402,29 @@ export class Menus {
     t.innerHTML = `${w.name}<small>${w.tips.join('<br>')}</small>`;
     el.appendChild(t);
     window.setTimeout(() => { if (this.layers.get('wtip') === el) this.close('wtip'); }, ms);
+  }
+
+  /** Secret code box (from 5 taps on the title logo). TODO(ui-pass) */
+  codePrompt(): void {
+    const el = this.layer('code', 'layer dim');
+    const p = document.createElement('div');
+    p.className = 'panel';
+    p.innerHTML = '<h2>?</h2>';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.autocomplete = 'off'; inp.className = 'code-input';
+    inp.setAttribute('aria-label', 'Code');
+    p.appendChild(inp);
+    const msg = document.createElement('div');
+    msg.className = 'subtitle';
+    p.appendChild(msg);
+    const submit = () => { const r = enterCode(inp.value); msg.textContent = r ?? 'nothing happens…'; inp.value = ''; if (r) this.banner('🔓 ' + r, 'cheat', 1400); };
+    inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') submit(); if (e.key === 'Escape') this.close('code'); });
+    const row = document.createElement('div');
+    this.btn(row, 'OK', submit, 'btn primary');
+    this.btn(row, 'CLOSE', () => this.close('code'));
+    p.appendChild(row);
+    el.appendChild(p);
+    setTimeout(() => inp.focus(), 50);
   }
 
   // ---------------- Results ----------------

@@ -1,7 +1,7 @@
 import type { World } from './world';
 import type { Fighter } from './fighter';
 import { WAVES_T, WORLD } from '../data/tuning';
-import { BOSS, type EnemyAttack } from '../data/enemies';
+import { isBoss, BOSS, type EnemyAttack } from '../data/enemies';
 import { simRng } from '../core/rng';
 import { enemyStrike } from './combat';
 import { clamp } from '../core/math';
@@ -35,7 +35,7 @@ export class EnemyAI {
       let best: Fighter | null = null, bs = Infinity;
       const p = w.player;
       for (const e of w.enemies) {
-        if (!e.alive || e.hasToken || e.kind === 'boss' || e.kind === 'dummy') continue;
+        if (!e.alive || e.hasToken || isBoss(e) || e.kind === 'dummy') continue;
         if (e.ai.cooldown > 0 || !(e.state === 'idle' || e.state === 'walk' || e.state === 'taunt')) continue;
         if (e.ai.spawnWalk > 0) continue;
         const score = Math.abs(e.x - p.x) - e.ai.tokenTime * 2 + simRng.range(0, 80);
@@ -60,7 +60,7 @@ export class EnemyAI {
       if (++e.poiseTimer > (e.def?.poiseRegenFrames ?? 120)) e.poise = e.maxPoise;
     }
 
-    if (e.kind === 'boss' && e.alive) this.bossExtras(w, e);
+    if (e.alive && isBoss(e)) this.bossExtras(w, e);
 
     switch (e.state) {
       case 'idle': case 'walk': case 'taunt': this.think(w, e); break;
@@ -85,7 +85,7 @@ export class EnemyAI {
     if (e.state !== 'taunt' || e.stateFrame > 40) e.facing = Math.sign(dx) || e.facing;
     if (e.kind === 'dummy' && !w.dummyAttacks) { e.vx = 0; if (e.state !== 'idle') e.setState('idle'); return; }
 
-    const canAttack = (e.hasToken || e.kind === 'boss' || (e.kind === 'dummy' && w.dummyAttacks)) && e.ai.cooldown <= 0 && p.alive && e.ai.spawnWalk <= 0;
+    const canAttack = (e.hasToken || isBoss(e) || (e.kind === 'dummy' && w.dummyAttacks)) && e.ai.cooldown <= 0 && p.alive && e.ai.spawnWalk <= 0;
     if (canAttack) {
       const atk = this.pickAttack(e, dist);
       if (dist <= atk.range * e.scale) {
@@ -108,7 +108,7 @@ export class EnemyAI {
     }
     if (e.state === 'taunt') { if (e.stateFrame > 50) e.setState('idle'); return; }
     const side = dx === 0 ? 1 : -Math.sign(dx);
-    const hold = (def.holdDist + e.ai.holdOff) * (e.kind === 'boss' ? 1 : 1);
+    const hold = def.holdDist + e.ai.holdOff;
     const tx = clamp(p.x + side * hold, WORLD.wallMargin + 20, WORLD.arenaW - WORLD.wallMargin - 20);
     this.walkTo(e, tx, def.walkSpeed * (e.ai.spawnWalk > 0 ? 1.4 : 0.8));
   }
@@ -134,6 +134,18 @@ export class EnemyAI {
       if (dist < 200) return simRng.chance(0.55) ? atks[0] : atks[1];
       return ph >= 3 && simRng.chance(0.5) ? atks[2] : atks[1];
     }
+    if (isBoss(e)) {
+      // Other bosses: any attack that reaches; the last (signature) attack is held back until phase 2
+      // unless nothing else reaches, and favoured in phase 3.
+      const reach = (a: EnemyAttack) => dist <= a.range * e.scale;
+      const last = atks[atks.length - 1];
+      if (e.ai.phase >= 3 && reach(last) && simRng.chance(0.5)) return last;
+      const pool = atks.filter((a, i) => reach(a) && (i < atks.length - 1 || e.ai.phase >= 2 || atks.length === 2));
+      if (pool.length) return pool[simRng.int(0, pool.length - 1)];
+      let best = atks[0];
+      for (const a of atks) if (a.range > best.range) best = a;
+      return best;
+    }
     // elite: pattern rotation with distance preference
     e.ai.pattern = (e.ai.pattern + 1) % 3;
     if (dist > 220) return atks[1];
@@ -144,8 +156,8 @@ export class EnemyAI {
     e.attack = atk;
     e.attackHit = false;
     let wind = atk.windup;
-    if (e.kind === 'boss' && e.ai.phase >= 3) wind = Math.round(wind * BOSS.p3Speed);
-    if (w.wave >= 8 && e.kind !== 'boss') wind = Math.max(14, wind - Math.min(6, w.wave - 7));
+    if (isBoss(e) && e.ai.phase >= 3) wind = Math.round(wind * BOSS.p3Speed);
+    if (w.wave >= 8 && !isBoss(e)) wind = Math.max(14, wind - Math.min(6, w.wave - 7));
     if (w.rhythm) wind = w.rhythm.enemyWindup(w, e, wind);
     e.setState('windup', wind);
     e.telegraph = wind;
@@ -176,7 +188,18 @@ export class EnemyAI {
     const atk = e.attack;
     if (!atk) { e.setState('idle'); return; }
     e.x += e.vx / 60;
+    const atWall = e.x <= WORLD.wallMargin || e.x >= WORLD.arenaW - WORLD.wallMargin;
     e.x = clamp(e.x, WORLD.wallMargin, WORLD.arenaW - WORLD.wallMargin);
+    // A charge that runs into the wall: crash, stunned and open (the Juggernaut's punish window).
+    if (atk.charge && atWall && e.stateFrame > 3) {
+      e.attack = null; e.vx = 0; e.telegraph = 0;
+      e.poise = 0; e.ai.stagger = BOSS.staggerFrames;
+      e.setState('stunned', 110);
+      this.releaseToken(e);
+      w.events.emit('wallImpact', { x: e.x, y: e.cy, power: 1.5, dir: -e.facing });
+      w.events.emit('text', { text: 'CRASH!', x: e.x, y: e.y - 200 * e.scale, color: '#ffe14a', size: 26 });
+      return;
+    }
     if (!atk.projectile && !e.attackHit) {
       if (enemyStrike(w, e, atk)) e.attackHit = true;
     }
@@ -189,6 +212,7 @@ export class EnemyAI {
   }
 
   private bossExtras(w: World, e: Fighter): void {
+    const spec = e.def!.boss!;
     const frac = e.hp / e.maxHp;
     const phase = frac <= BOSS.phase3 ? 3 : frac <= BOSS.phase2 ? 2 : 1;
     if (phase !== e.ai.phase) {
@@ -197,16 +221,30 @@ export class EnemyAI {
       if (e.ai.stagger === 0) e.poise = e.maxPoise;
     }
     if (phase >= 2) {
-      if (++e.ai.meteorTimer >= BOSS.meteorInterval / (phase >= 3 ? 1.4 : 1)) {
+      if (spec.meteors > 0 && ++e.ai.meteorTimer >= spec.meteors / (phase >= 3 ? 1.4 : 1)) {
         e.ai.meteorTimer = 0;
         w.spawnMeteor(w.player.x + simRng.range(-60, 60));
         if (phase >= 3) w.spawnMeteor(w.player.x + simRng.sign() * simRng.range(160, 280));
       }
-      if (++e.ai.summonTimer >= BOSS.summonEvery) {
+      if (spec.summon && ++e.ai.summonTimer >= spec.summon.every) {
         e.ai.summonTimer = 0;
         let alive = 0;
         for (const o of w.enemies) if (o.alive && o !== e) alive++;
-        if (alive < 3) { w.waves.summon(w, 'grunt'); w.waves.summon(w, phase >= 3 ? 'rusher' : 'grunt'); }
+        if (alive < 3) { w.waves.summon(w, spec.summon.kinds[0]); w.waves.summon(w, phase >= 3 ? spec.summon.kinds[1] : spec.summon.kinds[0]); }
+      }
+    }
+    // Blink: teleport to the far side when the player gets close (never mid-attack or while comboed).
+    if (spec.blink) {
+      if (e.ai.blinkCd > 0) e.ai.blinkCd--;
+      else if ((e.state === 'idle' || e.state === 'walk' || e.state === 'recover') && Math.abs(w.player.x - e.x) < spec.blink.range * e.scale && e.ai.stagger === 0) {
+        const fromX = e.x;
+        const side = w.player.x < WORLD.arenaW / 2 ? 1 : -1;
+        e.x = e.px = clamp(w.player.x + side * simRng.range(460, 600), WORLD.wallMargin + 40, WORLD.arenaW - WORLD.wallMargin - 40);
+        e.ai.blinkCd = spec.blink.cooldown;
+        e.ai.cooldown = Math.min(e.ai.cooldown, 20);
+        e.facing = Math.sign(w.player.x - e.x) || e.facing;
+        e.setState('idle');
+        w.events.emit('bossBlink', { x1: fromX, x2: e.x, y: e.cy });
       }
     }
     // Poise break -> long stagger window: the boss's "combo stage".

@@ -83,7 +83,7 @@ for (let i = 0; i < 4096; i++) LUT32[i] = LUT[i] === DITHER_IDX ? 0 : packed[LUT
 // ------------------------------------------------------------ fighters
 const TEAM: Record<string, string> = {
   player: INK.ink, grunt: INK.blue, rusher: INK.ink, brute: INK.red, kicker: INK.ink, thrower: INK.blue,
-  shield: INK.blue, elite: INK.red, boss: INK.red, dummy: INK.blue,
+  shield: INK.blue, elite: INK.red, boss: INK.red, dummy: INK.blue, witch: INK.blue, juggernaut: INK.red, shadow: INK.ink,
 };
 export function inkColor(f: Fighter): string { return TEAM[f.kind] ?? INK.ink; }
 
@@ -110,7 +110,7 @@ export function inkBody(ctx: CanvasRenderingContext2D, j: Float32Array): void {
 /** Limb and head-outline widths in low-res pixels: thin hero, chunkier enemies. */
 function weights(f: Fighter): { limb: number; head: number } {
   if (f.team === 'player') return { limb: INKLOOK.heroLimbPx, head: INKLOOK.heroHeadPx };
-  const k = f.kind === 'brute' || f.kind === 'boss' ? 1.35 : 1;
+  const k = f.kind === 'brute' || f.kind === 'boss' || f.kind === 'juggernaut' ? 1.35 : 1;
   return { limb: INKLOOK.enemyLimbPx * k, head: INKLOOK.enemyLimbPx };
 }
 
@@ -124,7 +124,8 @@ export function inkFigure(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32A
   ctx.strokeStyle = col;
   ctx.lineWidth = limb * wpp;
   ctx.beginPath(); inkBody(ctx, j); ctx.stroke();
-  if (f.team === 'player' || outlineOnly) {
+  // Hollow head: the hero, outline-only flashes, and Shadow (the hero's ink double).
+  if (f.team === 'player' || outlineOnly || f.def?.boss?.prop === 'band') {
     ctx.fillStyle = INK.paper;
     ctx.beginPath(); ctx.arc(hx, hy, headR, 0, TAU); ctx.fill();
     ctx.lineWidth = head * wpp;
@@ -251,11 +252,41 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
     ctx.beginPath(); ctx.rect(sx - 7 * s, sy - 34 * s, 14 * s, 50 * s); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(sx - 3 * s, sy - 20 * s); ctx.lineTo(sx + 3 * s, sy - 4 * s); ctx.stroke();
   }
-  if (f.kind === 'boss') {
+  const prop = f.def?.boss?.prop;
+  if (prop === 'horns' || prop === 'helm') {
     ctx.strokeStyle = col; ctx.lineWidth = 3 * wpp;
     ctx.beginPath();
     ctx.moveTo(hx - headR * 0.6, hy - headR * 0.7); ctx.lineTo(hx - headR * 1.1, hy - headR * 1.8);
     ctx.moveTo(hx + headR * 0.6, hy - headR * 0.7); ctx.lineTo(hx + headR * 1.1, hy - headR * 1.8);
+    ctx.stroke();
+    if (prop === 'helm') {
+      // Juggernaut: a helmet band with a visor slit and shoulder plates.
+      ctx.fillStyle = INK.ink;
+      ctx.beginPath(); ctx.rect(hx - headR * 1.15, hy - headR * 0.35, headR * 2.3, headR * 0.5); ctx.fill();
+      ctx.fillStyle = INK.paper;
+      ctx.beginPath(); ctx.rect(hx + face * headR * 0.1 - headR * 0.35, hy - headR * 0.2, headR * 0.7, headR * 0.16); ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 4 * wpp;
+      ctx.beginPath();
+      for (const sh of [J.shA, J.shB]) { const sx = j[sh * 2], sy = j[sh * 2 + 1]; ctx.moveTo(sx - 12 * s, sy + 4 * s); ctx.quadraticCurveTo(sx, sy - 12 * s, sx + 12 * s, sy + 4 * s); }
+      ctx.stroke();
+    }
+  } else if (prop === 'hat') {
+    // Witch: a tall bent pointy hat with a brim.
+    ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 2.5 * wpp;
+    ctx.beginPath();
+    ctx.moveTo(hx - headR * 1.0, hy - headR * 0.6);
+    ctx.lineTo(hx - face * headR * 0.6, hy - headR * 3.2);
+    ctx.lineTo(hx - face * headR * 1.4, hy - headR * 2.9);
+    ctx.lineTo(hx + headR * 1.0, hy - headR * 0.6);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(hx - headR * 1.9, hy - headR * 0.55); ctx.lineTo(hx + headR * 1.9, hy - headR * 0.65); ctx.stroke();
+  } else if (prop === 'band') {
+    // Shadow: the hero's red headband, mirrored.
+    ctx.strokeStyle = INK.red; ctx.lineWidth = 2 * wpp; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(hx - face * headR * 0.9, hy - headR * 0.25);
+    ctx.lineTo(hx - face * headR * 1.9, hy - headR * 0.1);
+    ctx.lineTo(hx - face * headR * 2.8, hy + headR * 0.4);
     ctx.stroke();
   }
   if (f.state === 'stunned' || f.dizzy > 0) {

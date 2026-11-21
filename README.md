@@ -108,12 +108,22 @@ You carry **one weapon** at a time. All five are unlocked from the start. Pick o
 
 Sound effects are recorded CC0 samples from Freesound (credits in `SOUND_CREDITS.md`), bundled with the build (~105 KB). Every effect still has its synthesized version: it plays until the samples load, and **Settings → Sound effects → Synthesized** switches back to the original set.
 
-## Cheats
+## Bosses
 
-All off by default (Settings → Cheats), and a run with any cheat on never sets a high score or record. Turn them off to go back to the normal game.
-- **Never die**: you take no damage.
-- **Ray gun in the loadout**: a 6th weapon (key 6) whose every swipe fires an arena-wide piercing ray; heavy fires a fan of three. Clears a wave in about a second.
-- **Nuke button** (☢ next to pause, or the **N** key): KOs everything on the page and cancels the rest of the wave.
+Every 10th wave is a boss, in this order, then around again with more HP:
+
+| Wave | Boss | How it fights |
+|---|---|---|
+| 10 | **The Colossus** | Hammer slams with shockwaves, sweeps and rushes; meteors and grunt summons from phase 2 |
+| 20 | **Scribbla, the Ink Witch** | Keeps her distance and throws fans of three darts (parry or deflect them); **blinks** to the far side when you get close; ink rain; summons Throwers and Shields |
+| 30 | **The Juggernaut** | Armored. Long charges across the arena: dodge one and he **crashes into the wall**, stunned and open for a full combo. Also a stomp with ground shockwaves and a wide swat; summons Brutes |
+| 40 | **Shadow, your ink double** | Your size and speed: fast combos and lunges, sometimes **slips** your hits (attack while it's staggered or busy attacking), ink strikes from phase 2 |
+
+All bosses have three phases (faster in phase 3) and a poise-break stagger window.
+
+## Easter eggs
+
+There are secret cheat codes. On a keyboard just type one; on a phone, tap the JUMPSHOT logo on the title screen five times. Codes toggle, and runs with a cheat on never set records. Hints: the overpowered weapon from the dev notes, the thing with a mushroom cloud, and a word for "can't die". The classic ↑↑↓↓←→←→BA works too.
 
 ## Look and animation (Hand-Drawn ink page)
 

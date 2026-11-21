@@ -138,6 +138,8 @@ export class Fighter {
     phase: 1,
     spawnWalk: 0,
     stagger: 0,
+    /** Boss blink cooldown (frames). */
+    blinkCd: 0,
   };
 
   anim: Animator;

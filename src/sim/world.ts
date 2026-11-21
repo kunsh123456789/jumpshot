@@ -10,7 +10,7 @@ import { WaveDirector } from './waves';
 import { Entities } from './entities';
 import { PlayerController } from './player';
 import { bowling, enemyPhysics, separate } from './physics';
-import { BOSS, ENEMIES, PROJECTILE, type EnemyAttack, type EnemyKind } from '../data/enemies';
+import { BOSS, ENEMIES, PROJECTILE, isBoss, type EnemyAttack, type EnemyKind } from '../data/enemies';
 import { simRng } from '../core/rng';
 import type { RhythmSim } from '../rhythm/simHooks';
 import { WeaponSim } from './weapon';
@@ -201,6 +201,14 @@ export class World {
     pr.life = PROJECTILE.life;
     pr.ownerId = e.id;
     this.events.emit('projectile', { x: pr.x, y: pr.y, kind: 'throw' });
+    // Fans (the witch): extra darts spread vertically around the first.
+    const n = pj.count ?? 1;
+    for (let i = 1; i < n; i++) {
+      const q = this.ents.projectiles.acquire();
+      q.team = 'enemy'; q.x = q.px = pr.x; q.y = q.py = pr.y; q.vx = pr.vx;
+      q.vy = (i % 2 ? -1 : 1) * Math.ceil(i / 2) * (pj.spread ?? 120);
+      q.damage = pj.damage; q.life = PROJECTILE.life; q.ownerId = e.id;
+    }
   }
 
   spawnGroundWave(x: number, dir: number, speed: number, damage: number, life: number): void {
@@ -216,7 +224,7 @@ export class World {
 
   dropLoot(e: Fighter): void {
     if (e.kind === 'dummy') return;
-    const big = e.kind === 'boss' || e.kind === 'elite';
+    const big = isBoss(e) || e.kind === 'elite';
     const nOrbs = big ? 5 : simRng.chance(PICKUPS.orbDropChance) ? 1 : 0;
     for (let i = 0; i < nOrbs; i++) this.ents.spawnPickup('orb', e.x, e.y - 40, simRng.range(-220, 220));
     const healthChance = PICKUPS.healthDropChance + (this.player.hp < this.player.maxHp * 0.35 ? 0.2 : 0);

@@ -64,7 +64,7 @@ export function poseFighter(f: Fighter, _time: number): void {
   // ---------------- Enemy attacks (telegraph = stretched wind-up) ----------------
   if (f.team === 'enemy' && (f.state === 'windup' || f.state === 'attack' || f.state === 'recover') && f.attack) {
     const atk = f.attack;
-    const def = getAnim(kind, atk.id);
+    const def = getAnim(kind, atk.anim ?? atk.id);
     const C = def.contact >= 0 ? def.contact : 8;
     let t: number;
     if (f.state === 'windup') {
@@ -167,7 +167,7 @@ function locomotion(f: Fighter, a: Animator, rate: number, moving: boolean): voi
   if (f.team === 'enemy') {
     if (moving) {
       const walk = getAnim(kind, 'walk');
-      const ref = kind === 'brute' || kind === 'boss' ? 167 : kind === 'rusher' ? 340 : 190;
+      const ref = kind === 'brute' || kind === 'boss' || kind === 'juggernaut' ? 167 : kind === 'rusher' || kind === 'shadow' ? 340 : 190;
       a.run(walk, rate * clamp(speed / ref, 0.5, 1.6), 5);
     } else {
       a.run(getAnim(kind, 'idle'), rate, 6);

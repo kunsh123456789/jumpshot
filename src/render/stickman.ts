@@ -225,7 +225,7 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
     ctx.beginPath();
     ctx.arc(hx + face * headR * 0.45, hy - headR * 0.1, Math.max(1.6, headR * 0.15), 0, TAU);
     ctx.fill();
-    if (f.kind === 'boss') {
+    if (f.def?.boss && f.def.boss.prop !== 'band') {
       ctx.strokeStyle = flashing ? '#fff' : f.accent;
       ctx.lineWidth = 4 * s * 0.6;
       ctx.beginPath();

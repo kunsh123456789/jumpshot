@@ -2,6 +2,7 @@ import type { World } from './world';
 import type { Fighter } from './fighter';
 import { ANIM, PHYS, WORLD } from '../data/tuning';
 import { WEAPON_T } from '../data/weapons/tuning';
+import { isBoss } from '../data/enemies';
 
 /**
  * Gravity multiplier with eased air-stall (blends in over stallEaseIn frames and
@@ -107,7 +108,7 @@ export function enemyPhysics(w: World, e: Fighter): void {
       e.knockdownOnLand = false;
       if (hard) {
         e.vx *= 0.35;
-        e.setState('knockdown', e.kind === 'boss' ? 50 : 42);
+        e.setState('knockdown', isBoss(e) ? 50 : 42);
         w.events.emit('groundImpact', { x: e.x, y: e.y, power: Math.min(1.4, vy / 1400 + 0.2), fighter: e, bounce: false });
       } else {
         e.setState('idle');
@@ -133,7 +134,7 @@ export function enemyPhysics(w: World, e: Fighter): void {
       if (--e.timer <= 0) e.setState('idle');
       break;
     case 'knockdown':
-      if (--e.timer <= 0) { e.setState('getup', e.kind === 'boss' ? 26 : 20); }
+      if (--e.timer <= 0) { e.setState('getup', isBoss(e) ? 26 : 20); }
       break;
     case 'getup':
       if (--e.timer <= 0) { e.setState('idle'); e.juggleHits = 0; e.gravityScale = 1; e.comboHits = Math.min(e.comboHits, 4); e.invuln = 4; e.otgUsed = false; }

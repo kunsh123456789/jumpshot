@@ -90,7 +90,7 @@ export class Hud {
         ctx.fillRect(cx - bw / 2, by + bh + 2, bw * pf, 3 * u);
       }
       ctx.font = `900 italic ${Math.round(12 * u)}px system-ui, sans-serif`;
-      outlineText(ctx, boss.def!.name + (boss.kind === 'boss' ? `  ·  PHASE ${boss.ai.phase}` : ''), cx, by + bh + 14 * u, fx.bossBarFlash > 0 ? '#ffe14a' : '#ffffff', 3);
+      outlineText(ctx, boss.def!.name + (boss.def?.boss ? `  ·  PHASE ${boss.ai.phase}` : ''), cx, by + bh + 14 * u, fx.bossBarFlash > 0 ? '#ffe14a' : '#ffffff', 3);
     } else this.bossLag = 1;
 
     // ---- Combo counter + style rank (right side) ----

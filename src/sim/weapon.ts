@@ -4,6 +4,7 @@ import type { MoveDef } from '../data/moves';
 import { DIR_VX, DIR_VY } from '../data/moves';
 import { WORLD } from '../data/tuning';
 import { WEAPON_T } from '../data/weapons/tuning';
+import { isBoss } from '../data/enemies';
 import { clamp } from '../core/math';
 import { playerHit, shockwave } from './combat';
 
@@ -222,7 +223,7 @@ export class WeaponSim {
     if (Math.abs(t.x - p.x) > reach || Math.abs(t.cy - p.cy) > reach * 1.3) return;
     // Heavy enemies keep their footing until their poise is broken (stagger, then throw).
     if (m.grab!.respectPoise && t.poise > 0 && !t.inHitState && t.kind !== 'grunt') return;
-    if (t.kind === 'boss' && !t.inHitState) return;
+    if (isBoss(t) && !t.inHitState) return;
     if (t.hasToken) w.ai.releaseToken(t);
     t.attack = null; t.telegraph = 0;
     t.setState('held');

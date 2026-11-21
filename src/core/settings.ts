@@ -97,8 +97,10 @@ export interface SaveData {
   highScore: number; tutorialDone: boolean; bestCombo: number; bestWave: number; padHintSeen: boolean;
   /** Equipped weapon (last loadout choice) and the weapons whose first-time tooltip was shown. */
   weapon: string; weaponTips: string[];
+  /** Easter-egg cheats unlocked by code (their Settings switches stay hidden until then). */
+  cheatsUnlocked: string[];
 }
-export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false, weapon: 'fists', weaponTips: [] };
+export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false, weapon: 'fists', weaponTips: [], cheatsUnlocked: [] };
 export function loadSave(): void {
   try {
     const raw = localStorage.getItem(SAVE_KEY);

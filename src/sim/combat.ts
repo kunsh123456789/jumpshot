@@ -4,7 +4,7 @@ import type { MoveDef } from '../data/moves';
 import { ANIM, COMBO, JUICE, PHYS, PLAYER, SCORE, SUPER } from '../data/tuning';
 import { settings } from '../core/settings';
 import { simRng } from '../core/rng';
-import type { EnemyAttack } from '../data/enemies';
+import { isBoss, type EnemyAttack } from '../data/enemies';
 import { dmgScale } from '../data/waves';
 
 function hitstopFrames(base: number): number {
@@ -35,6 +35,18 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   const combo = w.combo;
   const dirX = v.x === p.x ? p.facing : Math.sign(v.x - p.x) || p.facing;
   const finisher = m.tags.includes('finisher');
+
+  // ---- Boss slip (Shadow): sometimes dodges a hit outside its stagger window ----
+  const slip = v.def?.boss?.dodge ?? 0;
+  if (slip > 0 && v.ai.stagger === 0 && !v.inHitState && !finisher && v.state !== 'attack' && simRng.chance(slip)) {
+    v.invuln = 24;
+    v.vx = dirX * 760;
+    v.attack = null; v.telegraph = 0;
+    v.setState('burst', 14);
+    w.events.emit('afterimage', { fighter: v });
+    w.events.emit('text', { text: 'slipped!', x: v.x, y: v.y - 150 * v.scale, color: '#e22424', size: 16 });
+    return;
+  }
 
   // ---- Shield block ----
   if (v.def?.blocksFront && v.guardBroken <= 0 && !finisher) {
@@ -299,8 +311,8 @@ export function ko(w: World, v: Fighter, dirX: number): void {
   if (v.grounded) v.spinAngle = 0;
   v.setState('ko');
   v.grounded = false;
-  v.vy = v.kind === 'boss' ? -900 : -1050;
-  v.vx = dirX * (v.kind === 'boss' ? 300 : 760);
+  v.vy = isBoss(v) ? -900 : -1050;
+  v.vx = dirX * (isBoss(v) ? 300 : 760);
   // keep an existing tumble's direction so the KO spin never reverses abruptly
   v.spinVel = 0.35 * (v.spinVel !== 0 && !v.grounded ? Math.sign(v.spinVel) : dirX);
   v.stall = 0;
@@ -349,7 +361,7 @@ export function parry(w: World, e: Fighter | null, projectile: boolean): void {
   if (e) {
     if (e.hasToken) w.ai.releaseToken(e);
     e.attack = null; e.telegraph = 0;
-    e.setState('stunned', e.kind === 'boss' ? 60 : 80);
+    e.setState('stunned', isBoss(e) ? 60 : 80);
     e.impact = ANIM.impactSnapFrames;
     e.vx = e.facing * -160;
     e.flash = 4;

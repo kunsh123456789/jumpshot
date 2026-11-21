@@ -1,6 +1,6 @@
 import type { World } from './world';
 import { Fighter } from './fighter';
-import { ENEMIES, type EnemyKind } from '../data/enemies';
+import { ENEMIES, isBoss, type EnemyKind } from '../data/enemies';
 import { WAVES_T, WORLD } from '../data/tuning';
 import { hpScale, waveDef } from '../data/waves';
 import { simRng } from '../core/rng';
@@ -82,7 +82,7 @@ export class WaveDirector {
     e.ai.cooldown = 40 + simRng.int(0, 60);
     e.ai.holdOff = simRng.range(-40, 60);
     e.ai.think = simRng.int(10, 60);
-    if (kind === 'boss') {
+    if (isBoss(e)) {
       // The boss drops in from above.
       e.y = e.py = WORLD.groundY - 700;
       e.x = e.px = clamp(w.player.x + 360 * (simRng.sign()), 200, WORLD.arenaW - 200);

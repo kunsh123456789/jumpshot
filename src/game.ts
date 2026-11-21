@@ -33,6 +33,7 @@ import { SONGS } from './data/songs';
 import { weaponById } from './data/weapons';
 import { WEAPON_T } from './data/weapons/tuning';
 import { updateRefFx } from './render/weaponFx';
+import { CodeListener, enforceLocks } from './ui/cheats';
 
 type GState = 'title' | 'tutorial' | 'countdown' | 'playing' | 'breather' | 'gameover';
 
@@ -87,6 +88,10 @@ export class Game {
     this.keyboard = new Keyboard(this.pad);
     this.keyboard.onToggleDebug = () => { this.debug.visible = !this.debug.visible; settings.debug = this.debug.visible; };
     this.keyboard.onPause = () => this.togglePause();
+    // Easter-egg cheat codes typed anywhere.
+    enforceLocks();
+    const codes = new CodeListener((msg) => { this.menus.banner('🔓 ' + msg, 'cheat', 1400); this.menus.setPlayButtons(this.state === 'playing' || this.state === 'countdown' || this.state === 'breather'); });
+    this.keyboard.onAnyKey = (code, key) => codes.feed(code, key);
     this.keyboard.onKey = (code) => this.menus.loadoutKey(code) || this.menus.swapKey(code) || (code === 'KeyN' && this.nuke());
     this.menus.onNuke = () => this.nuke();
     this.keyboard.onDebugSlow = () => { this.debugScale = this.debugScale < 1 ? 1 : 0.1; this.debugFrozen = false; };

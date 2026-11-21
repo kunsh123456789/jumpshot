@@ -167,6 +167,11 @@ export class FxDirector {
     ev.on('pullArrive', () => audio.weapon('reel'));
     ev.on('deflect', (e) => { audio.weapon('deflect'); effects.text('DEFLECT', e.x, e.y - 60, '#9fd8ff', 16, 0.6); });
     ev.on('weaponSwap', () => audio.weapon('swap'));
+    ev.on('bossBlink', (e) => {
+      // Ink poof at both ends of the teleport.
+      for (const x of [e.x1, e.x2]) { effects.dust(x, WORLD.groundY, 0.7); effects.embers(x, e.y, 10, '#2436e6'); }
+      audio.weapon('zap'); audio.dodge();
+    });
     ev.on('nuke', (e) => {
       // Cheat nuke: white-out, crescent, thunder from every side, a big shockwave.
       if (!settings.reduceFlashes) { effects.invert = ANIM.invertSec * 3; crescentFlash(e.x, e.y - 60, 1); }
@@ -231,7 +236,8 @@ export class FxDirector {
     ev.on('text', (e) => effects.text(e.text, e.x, e.y, e.color, e.size));
     ev.on('spawn', (e) => {
       const f: Fighter = e.enemy;
-      if (f.kind === 'boss') { this.popup('THE COLOSSUS', 'BOSS', '#ff4040', true); this.cam.shake(14, 0, 1, 0.5); }
+      const bs = f.def?.boss;
+      if (bs) { this.popup(bs.title, bs.sub, '#ff4040', true); this.cam.shake(14, 0, 1, 0.5); }
       if (f.kind === 'elite') this.popup('RONIN', 'ELITE', '#ff4dd2', true);
     });
   }

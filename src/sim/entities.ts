@@ -1,7 +1,7 @@
 import { Pool } from '../core/pool';
 import type { World } from './world';
 import { PICKUPS, PHYS, WORLD, SUPER } from '../data/tuning';
-import { BOSS, PROJECTILE } from '../data/enemies';
+import { BOSS, PROJECTILE, isBoss } from '../data/enemies';
 import { hurtPlayer, overlaps, parry, sideHit } from './combat';
 
 export class Projectile {
@@ -100,7 +100,7 @@ export class Entities {
           else hurtPlayer(w, BOSS.meteorDamage, Math.sign(p.x - m.x) || 1, 380, -600, null);
         }
         for (const e of w.enemies) {
-          if (e.kind !== 'boss' && e.canBeHit && Math.abs(e.x - m.x) < BOSS.meteorRadius + 20) sideHit(w, e, 10, Math.sign(e.x - m.x) || 1, -600, 'shock');
+          if (!isBoss(e) && e.canBeHit && Math.abs(e.x - m.x) < BOSS.meteorRadius + 20) sideHit(w, e, 10, Math.sign(e.x - m.x) || 1, -600, 'shock');
         }
       }
       if (m.t > m.warn + 20) ms.releaseAt(i);

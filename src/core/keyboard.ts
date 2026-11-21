@@ -20,6 +20,8 @@ export class Keyboard {
   onDebugSlow: () => void = () => {};
   onDebugStep: () => void = () => {};
   onDebugResume: () => void = () => {};
+  /** Every key press (cheat-code listener). */
+  onAnyKey: (code: string, key: string) => void = () => {};
   /** Menu keys (weapon loadout / swap): return true if handled. */
   onKey: (code: string) => boolean = () => false;
   enabled = true;
@@ -54,6 +56,7 @@ export class Keyboard {
   }
 
   private down(e: KeyboardEvent): void {
+    if (!e.repeat && !(e.target instanceof HTMLInputElement)) this.onAnyKey(e.code, e.key);
     if (!e.repeat && this.onKey(e.code)) { e.preventDefault(); return; }
     switch (e.code) {
       case 'Backquote': this.onToggleDebug(); e.preventDefault(); return;

@@ -145,7 +145,7 @@ export class PaperHud {
       ctx.restore();
       seedSketch(73 + this.boil); ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.beginPath(); penRect(ctx, cx - bw / 2, by, bw, bh, 1); ctx.stroke();
       ctx.font = `${Math.round(15 * u)}px ${MARKER}`; ctx.fillStyle = fx.bossBarFlash > 0 ? red : ink; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      ctx.fillText(boss.def!.name + (boss.kind === 'boss' ? ` · phase ${boss.ai.phase}` : ''), cx, by + bh + 3 * u);
+      ctx.fillText(boss.def!.name + (boss.def?.boss ? ` · phase ${boss.ai.phase}` : ''), cx, by + bh + 3 * u);
     } else this.bossLag = 1;
 
     // ---- Combo counter + rank (right, under the pause button; measured so they never overlap) ----

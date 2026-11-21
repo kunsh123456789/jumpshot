@@ -260,3 +260,4 @@ html, body { background: var(--paper); color: var(--ink); font-family: var(--han
 .wtip { top: 30%; }
 /* Cheat nuke button, next to pause. TODO(ui-pass) */
 .nuke-btn { right: calc(max(10px, env(safe-area-inset-right)) + 58px) !important; color: var(--pen-red); }
+.code-input { font-family: var(--marker); font-size: 22px; text-transform: uppercase; text-align: center; width: 100%; padding: 6px; margin: 8px 0; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); }

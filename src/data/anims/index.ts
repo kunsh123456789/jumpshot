@@ -36,8 +36,11 @@ export function useHandDrawn(on: boolean): void {
 }
 
 /** Kind-specific override -> enemy default -> shared -> idle. */
+/** Kinds that borrow another kind's idle/walk/taunt drawings. */
+const KIND_ALIAS: Record<string, string> = { juggernaut: 'brute', shadow: 'rusher' };
 export function getAnim(kind: string, name: string): AnimDef {
   return ANIMS[`${kind}.${name}`]
+    ?? (KIND_ALIAS[kind] ? ANIMS[`${KIND_ALIAS[kind]}.${name}`] : undefined)
     ?? (kind !== 'player' ? ANIMS[`enemy.${name}`] : undefined)
     ?? ANIMS[name]
     ?? (kind !== 'player' ? ANIMS['enemy.idle'] : ANIMS.idle);

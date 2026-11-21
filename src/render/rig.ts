@@ -57,6 +57,9 @@ export const RIGS: Record<string, RigDims> = {
   rusher: { ...RIG, hipH: 72, torso: 40, thigh: 40, shin: 39, headR: 12.5 },
   kicker: { ...RIG, hipH: 74, torso: 39, thigh: 41, shin: 41, upperArm: 27, foreArm: 26 },
   brute: { ...RIG, hipH: 58, torso: 54, neck: 4, headR: 14, upperArm: 32, foreArm: 31, thigh: 32, shin: 32, shoulderHalf: 8, hipHalf: 6, shoulderTwist: 8 },
+  witch: { ...RIG, hipH: 70, torso: 50, thigh: 38, shin: 38, upperArm: 31, foreArm: 32, headR: 12 },
+  juggernaut: { ...RIG, hipH: 56, torso: 56, neck: 3, headR: 13, upperArm: 33, foreArm: 32, thigh: 32, shin: 31, shoulderHalf: 9, hipHalf: 6, shoulderTwist: 9 },
+  shadow: RIG,
   boss: { ...RIG, hipH: 60, torso: 52, neck: 4, headR: 13.5, upperArm: 31, foreArm: 31, thigh: 34, shin: 33, shoulderHalf: 7, hipHalf: 5, shoulderTwist: 8 },
 };
 
