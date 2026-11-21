@@ -326,7 +326,7 @@ export class Menus {
       w.icon(ic.getContext('2d')!, 32, 32, 56, '#1b1a17');
       c.appendChild(ic);
       const t = document.createElement('div');
-      t.innerHTML = `<div class="nm">${i + 1}. ${w.name}</div><div class="ds">${w.desc}</div>`;
+      t.innerHTML = `<div class="nm">${i < 10 ? ((i + 1) % 10) + '. ' : ''}${w.name}</div><div class="ds">${w.desc}</div>`;
       c.appendChild(t);
       c.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.ui('select'); pick(id); });
       cards.appendChild(c);
@@ -346,11 +346,10 @@ export class Menus {
   loadoutKey(code: string): boolean {
     const el = this.layers.get('loadout');
     if (!el) return false;
-    const n = code.startsWith('Digit') ? parseInt(code.slice(5), 10) : NaN;
-    if (n >= 1 && n <= availableWeapons().length) { (el.querySelectorAll<HTMLButtonElement>('.card')[n - 1])?.click(); return true; }
     if (code === 'Enter' || code === 'Escape') { el.querySelector<HTMLButtonElement>('.sticky-foot .btn')?.click(); return true; }
-    return false;
+    return pickByKey(code, [...el.querySelectorAll<HTMLButtonElement>('.card')], (b) => b.classList.contains('sel'), true);
   }
+
 
   /** Between waves: a small non-blocking strip of weapon icons; tap (or press 1-5) to swap instantly. */
   showSwap(current: WeaponId, onSwap: (id: WeaponId) => void): void {
@@ -366,14 +365,14 @@ export class Menus {
       const w = WEAPONS[id];
       const b = document.createElement('button');
       b.className = 'btn small swap-btn' + (id === current ? ' sel' : '');
-      b.title = `${i + 1}: ${w.name}`;
+      b.title = i < 10 ? `${(i + 1) % 10}: ${w.name}` : `Q / E: ${w.name}`;
       b.dataset.id = id;
       const ic = document.createElement('canvas');
       ic.width = 40; ic.height = 40;
       w.icon(ic.getContext('2d')!, 20, 20, 34, '#1b1a17');
       b.appendChild(ic);
       const k = document.createElement('small');
-      k.textContent = String(i + 1);
+      k.textContent = i < 10 ? String((i + 1) % 10) : '';
       b.appendChild(k);
       b.addEventListener('click', (e) => {
         e.stopPropagation(); audio.unlock();
@@ -389,10 +388,9 @@ export class Menus {
   swapKey(code: string): boolean {
     const el = this.layers.get('swap');
     if (!el) return false;
-    const n = code.startsWith('Digit') ? parseInt(code.slice(5), 10) : NaN;
-    if (n >= 1 && n <= availableWeapons().length) { el.querySelectorAll<HTMLButtonElement>('.swap-btn')[n - 1]?.click(); return true; }
-    return false;
+    return pickByKey(code, [...el.querySelectorAll<HTMLButtonElement>('.swap-btn')], (b) => b.classList.contains('sel'), false);
   }
+
 
   /** First-time tooltip for a weapon: its directional moves, non-blocking. */
   weaponTip(w: WeaponDef, ms: number): void {
@@ -502,4 +500,23 @@ function cheatSheet(w: WeaponDef): string {
   const rows: [string, keyof WeaponDef['ground']][] = [['→ ←', 'side'], ['↗ ↖', 'upDiag'], ['↑', 'up'], ['↘ ↙', 'downDiag'], ['↓', 'down']];
   const tr = (set: WeaponDef['ground']) => rows.map(([d, k]) => `<tr><td>${d}</td><td>${nm(set[k].light)}</td><td>${nm(set[k].heavy)}</td></tr>`).join('');
   return `<table><tr><th>swipe</th><th>light</th><th>heavy (long fast swipe / Shift)</th></tr>${tr(w.ground)}<tr><th colspan="3">in the air</th></tr>${tr(w.air)}<tr><td>tap</td><td colspan="2">${w.dodge.rope ? 'hook-zip dodge' : 'dodge'} / parry</td></tr></table>`;
+}
+
+/**
+ * Weapon picking by key: 1-9 and 0 pick the first ten, Q / E step to the previous / next weapon
+ * (arrow keys too in the loadout screen, where they can't move the hero).
+ */
+function pickByKey(code: string, btns: HTMLButtonElement[], isSel: (b: HTMLButtonElement) => boolean, arrows: boolean): boolean {
+  if (!btns.length) return false;
+  let i = -1;
+  if (code.startsWith('Digit')) { const n = parseInt(code.slice(5), 10); i = n === 0 ? 9 : n - 1; }
+  else if (code === 'KeyQ' || code === 'KeyE' || (arrows && (code === 'ArrowLeft' || code === 'ArrowRight'))) {
+    const cur = Math.max(0, btns.findIndex(isSel));
+    const d = code === 'KeyQ' || code === 'ArrowLeft' ? -1 : 1;
+    i = (cur + d + btns.length) % btns.length;
+  } else return false;
+  if (i < 0 || i >= btns.length) return false;
+  btns[i].click();
+  btns[i].scrollIntoView?.({ block: 'nearest' });
+  return true;
 }

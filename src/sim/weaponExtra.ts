@@ -69,7 +69,9 @@ export class WeaponExtra {
       const s = this.spikes.find((x) => !x.on);
       if (!s) return;
       s.on = true; s.move = m; s.t = 0; s.first = i === 0;
-      s.x = p.x + p.facing * (K.start + i * K.spacing) * p.scale;
+      // A single spike (geyser / pillar launcher) erupts under the target; lines start in front.
+      const tx = K.count === 1 && p.target && p.target.alive && Math.abs(p.target.x - p.x) < 520 ? p.target.x : 0;
+      s.x = tx || p.x + p.facing * (K.start + i * K.spacing) * p.scale;
       s.delay = i * K.delay;
     }
     p.moveHit = true;

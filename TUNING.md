@@ -345,7 +345,12 @@ Weapon moves are ordinary `MoveDef`s (`addMove`) with these generic hooks, all r
 | tether | `{ mode: pull / zip / swing / slam / air, frames }`: grappling hook |
 | plant | `{ radius, damage, x }`: floor shockwave + crack at contact |
 | deflect | Enemy darts bounce off while the move is active |
-| toss | `{ speed, range, radius }`: the weapon is thrown, spins out along the aim and returns, hitting everything once per leg (staff boomerang). Any other move recalls it |
+| toss | `{ speed, range, radius, bounce?, floor?, draw? }` (`bounce`: ricochet to N more enemies; `floor`: skims the floor): the weapon is thrown, spins out along the aim and returns, hitting everything once per leg (staff boomerang). Any other move recalls it |
+| shoot | `{ kind, speed, count, spread, gravity, homing, pierce, life, radius, fromSky? }`: player projectiles (ink blob, paper plane, rocket fist, bubble, ice shard) |
+| spikes | `{ count, spacing, start, delay }`: ground spikes erupting one after another (a single spike erupts under the target) |
+| status | `{ kind: bleed / freeze / bubble / snare, frames }` applied on hit. Frozen victims shatter (×`shatterMult`) and bubbled ones pop (×`popMult`) on the next hit; bosses resist freeze / bubble / snare |
+| chain | `{ arcs, dmg }`: chain lightning to nearby enemies (`chainRange`) |
+| behind | The magnetism dash lands behind the target |
 | fx | Presentation only: `lightning` (bolts strike the victims), `whirl` (whirlwind radius while active), `crescent` (white-crescent impact frame) |
 | heat | Laser heat added per shot (0..1) |
 | slowmo | `{ scale, sec, at? }`: the weapon's slow-mo moment, at contact or at the apex of the follow leap |
@@ -366,9 +371,16 @@ Weapon moves are ordinary `MoveDef`s (`addMove`) with these generic hooks, all r
 | beamWallReflect | Stretch goal: piercing beams reflect once off the arena walls (off) |
 | beamFrames, beamHeavyFrames | Beam flash length |
 | tipMs | First-time weapon tooltip duration |
+| shatterMult, popMult | Damage multiplier when a frozen enemy shatters / a bubbled enemy pops |
+| chainRange | Chain-lightning jump distance |
+| bleedEvery, bleedDamage | Bleed ticks (frames, damage) |
+| bubbleHeight | How high a bubbled enemy floats |
+| spikeWidth, spikeFrames | Ground-spike hit width and lifetime |
 
 **`WeaponDef` extras:** `sweep(j, scale, out)` returns the weapon's striking segment; smeared drawings then fill the area it swept with a hatched crescent. `ropeStyle: 'arm'` draws the tether as a stretched arm (Throw's long arm) instead of a chain.
 
 **Fists Reference v2** (`data/anims/fistsV2.ts`): `FIST_IDS` are rebuilt from the Legacy drawings by `refine()` (deeper crouches ×1.16, coiled pre-contact drawing, +0.06 stretch on contact, contact held up to 2 ticks longer); `CONTACT` holds per-move touches; `CRESCENT` lists moves with limb crescents (`SmearCfg.crescent`); `FIST_FX` the finisher FX. Setting `fistAnims` ('v2' | 'legacy').
+
+**Templates:** the third batch draws every move from `author.ts` `tplAnim(id, move, template, patch)` (jab, slash, overhead, upper, low, spin, twirl, throw, shoot, shootUp, shootDown, slam, stomp, dash, air, airDown, airUp, airShoot), so the contact drawing still lands exactly on the first active frame. **DodgeSpec** also takes `blink` (teleport) and `parry` (a block that stands its ground).
 
 **Authoring drawings:** `author.ts` `strikeAnim(id, move, { antic, hit, hit2?, follow, smear, inbetweens, ones })` spreads the drawings over the move's frame data so the contact drawing starts exactly on the first active frame. Weapon animations are listed per weapon in the Animation Lab (`weapon: <name>`), with the held weapon drawn.

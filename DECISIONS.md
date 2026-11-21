@@ -308,3 +308,15 @@ Balance (rule bot, Fists, deliberately poor at dodging): Colossus ~300-400 damag
 ## Jump
 
 At the user's request, tap and Space now **jump** (one extra jump in the air; air moves are available straight away). Dodge and the perfect parry are kept on a **double-tap** (two taps within 16 frames: the first jumps, the second dodges, which works in the air too), **Shift+Space** or **F**. Settings → Tap / Space restores the original tap = dodge & parry. The Classic fingerprint and the regression tests run with the original setting, so they stay comparable.
+
+## Twelve more weapons
+
+Chain Whip, Giant Hammer, Twin Daggers, Boomerang Shield, Ink Brush, Yo-Yo, Bubble Gun, Rocket Gloves, Ice Spear, Paper Plane Swarm, Lightning Fist and Scythe (17 weapons in the loadout, plus the cheat Ray Gun).
+
+**Shared mechanics, not one-offs.** Each weapon is still a data file. The new behaviors are a few more generic `MoveDef` hooks resolved by `sim/weaponExtra.ts`: player projectiles (`shoot`, with homing, gravity, pierce and a from-the-sky variant), erupting ground spikes (`spikes`), statuses (`status`: bleed, freeze/shatter, bubble/pop, snare), chain lightning (`chain`), blink-behind dashes (`behind`, reusing the shield cross-up logic), and throws that ricochet (`toss.bounce`) or skim the floor (`toss.floor`). Beams got styles (whip, lightning, ice, ink) and dodges got `blink` (teleport) and `parry` (a stationary block). Everything still hits through `playerHit`, so combos, juggles, style, super, Rhythm snapping and bowling apply unchanged; Fists is untouched (fingerprint identical).
+
+**Drawings from templates.** With ~120 new moves, the drawings come from shared pose templates (jab, slash, overhead, uppercut, sweep, spin, throw, aimed shot, slam and air versions) patched per move, so all weapons share one pose language and every contact drawing still lands on the hit frame. This is less individual than the hand-authored Fists v2 / Staff drawings; the weapons that deserve bespoke drawings next are the Scythe, Hammer and Daggers.
+
+**Bosses resist control.** Freeze, bubble and snare don't lock down bosses (a freeze chips a quarter of a boss's poise instead), so boss fights can't be trivialized.
+
+**Balance.** A 6-wave bot run per weapon: every one clears with no near-deaths; the Whip, Brush and Bubble Gun were ~50% slower to clear and got damage buffs. Daggers and Lightning Fist score highest (bleed ticks and chain arcs both feed the combo). 60 fps with 13-16 enemies and swarms of projectiles.

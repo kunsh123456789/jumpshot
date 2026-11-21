@@ -11,7 +11,8 @@ import type { Fighter } from '../../sim/fighter';
  * MoveDef (ranged, aimCone, beam, grab, tether, plant, deflect, heat). Add a
  * weapon by adding a file here and listing it in index.ts.
  */
-export type WeaponId = 'fists' | 'hook' | 'throw' | 'staff' | 'laser' | 'raygun';
+export type WeaponId = 'fists' | 'hook' | 'throw' | 'staff' | 'laser' | 'raygun'
+  | 'whip' | 'hammer' | 'daggers' | 'shield' | 'brush' | 'yoyo' | 'bubble' | 'rocket' | 'ice' | 'planes' | 'thunder' | 'scythe';
 
 export interface MovePair { light: string; heavy: string }
 /**
@@ -54,7 +55,7 @@ export interface WeaponDef {
   air: MoveSet;
   dodge: DodgeSpec;
   /** How the tether is drawn: a sketchy chain (hook) or a stretched arm (throw's long-arm grab). */
-  ropeStyle?: 'chain' | 'arm';
+  ropeStyle?: 'chain' | 'arm' | 'whip';
   /** Auto-targeting range (world units); default PLAYER.targetRange. Ranged weapons reach further. */
   range?: number;
   /** Heat limiter instead of ammo (laser): firing adds MoveDef.heat; full heat overheats. */

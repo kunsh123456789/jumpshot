@@ -140,7 +140,9 @@ const HEAVY_CANCEL: MoveTag[] = ['launcher', 'down', 'dodge', 'special'];
 const AIR_CANCEL: MoveTag[] = ['air', 'down', 'dodge', 'special'];
 
 type MoveInput = Omit<MoveDef, 'poses' | 'family' | 'zoom' | 'poise' | 'maxTargets' | 'dash' | 'travel' | 'launch' |
-  'follow' | 'knockdown' | 'spike' | 'aoe' | 'selfVY' | 'afterimage' | 'cancelFrom'> & {
+  'follow' | 'knockdown' | 'spike' | 'aoe' | 'selfVY' | 'afterimage' | 'cancelFrom' | 'hitstop' | 'shake'> & {
+  /** Hit-stop and shake default to 3 when a move leaves them out. */
+  hitstop?: number; shake?: number;
   family?: string; zoom?: number; poise?: number; maxTargets?: number; dash?: boolean; travel?: number;
   launch?: number; follow?: boolean; knockdown?: boolean; spike?: boolean; aoe?: number; selfVY?: number;
   afterimage?: boolean; cancelFrom?: number;
@@ -158,7 +160,7 @@ function def(m: MoveInput): MoveDef {
   return {
     family: m.family ?? m.id,
     zoom: 0, poise: 1, maxTargets: 1, dash: true, travel: 0, launch: 0, follow: false,
-    knockdown: false, spike: false, aoe: 0, selfVY: 0, afterimage: false,
+    knockdown: false, spike: false, aoe: 0, selfVY: 0, afterimage: false, hitstop: 3, shake: 3,
     cancelFrom: Math.max(1, m.active - 1),
     ...m,
     poses: m.poses && {

@@ -73,7 +73,7 @@ These are the **Fists** moves (the default weapon). Other weapons replace the mo
 | **Shift** + attack | Heavy |
 | **Space** | Jump (again in the air for a double jump) |
 | **Shift+Space** or **F** | Dodge / parry |
-| **1–5** | Pick a weapon (loadout screen), or swap weapons during the between-wave breather |
+| **1–9, 0 / Q, E** | Pick a weapon (loadout screen), or swap weapons during the between-wave breather |
 | **Enter / Esc** | Close the loadout screen |
 | **Esc / P** | Pause |
 | **`** | Debug panel: FPS, sim tick rate, interpolation alpha, frame-time graph, pop detector, input state, buffer |
@@ -90,7 +90,7 @@ These are the **Fists** moves (the default weapon). Other weapons replace the mo
 
 ## Weapons
 
-You carry **one weapon** at a time. All five are unlocked from the start. Pick one on the **loadout** screen (the ⚔ WEAPON button on the title screen, or keys 1–5). It shows a looping preview of the moves and a swipe cheat-sheet, and remembers your choice. Between waves you can swap instantly from the small strip (tap an icon or press 1–5). The first time you equip a weapon, a tooltip lists its moves. Every weapon works with the pad and the keyboard, combos, juggles, parry/dodge, the Super Meter finishers (JUMPSHOT and FLURRY), the style rank and both game modes.
+You carry **one weapon** at a time. All 17 are unlocked from the start. Pick one on the **loadout** screen (the ⚔ WEAPON button on the title screen; keys 1–9 and 0 pick the first ten, Q / E or ←/→ step through all of them). It shows a looping preview of the moves and a swipe cheat-sheet, and remembers your choice. Between waves you can swap instantly from the small strip (tap an icon, press 1–9 / 0, or step with Q / E). The first time you equip a weapon, a tooltip lists its moves. Every weapon works with the pad and the keyboard, combos, juggles, parry/dodge, the Super Meter finishers (JUMPSHOT and FLURRY), the style rank and both game modes.
 
 | Weapon | Strength | → ← | ↑ (starter) | ↗ ↖ / ↘ ↙ | ↓ | Tap |
 |---|---|---|---|---|---|---|
@@ -99,6 +99,18 @@ You carry **one weapon** at a time. All five are unlocked from the start. Pick o
 | **Throw** | Crowd damage through bowling | Dash, **grab**, quick toss · heavy: overhead heave (wall bounce) | **Toss Up** · heavy: **Long Arm** (the arm stretches out, drags them in, over-the-shoulder slam) | **Bowling throws** (high lob / flat into the crowd) | **Pile-driver** with a shockwave | Dodge |
 | **Staff** | Reach and crowd control | 3-hit twirl · heavy: spinning sweep that trips everyone around | **Pole Vault** launcher | **Helicopter** spin (hits all around, deflects darts) · ↗ heavy: **boomerang** throw | Plant slam shockwave | Dodge |
 | **Laser Blast** | Safe ranged damage | Bolt · heavy: **charged piercing beam** | **Sky Blast** (heavy: a barrage that keeps them aloft) | Rising bolt / leg shot (trips) | Ground blast · air: **down beam** spike | Dodge |
+| **Chain Whip** | Reach, crowds at range | Lash through the whole line · heavy: crack | **Wrap & Hoist** | Whirl overhead / ankle lash (trips) | Snap the floor | Dodge |
+| **Giant Hammer** | Armor breaking, huge hits | Swing · heavy: home-run smash | Skyward swing · heavy: **Ground Pound** (launches everyone near) | Hammer spin / ankle breaker | Quake · air: meteor hammer | Dodge |
+| **Twin Daggers** | Speed, long combos | 3-cut string (bleeds) · heavy: **Blink Slash** behind them | Rising fangs | Knife fan / hamstring | Blade storm | **Teleport** |
+| **Boomerang Shield** | Defense | Bash (deflects darts) · heavy: **Ricochet** throw | Shield lift | High ricochet / shield surf | Shield slam | **Block** (long parry window) |
+| **Ink Brush** | Magic, zoning | Ink blob · heavy: **Spike Line** | **Ink Geyser** | Splash / brush stroke · heavy: **snaring circle** | Ink splat | Dodge |
+| **Yo-Yo** | Returns, juggles | Throw · heavy: **Walk the Dog** | **Sleeper** (bounces them) | Around the world (deflects) / creeper | Gravity pull | Dodge |
+| **Bubble Gun** | Silly control | Bubble · heavy: burst (bubbles float enemies; any hit **pops** for bonus damage) | Bubble lift | Bubble arc / roll · heavy: pop party | Swat | Dodge |
+| **Rocket Gloves** | Mobility + burst | **Rocket jab** fires your fist · heavy: barrage | **Rocket Uppercut** | Sky rocket / jet dash | Rocket slam · air: rocket dive | Long dodge |
+| **Ice Spear** | Freeze, then shatter | Frost jab · heavy: ice lance (hits **freeze**; next hit **shatters**) | **Ice Pillar** | Shard fan / glacier sweep · heavy: frost field | Downstab | Dodge |
+| **Paper Plane Swarm** | Safe ranged pressure | Homing plane · heavy: **flock** of six | Updraft | Loop / floor skimmer · heavy: **dive bomb** from above | Paper cut | Dodge |
+| **Lightning Fist** | Chains through crowds | Spark jabs (**chain lightning**) · heavy: thunderbolt | **Thunder Uppercut** | Static hook / ground current · heavy: storm call | Shock stomp | Dodge |
+| **Scythe** | Crescent reach | Reap string · heavy: **Death Spiral** | Rising moon | **Scythe throw** / **reaping pull** | Harvest · air: guillotine | Dodge |
 
 - **Throw:** the swipe direction is the throw direction. Thrown enemies are live projectiles that bowl through everyone they hit, and you can swipe at a flying body to re-grab it and throw it again. Shields can be grabbed through their guard; a Brute keeps its footing until its poise is broken.
 - **Hook and Laser** are ranged: they don't dash you up close; they fire at the best target in the swipe direction (generous auto-aim).

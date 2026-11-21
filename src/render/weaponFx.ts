@@ -35,7 +35,14 @@ export function drawWeaponFx(ctx: CanvasRenderingContext2D, w: World, alpha: num
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
   // ---- Rope: chain links along the verlet points (or a stretched arm for the long-arm grab) ----
-  if (ws.ropeVisible && w.weapon.ropeStyle === 'arm') {
+  if (ws.ropeVisible && w.weapon.ropeStyle === 'whip') {
+    // whip / scythe tether: one thin taut line with a small crack at the end
+    const R = ws.rope;
+    ctx.strokeStyle = ink; ctx.lineWidth = 1.8 * wpp + 0.6;
+    ctx.beginPath(); ctx.moveTo(R[0].x, R[0].y);
+    for (let i = 1; i < R.length; i++) ctx.lineTo(R[i].x, R[i].y);
+    ctx.stroke();
+  } else if (ws.ropeVisible && w.weapon.ropeStyle === 'arm') {
     const R = ws.rope;
     const px = p.px + (p.x - p.px) * alpha, py = p.py + (p.y - p.py) * alpha;
     const sx = px + p.facing * 14 * p.scale, sy = py - 100 * p.scale;
