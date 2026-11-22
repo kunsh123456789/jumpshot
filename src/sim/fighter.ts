@@ -10,7 +10,11 @@ export type FState =
   | 'stunned' | 'ko' | 'dead' | 'windup' | 'attack' | 'recover' | 'burst' | 'land'
   | 'jumpFollow' | 'fall' | 'guardbreak' | 'taunt' | 'hurt'
   /** Weapon reactions: held by a grab, reeled in by a hook. Driven by the weapon sim (no AI, no physics). */
-  | 'held' | 'pulled';
+  | 'held' | 'pulled'
+  /** Player: the jump's anticipation crouch (a few frames before take-off). */
+  | 'jumpSquat'
+  /** Scripted cinematic (finishers, specials): position and drawing driven by the cinematic player. */
+  | 'cine';
 
 export const MAX_HITLIST = 12;
 
@@ -106,6 +110,8 @@ export class Fighter {
   hitSerial = 0;
   hitHeavy = false;
   hitBehind = false;
+  /** The last hit came from above (meteors, slams, airborne attackers). */
+  hitAbove = false;
   /** One-shot animation cue (e.g. 'parry', 'bounce') and its serial. */
   cue = '';
   cueSerial = 0;
@@ -126,6 +132,27 @@ export class Fighter {
   weapon = 'fists';
   /** The weapon has been thrown and is out of the hero's hands (staff toss). */
   weaponOut = false;
+  // ---- Jump / air presentation (revision pass 8) ----
+  /** What put the hero in the air: a jump, an air jump, a launcher leap, a vault, a dodge hop. */
+  jumpKind: 'none' | 'jump' | 'air' | 'leap' | 'hop' = 'none';
+  /** Frames since leaving the ground (or since the last air jump). */
+  airFrames = 0;
+  /** Variable-height boost frames left (drag / held key). */
+  jumpBoost = 0;
+  /** Falling speed at the last landing (hard landing when fast). */
+  landVy = 0;
+  /** Presentation: low stance (pad dragged down / S key) and air drift input (-1..1, facing-relative). */
+  crouch = false;
+  drift = 0;
+  /** Frames since the last player input (bored idle). */
+  idleFrames = 0;
+  /** Scripted cinematic drawing (state 'cine'): animation id and time. */
+  cineAnim = '';
+  cineT = 0;
+  /** Spawn-in fade (enemies): frames left of the dithered fade from gray to solid. */
+  spawnFade = 0;
+  /** Death variant (0 flat collapse, 1 launched off-screen, 2 scribbled out) and its timer. */
+  deathStyle = 0;
 
   // ---- AI state ----
   ai = {

@@ -65,6 +65,9 @@ export class Animator {
   reachLimb = 0;
   intentSnap = false;
   rig: RigDims = RIG;
+  /** Weapon grip layer (pass 8): arm channels laid over locomotion drawings (NaN = keep), and its weight. */
+  grip: Float32Array | null = null;
+  gripW = 0;
 
   // Facing turn.
   face = 1; prevFace = 1;
@@ -257,6 +260,10 @@ export class Animator {
         if (k && k.sfx && this.sfxEnabled) animSfx(k.sfx, bx, by);
       }
       this.lastT = this.t;
+      if (this.grip && this.gripW > 0) {
+        const g = this.grip, k = this.gripW;
+        for (let i = 0; i < POSE_N; i++) { const v = g[i]; if (v === v) this.evalBuf[i] += angDelta(this.evalBuf[i], v) * k; }
+      }
       this.evalBuf[Ch.spin] += this.spinAdd;
       this.evalBuf[Ch.head] += this.headLook;
       if (this.fadeT < this.fadeDur) {

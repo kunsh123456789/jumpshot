@@ -6,6 +6,8 @@ import { classifyDir, type DrawPad } from '../ui/pad';
  *  - Move:   A / D  or  ← / →   (held; analog-style axis)
  *  - Attack: I / J / K / L = up / left / down / right; press two together for diagonals
  *  - Shift = heavy, Space = tap (jump; Shift+Space or F = dodge/parry)
+ *  - W / ↑ = jump (hold for a higher jump), S / ↓ = low stance, X or Enter = Special
+ *  - While a Special is being traced: arrows / WASD = the shown directions, Space = tap prompts
  *  - 1-5 = pick a weapon (loadout screen, or swap during the between-wave breather)
  *  - ` = debug overlay, Esc/P = pause, [ = 0.1x slow-mo, ] = freeze + step one frame, \ = resume
  * Diagonal chords are resolved by polling (no timers): poll() runs every sim tick.
@@ -25,6 +27,14 @@ export class Keyboard {
   /** Menu keys (weapon loadout / swap): return true if handled. */
   onKey: (code: string) => boolean = () => false;
   enabled = true;
+  /** Special input mode: arrows / WASD / Space go here instead of the game (trace + QTE). */
+  specialSink: ((key: 'up' | 'down' | 'left' | 'right' | 'tap', down: boolean) => void) | null = null;
+  private jumpDownT = -1;
+  private crouchHeld = false;
+
+  /** Jump charge from a held W / ↑ (0..1 over ~150 ms). */
+  jumpCharge(now: number): number { return this.jumpDownT < 0 ? 0 : Math.min(1, (now - this.jumpDownT) / 150); }
+  get crouching(): boolean { return this.crouchHeld; }
 
   constructor(private pad: DrawPad) {
     window.addEventListener('keydown', (e) => this.down(e));
@@ -66,7 +76,18 @@ export class Keyboard {
       case 'Backslash': this.onDebugResume(); e.preventDefault(); return;
     }
     this.shift = e.shiftKey;
+    if (this.specialSink) {
+      const sk = specialKey(e.code);
+      if (sk) { e.preventDefault(); if (!e.repeat) this.specialSink(sk, true); return; }
+    }
     if (!this.enabled) return;
+    if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+      e.preventDefault();
+      if (!e.repeat) { this.jumpDownT = e.timeStamp || performance.now(); this.pad.inject('jump', 2, false, this.jumpDownT); }
+      return;
+    }
+    if (e.code === 'KeyS' || e.code === 'ArrowDown') { e.preventDefault(); this.crouchHeld = true; return; }
+    if (e.code === 'KeyX' || e.code === 'Enter') { e.preventDefault(); if (!e.repeat) this.pad.inject('hold', -1, false, e.timeStamp || performance.now()); return; }
     const m = this.moveKey(e.code);
     if (m) { this.move[m] = true; e.preventDefault(); return; }
     const k = this.attackKey(e.code);
@@ -87,6 +108,9 @@ export class Keyboard {
 
   private up(e: KeyboardEvent): void {
     this.shift = e.shiftKey;
+    if (this.specialSink) { const sk = specialKey(e.code); if (sk) { this.specialSink(sk, false); return; } }
+    if (e.code === 'KeyW' || e.code === 'ArrowUp') { this.jumpDownT = -1; return; }
+    if (e.code === 'KeyS' || e.code === 'ArrowDown') { this.crouchHeld = false; return; }
     const m = this.moveKey(e.code);
     if (m) { this.move[m] = false; return; }
     const k = this.attackKey(e.code);
@@ -110,4 +134,15 @@ export class Keyboard {
     if (dx === 0 && dy === 0) return;
     this.pad.inject('swipe', classifyDir(dx, dy), this.shift, t0);
   }
+}
+
+function specialKey(code: string): 'up' | 'down' | 'left' | 'right' | 'tap' | null {
+  switch (code) {
+    case 'ArrowUp': case 'KeyW': case 'KeyI': return 'up';
+    case 'ArrowDown': case 'KeyS': case 'KeyK': return 'down';
+    case 'ArrowLeft': case 'KeyA': case 'KeyJ': return 'left';
+    case 'ArrowRight': case 'KeyD': case 'KeyL': return 'right';
+    case 'Space': case 'Enter': case 'KeyX': return 'tap';
+  }
+  return null;
 }

@@ -47,6 +47,9 @@ export class PlayerController {
         if (!done && p.state === 'move' && p.move && p.strokeId === ev.segId) this.promoteCurrent(w);
         continue;
       }
+      p.idleFrames = 0;
+      // Long-press: the Special (never buffered as an attack).
+      if (ev.kind === 'hold') { w.special.request(w, ev); continue; }
       let b: Buffered;
       if (this.buf.length >= INPUT.bufferSize) {
         b = this.buf[this.buf.length - 1]; // replace the tail with the newest intent
@@ -100,7 +103,19 @@ export class PlayerController {
       case 'land':
         if (--p.timer <= 0) p.setState('idle');
         break;
+      case 'jumpSquat':
+        if (--p.timer <= 0) this.takeOff(w);
+        break;
       case 'jumpFollow':
+        // Variable height: keep rising while the finger keeps dragging up (or the key stays held).
+        // The boost behaves as if the jump had left the floor at the charged speed: target speed
+        // minus the gravity accumulated since take-off (so it never over-extends the rise).
+        if (p.jumpBoost > 0 && p.vy < 0) {
+          p.jumpBoost--;
+          const v0 = PLAYER.jumpVelMin + (PLAYER.jumpVelMax - PLAYER.jumpVelMin) * w.jumpCharge;
+          const v = v0 + (PHYS.gravity * p.airFrames) / 60;
+          if (v < p.vy) p.vy = v;
+        }
         // Weapon slow-mo at the apex of the follow leap (staff vault).
         if (w.wpn.apexMoment && p.vy > -120) {
           const s = w.wpn.apexMoment; w.wpn.apexMoment = null;
@@ -111,6 +126,10 @@ export class PlayerController {
     }
     this.locomotion(w);
     this.physics(w);
+    if (p.grounded) { p.airFrames = 0; if (p.state !== 'jumpSquat') p.jumpKind = 'none'; } else p.airFrames++;
+    p.drift = p.grounded ? 0 : w.moveAxis * p.facing;
+    p.crouch = p.grounded && w.crouch && (p.state === 'idle' || p.state === 'walk');
+    p.idleFrames++;
   }
 
   private release(i: number): void {
@@ -124,6 +143,8 @@ export class PlayerController {
     switch (p.state) {
       case 'idle': case 'land': case 'fall': case 'jumpFollow': case 'walk':
         return true;
+      case 'jumpSquat':
+        return false;
       case 'dodge':
         return p.stateFrame >= 6;
       case 'move': {
@@ -145,9 +166,14 @@ export class PlayerController {
 
   private tryExecute(w: World, b: Buffered): boolean {
     const p = w.player;
+    if (b.ev.kind === 'jump') {
+      if (!this.canAct(p, null, true)) return false;
+      this.jump(w, true);
+      return true;
+    }
     if (b.ev.kind === 'tap') {
       if (!this.canAct(p, null, true)) return false;
-      if (w.tapJump && !b.heavy) { this.jump(w); return true; }
+      if (w.tapJump && !b.heavy) { this.jump(w, false); return true; }
       this.startDodge(w);
       if (w.rhythm) w.rhythm.onTap(w, b.ev);
       return true;
@@ -371,6 +397,7 @@ export class PlayerController {
       w.wpn.apexMoment = m.slowmo && m.slowmo.at === 'apex' ? m.slowmo : null;
       p.move = null;
       p.setState('jumpFollow');
+      p.jumpKind = 'leap'; p.airFrames = 0;
       p.grounded = false;
       p.vy = Math.min(-700, t.vy * 0.97);
       p.vx = clamp((t.x - p.facing * 50 - p.x) * 3, -400, 400);
@@ -468,20 +495,47 @@ export class PlayerController {
   }
 
   // ---------------------------------------------------------------------
-  /** Jump (tap / Space): from the ground, or one extra jump in the air. Air moves are available at once. */
-  private jump(w: World): void {
+  /**
+   * Jump: from the ground a short anticipation crouch (jumpSquat) then take-off; in the air one
+   * extra jump. A drag jump (`drag`) starts lower and grows while the finger keeps dragging up;
+   * a tap jump is a fixed full jump. Air moves are available at once after take-off.
+   */
+  private jump(w: World, drag: boolean): void {
     const p = w.player;
-    let vy: number;
-    if (p.grounded) vy = PLAYER.jumpVel;
-    else if (this.airJumps > 0) { this.airJumps--; vy = PLAYER.airJumpVel; }
-    else return;
     if (p.move) w.wpn.endMove(p);
     p.move = null;
+    if (p.grounded) {
+      this.dragJump = drag;
+      p.jumpKind = 'jump';
+      p.vx *= 0.6;
+      p.setState('jumpSquat', PLAYER.jumpSquatFrames);
+      return;
+    }
+    if (this.airJumps <= 0) return;
+    this.airJumps--;
     p.grounded = false;
-    p.vy = vy;
+    p.vy = PLAYER.airJumpVel;
+    p.jumpKind = 'air';
+    p.airFrames = 0;
+    p.jumpBoost = 0;
     p.stall = 0; p.stallCount = 0;
     p.setState('jumpFollow');
-    w.events.emit('jump', { x: p.x, y: p.y, air: vy !== PLAYER.jumpVel });
+    w.events.emit('jump', { x: p.x, y: p.y, air: true });
+    w.events.emit('afterimage', { fighter: p });
+  }
+  private dragJump = false;
+
+  /** Leave the ground after the jump squat. */
+  private takeOff(w: World): void {
+    const p = w.player;
+    p.grounded = false;
+    p.vy = this.dragJump ? PLAYER.jumpVelMin : PLAYER.jumpVel;
+    p.jumpBoost = this.dragJump ? PLAYER.jumpBoostFrames : 0;
+    p.vx += w.moveAxis * MOVE.airMax * 0.6;
+    p.airFrames = 0;
+    p.stall = 0; p.stallCount = 0;
+    p.setState('jumpFollow');
+    w.events.emit('jump', { x: p.x, y: p.y, air: false });
     w.events.emit('afterimage', { fighter: p });
   }
 
@@ -508,7 +562,7 @@ export class PlayerController {
     if (D.parry) p.parryWindow = D.parry;
     if (D.blink) { p.x = p.dodgeFromX = p.dodgeToX; w.events.emit('bossBlink', { x1: p.dodgeFromX - away * D.distance, x2: p.x, y: p.cy }); }
     if (D.rope) w.wpn.dodgeRope(p, p.dodgeToX);
-    if (!p.grounded) { p.vy = Math.min(p.vy, -120); p.stall = 10; }
+    if (!p.grounded) { p.vy = Math.min(p.vy, -120); p.stall = 10; p.jumpKind = 'hop'; p.airFrames = 0; }
     p.vx = 0;
     w.events.emit('dodge', { x: p.x, y: p.cy });
     w.events.emit('afterimage', { fighter: p });
@@ -574,6 +628,8 @@ export class PlayerController {
       if (p.y >= WORLD.groundY) {
         p.y = WORLD.groundY;
         p.grounded = true;
+        p.landVy = p.vy;
+        if (p.vy >= PLAYER.hardLandVy || (p.move !== null && p.move.tags.includes('air') && p.move.tags.includes('down'))) { p.cue = 'hardLand'; p.cueSerial++; w.events.emit('groundImpact', { x: p.x, y: p.y, power: 0.6, fighter: p, bounce: false }); }
         p.vy = 0;
         p.stallCount = 0;
         p.followTarget = null;

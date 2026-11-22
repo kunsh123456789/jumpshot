@@ -376,7 +376,7 @@ export function parry(w: World, e: Fighter | null, projectile: boolean): void {
   w.events.emit('parry', { x: e ? (e.x + p.x) / 2 : p.x + p.facing * 30, y: p.cy, projectile });
 }
 
-export function hurtPlayer(w: World, dmg: number, dirX: number, kbX: number, kbY: number, _src: Fighter | null): void {
+export function hurtPlayer(w: World, dmg: number, dirX: number, kbX: number, kbY: number, src: Fighter | null): void {
   const p = w.player;
   if (p.invuln > 0 || !p.alive) return;
   if (settings.cheatGod) return; // cheat: never take damage
@@ -386,6 +386,8 @@ export function hurtPlayer(w: World, dmg: number, dirX: number, kbX: number, kbY
   p.hitSerial++;
   p.hitHeavy = dmg >= 14 || kbY < -300;
   p.hitBehind = p.facing === dirX;
+  // From above: a meteor (no attacker, big upward knock) or an attacker well above the hero.
+  p.hitAbove = src ? src.y < p.y - 90 : kbY <= -600;
   p.hitDirX = dirX;
   p.move = null;
   p.followTarget = null;

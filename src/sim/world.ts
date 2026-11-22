@@ -16,6 +16,7 @@ import type { RhythmSim } from '../rhythm/simHooks';
 import { WeaponSim } from './weapon';
 import { ko } from './combat';
 import { WEAPONS, weaponById, type WeaponDef } from '../data/weapons';
+import { SpecialSystem } from './special';
 
 /** The simulation container. Advanced only in fixed 60 Hz steps. */
 export class World {
@@ -44,6 +45,12 @@ export class World {
   tapJump = false;
   /** Horizontal movement input this tick (-1..1), from the pad stick or keyboard. */
   moveAxis = 0;
+  /** Jump height input (0..1): the pad's upward drag after a drag jump, or W / ↑ held. */
+  jumpCharge = 0;
+  /** Low stance input (pad dragged down while idle / S or ↓ held). Presentation only. */
+  crouch = false;
+  /** The Special Bar and special moves (revision pass 8). */
+  readonly special = new SpecialSystem();
 
   constructor() {
     this.player = this.makePlayer();
@@ -67,6 +74,7 @@ export class World {
     this.ents.clear();
     this.ctrl.reset();
     this.wpn.reset();
+    this.special.reset();
     this.player.weapon = this.weapon.id;
     this.gameOver = false;
     this.wave = 0;

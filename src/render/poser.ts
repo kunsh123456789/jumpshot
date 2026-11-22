@@ -7,6 +7,16 @@ import { ANIM, MOVE } from '../data/tuning';
 import { ANIMS, getAnim } from '../data/anims';
 import type { AnimDef } from '../data/anims/types';
 import { RIGS } from './rig';
+import '../data/anims/heroSet';
+import { gripPose, gripWeight, WEAPON_VICTORY, type GripState } from '../data/weapons/grips';
+import { PLAYER } from '../data/tuning';
+
+/** Lay the equipped weapon's grip pose over the hero's locomotion drawing. */
+function grip(f: Fighter, a: Animator, st: GripState | null): void {
+  if (f.team !== 'player' || !st || f.weaponOut) { a.grip = null; a.gripW = 0; return; }
+  a.grip = gripPose(f.weapon, st);
+  a.gripW = a.grip ? gripWeight(f.weapon, st) : 0;
+}
 
 /**
  * Chooses which authored animation each fighter shows, and at what time,
@@ -30,9 +40,17 @@ export function poseFighter(f: Fighter, _time: number): void {
   const a = f.anim;
   if (a.rig === RIGS.player && f.kind !== 'player') a.rig = RIGS[f.kind] ?? RIGS.grunt;
   a.intentSnap = f.impact > 0;
+  a.grip = null; a.gripW = 0;
   const frozen = f.hitstop > 0;
   const rate = frozen ? 0 : 1;
   const kind = f.kind;
+
+  // ---------------- Scripted cinematics (finishers, specials) ----------------
+  if (f.state === 'cine') {
+    const def = ANIMS[f.cineAnim] ?? getAnim(kind, 'idle');
+    a.show(def, Math.min(def.len, f.cineT), 1);
+    return;
+  }
 
   // ---------------- Player attacks ----------------
   if (f.team === 'player' && f.state === 'move' && f.move) {
@@ -86,7 +104,9 @@ export function poseFighter(f: Fighter, _time: number): void {
 
   switch (f.state) {
     case 'hurt': case 'hitstun': {
-      const def = f.hitBehind ? ANIMS.hurtBehind : f.hitHeavy ? ANIMS.hurtHeavy : ANIMS.hurtLight;
+      const def = f.team === 'player' && !f.grounded ? ANIMS.hurtAir
+        : f.hitAbove ? ANIMS.hurtAbove
+        : f.hitBehind ? ANIMS.hurtBehind : f.hitHeavy ? ANIMS.hurtHeavy : ANIMS.hurtLight;
       a.run(def, rate, ANIM.fadeHit, newHit);
       if (!f.grounded) a.flags.snapping = true;
       return;
@@ -108,6 +128,7 @@ export function poseFighter(f: Fighter, _time: number): void {
       return;
     }
     case 'knockdown': case 'dead': {
+      if (f.team === 'player' && !f.alive) { a.run(ANIMS.deathCollapse, rate, 3, a.cur !== ANIMS.deathCollapse); return; }
       if (a.cur !== ANIMS.knockdown && a.cur !== ANIMS.lying) a.run(ANIMS.knockdown, rate, ANIM.fadeLand, true);
       else if (a.cur === ANIMS.knockdown && !a.playing('knockdown')) a.run(ANIMS.lying, rate, 2);
       else a.run(a.cur!, rate);
@@ -115,7 +136,9 @@ export function poseFighter(f: Fighter, _time: number): void {
     }
     case 'getup': {
       const total = Math.max(1, f.timer + f.stateFrame);
-      a.show(ANIMS.getup, (ANIMS.getup.len * f.stateFrame) / total, 2);
+      // Short get-ups (quick recoveries) kip up; long ones climb up slowly.
+      const g = total <= 16 && ANIMS.getupQuick ? ANIMS.getupQuick : ANIMS.getup;
+      a.show(g, (g.len * f.stateFrame) / total, 2);
       return;
     }
     case 'held': a.run(getAnim(kind, 'held'), rate, 2); tumbleSpin(f, a); return;
@@ -123,24 +146,46 @@ export function poseFighter(f: Fighter, _time: number): void {
     case 'stunned': a.run(ANIMS.stunned, rate, 3); return;
     case 'guardbreak': a.run(ANIMS.guardbreak, rate, ANIM.fadeHit); return;
     case 'burst': a.run(ANIMS.burst, rate, ANIM.fadeHit); return;
-    case 'dodge': a.show(ANIMS.dodge, (f.stateFrame * ANIMS.dodge.len) / Math.max(1, f.dodgeLen), 1); return;
-    case 'jumpFollow': a.run(ANIMS.leap, rate, 2); return;
-    case 'fall': {
-      if (newCue && f.cue === 'parry') { a.run(ANIMS.parry, rate, 1, true); return; }
-      if (a.playing('parry') || a.playing('leap')) { a.run(a.cur!, rate); return; }
+    case 'dodge': {
+      const d = f.grounded ? ANIMS.dodge : ANIMS.airDodge;
+      a.show(d, (f.stateFrame * d.len) / Math.max(1, f.dodgeLen), 1); return;
+    }
+    case 'jumpSquat': a.show(ANIMS.jumpSquat, Math.min(ANIMS.jumpSquat.len - 1, f.stateFrame), 1); grip(f, a, 'crouch'); return;
+    case 'jumpFollow': case 'fall': {
+      if (newCue && f.cue === 'parry') { a.run(ANIMS.parryFlash, rate, 1, true); return; }
+      if (a.playing('parryFlash')) { a.run(a.cur!, rate); return; }
+      if (f.team === 'player') { airborne(f, a, rate); return; }
+      if (f.state === 'jumpFollow') { a.run(ANIMS.leap, rate, 2); return; }
       a.run(ANIMS.fall, rate, 4); return;
     }
-    case 'land': a.run(ANIMS.land, rate, ANIM.fadeLand); return;
+    case 'land': {
+      if (f.team === 'player') {
+        const hard = newCue && f.cue === 'hardLand';
+        if (hard || a.playing('jumpHardLand')) { a.run(ANIMS.jumpHardLand, rate, 1, hard); grip(f, a, 'land'); return; }
+        a.run(ANIMS.jumpLand, rate, ANIM.fadeLand, a.cur !== ANIMS.jumpLand); grip(f, a, 'land'); return;
+      }
+      a.run(ANIMS.land, rate, ANIM.fadeLand); return;
+    }
     case 'taunt': a.run(getAnim(kind, 'taunt'), rate, 4); return;
     case 'walk':
-      if (newCue && f.cue === 'draw') { a.run(ANIMS.drawWeapon, rate, 1, true); return; }
-      locomotion(f, a, rate, true); return;
+      if (newCue && f.cue === 'draw') { a.run(ANIMS.weaponSwap, rate, 1, true); return; }
+      locomotion(f, a, rate, true); if (f.team === 'player') grip(f, a, 'run'); return;
     case 'idle': default: {
-      if (newCue && f.cue === 'parry') { a.run(ANIMS.parry, rate, 1, true); return; }
-      if (newCue && f.cue === 'draw') { a.run(ANIMS.drawWeapon, rate, 1, true); return; }
+      if (newCue && f.cue === 'parry') { a.run(f.team === 'player' ? ANIMS.parryFlash : ANIMS.parry, rate, 1, true); return; }
+      if (newCue && f.cue === 'draw') { a.run(ANIMS.weaponSwap, rate, 1, true); return; }
+      if (newCue && f.cue === 'victory') { a.run(ANIMS[WEAPON_VICTORY[f.weapon] ?? 'victory_pump'] ?? ANIMS.idle, rate, 2, true); return; }
+      if (newCue && f.cue === 'entrance') { a.run(ANIMS.entrance, rate, 1, true); return; }
+      if (newCue && f.cue === 'hardLand') { a.run(ANIMS.jumpHardLand, rate, 1, true); grip(f, a, 'land'); return; }
       // one-shots that finish even though the sim is already idle
-      if (a.playing('parry') || a.playing('land') || a.playing('runStop') || a.playing('drawWeapon')) { a.run(a.cur!, rate); return; }
+      if (a.playing('parry') || a.playing('parryFlash') || a.playing('land') || a.playing('jumpLand') || a.playing('jumpHardLand') || a.playing('runStop')
+        || a.playing('drawWeapon') || a.playing('weaponSwap') || a.playing('entrance') || (a.cur && a.cur.id.startsWith('victory_') && a.playing(a.cur.id))) {
+        a.run(a.cur!, rate);
+        if (a.cur!.id === 'jumpLand' || a.cur!.id === 'jumpHardLand') grip(f, a, 'land');
+        return;
+      }
+      if (f.team === 'player' && f.crouch) { a.run(ANIMS.crouch, rate, 3); grip(f, a, 'crouch'); return; }
       locomotion(f, a, rate, false);
+      if (f.team === 'player') grip(f, a, a.loco === 'none' ? 'idle' : 'run');
     }
   }
 }
@@ -196,6 +241,7 @@ function locomotion(f: Fighter, a: Animator, rate: number, moving: boolean): voi
   } else {
     a.loco = 'none';
     if (f.stateFrame > ANIM.tauntIdleFrames && f.stateFrame < ANIM.tauntIdleFrames + ANIMS.taunt.len) a.run(ANIMS.taunt, rate, 6);
+    else if (f.idleFrames > ANIM.boredIdleFrames && !poseBeat) a.run(ANIMS.idleBored, rate, 6);
     else { a.run(ANIMS.idle, rate, 5); if (poseBeat && rate > 0) beatIdle(a); }
   }
   a.lastSpeed = speed;
@@ -207,3 +253,27 @@ function locomotion(f: Fighter, a: Animator, rate: number, moving: boolean): voi
 }
 
 export { Ch };
+
+/**
+ * The hero in the air (pass 8 jump set): which drawing depends on what put it there and where it
+ * is in the arc. Launcher leaps and vaults tuck-flip first; air jumps burst; drag/tap jumps
+ * stretch out of the squat. Then rise -> apex hang -> fall, leaning with the air-drift input.
+ */
+function airborne(f: Fighter, a: Animator, rate: number): void {
+  const k = f.jumpKind;
+  const fr = f.airFrames;
+  let def: AnimDef;
+  if ((k === 'leap') && fr < ANIMS.jumpFlip.len) def = ANIMS.jumpFlip;
+  else if (k === 'air' && fr < ANIMS.airJump.len) def = ANIMS.airJump;
+  else if (k === 'hop' && fr < ANIMS.airDodge.len) def = ANIMS.airDodge;
+  else if (k === 'jump' && fr < ANIMS.jumpLaunch.len) def = ANIMS.jumpLaunch;
+  else if (f.vy < -PLAYER.apexVy) def = ANIMS.jumpRise;
+  else if (f.vy < PLAYER.apexVy) def = ANIMS.jumpApex;
+  else if (f.drift > 0.3) def = ANIMS.airDriftF;
+  else if (f.drift < -0.3) def = ANIMS.airDriftB;
+  else def = ANIMS.jumpFall;
+  const oneShot = def === ANIMS.jumpFlip || def === ANIMS.airJump || def === ANIMS.airDodge || def === ANIMS.jumpLaunch;
+  if (oneShot) a.show(def, fr, 1, a.cur !== def);
+  else a.run(def, rate, def === ANIMS.jumpApex ? 3 : 2);
+  if (def === ANIMS.jumpRise || def === ANIMS.jumpApex || def === ANIMS.jumpFall || def === ANIMS.jumpLaunch) grip(f, a, 'air');
+}

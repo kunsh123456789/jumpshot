@@ -9,7 +9,7 @@ import { penArrow, penCircle, penLine, seedSketch, srand } from '../render/sketc
 const PEN_TRAIL = ['#7d7a73', '#1b1a17', '#d42a2a', '#d42a2a', '#2f55c8'];
 const PAPER_INK = '#1b1a17';
 
-export type SwipeKind = 'swipe' | 'tap' | 'promote';
+export type SwipeKind = 'swipe' | 'tap' | 'promote' | 'jump' | 'hold';
 export interface SwipeEvent {
   kind: SwipeKind;
   /** 0=E,1=NE,2=N,3=NW,4=W,5=SW,6=S,7=SE */
@@ -102,6 +102,19 @@ export class DrawPad {
   private fxT = new Float64Array(8); private fxX = new Float32Array(8); private fxY = new Float32Array(8);
   private fxDir = new Int8Array(8); private fxC = new Uint8Array(8); private fxHead = 0;
   pulse = 0;
+
+  // ---- Jump (slow upward drag) and long-press (special) ----
+  /** Live jump strength 0..1: how far the finger has dragged up since the jump fired (variable height). */
+  jumpCharge = 0;
+  private jumpY0 = 0; private jumpX0 = 0;
+  private jumpArmed = true;
+  private jumpFiredY = 0;
+  private holdFired = false;
+  /**
+   * Special-input mode: when set, every pointer goes straight here (trace / QTE) and the normal
+   * gesture recognizer is bypassed. The whole screen accepts input while it is set.
+   */
+  rawSink: ((phase: 'down' | 'move' | 'up', x: number, y: number, t: number) => void) | null = null;
   private stickAlpha = 0;
   /** Tutorial hint: direction index, -2 = tap, -3 = drag demo, -1 = none. */
   hint = -1;
@@ -122,6 +135,14 @@ export class DrawPad {
   private flickDist(): number { return PAD.flickMinDist / settings.sensitivity; }
 
   private onDown(e: PointerEvent): void {
+    if (this.rawSink) {
+      if (this.pointerId !== -1) return;
+      e.preventDefault();
+      this.pointerId = e.pointerId;
+      try { (e.target as Element).setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
+      this.rawSink('down', e.clientX, e.clientY, e.timeStamp || performance.now());
+      return;
+    }
     if (!this.enabled) return;
     if (this.pointerId !== -1) return; // ignore extra touches
     if (!layout.inPad(e.clientX, e.clientY)) return; // upper half: menus/buttons only
@@ -140,13 +161,27 @@ export class DrawPad {
     this.moveX = 0;
     this.mode = 'idle';
     this.curColor = 0;
+    this.jumpX0 = e.clientX; this.jumpY0 = e.clientY; this.jumpArmed = true; this.jumpCharge = 0;
+    this.holdFired = false;
     this.addSample(e.clientX, e.clientY, t);
     this.pushTrail(e.clientX, e.clientY, t, true);
+  }
+
+  /** Long-press in place (special): fired from the frame poll, since a still finger sends no events. */
+  pollHold(now: number): void {
+    if (this.rawSink || this.pointerId === -1 || this.holdFired || this.anyCommit) return;
+    if (this.travel > PAD.holdMaxDist || now - this.startT < PAD.holdMs) return;
+    this.holdFired = true;
+    this.anyCommit = true; // no tap on release
+    this.curSegId = ++this.segId;
+    this.emit('hold', -1, false, 0, 0, now);
+    this.flash(this.lastX, this.lastY, -1, 4);
   }
 
   private onMove(e: PointerEvent): void {
     if (e.pointerId !== this.pointerId) return;
     e.preventDefault();
+    if (this.rawSink) { this.rawSink('move', e.clientX, e.clientY, e.timeStamp || performance.now()); return; }
     const list = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : null;
     if (list && list.length > 0) {
       for (let i = 0; i < list.length; i++) this.sample(list[i].clientX, list[i].clientY, list[i].timeStamp || e.timeStamp);
@@ -256,8 +291,36 @@ export class DrawPad {
       this.moveX = Math.sign(sdx) * mag;
     }
     this.stickDX = x - this.anchorX; this.stickDY = y - this.anchorY;
+    this.jumpGesture(x, y, t);
     if (t - this.commitT < 160) this.mode = 'attacking';
     else this.mode = this.moveX !== 0 ? 'moving' : 'idle';
+  }
+
+  /**
+   * JUMP: a deliberate SLOW upward drag. The finger's lowest point is the reference; once it has
+   * risen jumpDragPx above it (mostly vertical, below the flick speed) a jump fires. Dragging on
+   * keeps raising jumpCharge (the sim reads it for a higher jump). A quick flick up never gets
+   * here first: flick detection runs before this and re-bases the reference.
+   */
+  private jumpGesture(x: number, y: number, t: number): void {
+    if (t - this.commitT < PAD.jumpAfterFlickMs) { this.jumpY0 = y; this.jumpX0 = x; return; }
+    if (!this.jumpArmed) {
+      if (y - this.jumpFiredY > PAD.jumpRearmPx) { this.jumpArmed = true; this.jumpY0 = y; this.jumpX0 = x; }
+      else this.jumpCharge = Math.max(this.jumpCharge, clamp((this.jumpFiredY - y) / PAD.jumpBoostPx, 0, 1));
+      return;
+    }
+    if (y > this.jumpY0) { this.jumpY0 = y; this.jumpX0 = x; return; }
+    const up = this.jumpY0 - y;
+    const side = Math.abs(x - this.jumpX0);
+    if (up >= PAD.jumpDragPx / settings.sensitivity && up >= side * PAD.jumpMinSlope && this.recentSpeed < this.flickSpeed() * PAD.jumpMaxSpeedFrac) {
+      this.jumpArmed = false;
+      this.jumpFiredY = y;
+      this.jumpCharge = 0;
+      this.curSegId = ++this.segId;
+      this.emit('jump', 2, false, up, this.recentSpeed, t);
+      this.flash(x, y, 2, 4);
+      this.anyCommit = true;
+    }
   }
 
   private commit(dx: number, dy: number, d: number, speed: number, t: number, x: number, y: number, ox: number, oy: number, ot: number): void {
@@ -285,6 +348,8 @@ export class DrawPad {
     if (e.pointerId !== this.pointerId) return;
     this.pointerId = -1;
     const t = e.timeStamp || performance.now();
+    this.jumpCharge = 0;
+    if (this.rawSink) { this.rawSink('up', e.clientX, e.clientY, t); return; }
     if (!this.anyCommit && this.travel <= PAD.tapMaxDist && t - this.startT <= PAD.tapMaxMs) {
       this.curSegId = ++this.segId;
       this.emit('tap', -1, false, 0, 0, t);
@@ -337,6 +402,8 @@ export class DrawPad {
 
   onHit(weight: number): void { this.pulse = Math.min(1, this.pulse + 0.35 + weight * 0.5); }
   isTouching(): boolean { return this.pointerId !== -1; }
+  /** Low stance: the finger has slid down from its anchor (and isn't flicking). */
+  get crouching(): boolean { return this.pointerId !== -1 && !this.rawSink && this.stickDY > PAD.crouchPx && this.mode !== 'attacking'; }
 
   // ---------------- Rendering (css px space) ----------------
   draw(ctx: CanvasRenderingContext2D, now: number, dt: number): void {

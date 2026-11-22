@@ -64,6 +64,8 @@ export const ANIM = {
   skidMinSpeed: 150,
   /** Player taunts after this many idle frames with nothing happening. */
   tauntIdleFrames: 480,
+  /** No input for this long (frames, 5 s) and the hero slips into the bored idle. */
+  boredIdleFrames: 300,
   /** Smears: sub-samples along the swept arc, and fill alpha (recent / older half). */
   smearSamples: 6,
   smearAlpha: 0.85,
@@ -128,6 +130,24 @@ export const PAD = {
   chainTurnDeg: 60,
   tapMaxDist: 14,
   tapMaxMs: 260,
+  /**
+   * JUMP (revision pass 8): a slow upward drag. Fires once the finger is jumpDragPx above its
+   * lowest point, mostly vertical (rise >= side * jumpMinSlope) and slower than
+   * flickSpeed * jumpMaxSpeedFrac (a fast stroke is the flick-up launcher instead). Dragging a
+   * further jumpBoostPx raises the jump to full height. Re-arms after the finger moves back down
+   * jumpRearmPx; never within jumpAfterFlickMs of a flick.
+   */
+  jumpDragPx: 48,
+  jumpMinSlope: 1.3,
+  jumpMaxSpeedFrac: 0.85,
+  jumpBoostPx: 50,
+  jumpRearmPx: 30,
+  jumpAfterFlickMs: 180,
+  /** Long-press in place (Special): held this long without moving more than holdMaxDist px. */
+  holdMs: 350,
+  holdMaxDist: 12,
+  /** Low stance (presentation): finger slid this far down from its anchor. */
+  crouchPx: 40,
   trailFadeMs: 250,
 } as const;
 
@@ -193,6 +213,19 @@ export const PLAYER = {
   landingRecovery: 4,
   /** Jump (tap / Space): take-off speed, mid-air jumps allowed, and the air jump's speed. */
   jumpVel: -1150,
+  /**
+   * Drag jump (revision pass 8): take-off at jumpVelMin; while the finger keeps dragging up
+   * (or W / ↑ stays held) for jumpBoostFrames the speed rises toward jumpVelMax.
+   */
+  jumpVelMin: -880,
+  jumpVelMax: -1260,
+  jumpBoostFrames: 16,
+  /** Anticipation crouch before a ground jump leaves the floor (frames). */
+  jumpSquatFrames: 3,
+  /** Landing faster than this (units/s) plays the hard landing. */
+  hardLandVy: 1450,
+  /** |vy| below this (units/s) shows the apex hang drawing. */
+  apexVy: 260,
   airJumps: 1,
   airJumpVel: -950,
   hpRegenSRank: 1.2, // hp per second while at S rank or higher

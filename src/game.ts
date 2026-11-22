@@ -381,6 +381,8 @@ export class Game {
     else { this.endRhythm(); audio.startMusic(); }
     this.pops.reset();
     if (!save.padHintSeen) { this.pad.labelAlpha = 1; this.labelTime = 7; }
+    // Presentation: the hero drops onto the page.
+    const hp = this.world.player; hp.cue = 'entrance'; hp.cueSerial++;
     this.beginCountdown();
   }
 
@@ -430,6 +432,7 @@ export class Game {
     this.world.combo.score += SCORE.waveClear * this.nextWave;
     const p = this.world.player;
     p.hp = Math.min(p.maxHp, p.hp + p.maxHp * WAVES_T.healFraction);
+    if (p.state === 'idle' || p.state === 'walk') { p.cue = 'victory'; p.cueSerial++; }
     save.bestWave = Math.max(save.bestWave, this.nextWave);
     this.menus.banner('WAVE CLEAR', `+${(SCORE.waveClear * this.nextWave).toLocaleString()}  ·  +${Math.round(WAVES_T.healFraction * 100)}% HP`, 1500);
     audio.ui('clear');
@@ -493,12 +496,14 @@ export class Game {
   /** One fixed simulation step (1/60 s). */
   step(): void {
     this.inputs.length = 0;
-    this.keyboard.poll(performance.now());
+    const nowMs = performance.now();
+    this.keyboard.poll(nowMs);
+    this.pad.pollHold(nowMs);
     if (this.calib) { this.calibInput(); return; }
     const ev = this.pad.events;
     if (this.state === 'title') {
       for (const e of ev) {
-        if (e.kind === 'swipe' || e.kind === 'tap') { ev.length = 0; this.startFromTitle(); return; }
+        if (e.kind === 'swipe' || e.kind === 'tap' || e.kind === 'jump') { ev.length = 0; this.startFromTitle(); return; }
       }
     }
     const acceptInput = this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'breather';
@@ -517,6 +522,8 @@ export class Game {
     this.world.camLeft = this.cam.viewLeft();
     this.world.camRight = this.cam.viewRight();
     const axis = acceptInput ? clamp(this.pad.moveX + this.keyboard.moveAxis, -1, 1) : 0;
+    this.world.jumpCharge = acceptInput ? Math.max(this.pad.jumpCharge, this.keyboard.jumpCharge(nowMs)) : 0;
+    this.world.crouch = acceptInput && (this.pad.crouching || this.keyboard.crouching);
     this.world.step(this.inputs, axis);
     if (this.world.rhythm) this.rhythm.afterStep(this.world);
     this.pops.log = this.debug.visible;
