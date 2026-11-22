@@ -3,6 +3,7 @@ import '@fontsource/permanent-marker/latin-400.css';
 import { inkFx } from './render/inkFx';
 import { Game } from './game';
 import { initSketchDom } from './ui/sketchDom';
+import { applyPerfClass } from './ui/menus';
 import { layout } from './core/layout';
 import { save } from './core/settings';
 import { audio } from './core/audio';
@@ -12,6 +13,7 @@ import { loadSave, loadSettings } from './core/settings';
 loadSettings();
 loadSave();
 
+applyPerfClass();
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 initSketchDom();
 const game = new Game(canvas);
@@ -35,9 +37,18 @@ if (location.hash === '#lab') game.openLab();
 const unlock = () => audio.unlock();
 for (const t of ['pointerdown', 'touchend', 'keydown', 'click']) document.addEventListener(t, unlock, { capture: true, passive: true });
 
-// Prevent page scrolling / pinch-zoom / context menus on mobile.
+// Prevent page scrolling / pinch-zoom / context menus on mobile, except inside
+// menus that can scroll (settings, loadout, ...), which scroll with a finger swipe.
 const stop = (e: Event) => e.preventDefault();
-document.addEventListener('touchmove', stop, { passive: false });
+const scrollsAt = (t: EventTarget | null): boolean => {
+  for (let el = t instanceof Element ? t : null; el && el !== document.body; el = el.parentElement) {
+    if (el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1) continue;
+    const cs = getComputedStyle(el);
+    if (/(auto|scroll)/.test(cs.overflowY + cs.overflowX)) return true;
+  }
+  return false;
+};
+document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 || !scrollsAt(e.target)) e.preventDefault(); }, { passive: false });
 document.addEventListener('gesturestart', stop);
 document.addEventListener('contextmenu', stop);
 document.addEventListener('dblclick', stop);

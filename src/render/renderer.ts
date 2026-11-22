@@ -33,7 +33,7 @@ export class Renderer {
   }
 
   resize(): void {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(settings.mobilePerf ? 1 : 2, window.devicePixelRatio || 1);
     const w = window.innerWidth, h = window.innerHeight;
     layout.update(w, h, dpr);
     this.canvas.width = Math.round(w * dpr);
@@ -57,6 +57,9 @@ export class Renderer {
   beatPulse = 0;
   private low: HTMLCanvasElement | null = null;
   private lowCtx: CanvasRenderingContext2D | null = null;
+  /** Mobile Performance: a GPU-backed low-res layer that is never read back (no palette snap). */
+  private fast: HTMLCanvasElement | null = null;
+  private fastCtx: CanvasRenderingContext2D | null = null;
 
   render(world: World, cam: Camera, alpha: number, time: number, dt: number): void {
     if (DRAW.ink) { this.renderInk(world, cam, alpha, time, dt); return; }
@@ -133,6 +136,7 @@ export class Renderer {
   private renderInk(world: World, cam: Camera, alpha: number, time: number, dt: number): void {
     const ctx = this.ctx;
     const pixel = settings.look === 'pixel';
+    const perf = settings.mobilePerf;
     const r = layout.world, sc = layout.scale;
     // ---- Paper (screen space, pre-rendered; paper doesn't parallax) ----
     const q = pixel ? settings.pixelRes / sc : layout.dpr;
@@ -148,9 +152,12 @@ export class Renderer {
     if (pixel) {
       res = settings.pixelRes;
       lw = Math.max(16, Math.ceil(layout.cssW * q)); lh = Math.max(16, Math.ceil(layout.cssH * q));
-      if (!this.low) { this.low = document.createElement('canvas'); this.lowCtx = this.low.getContext('2d', { willReadFrequently: true }); }
-      if (this.low.width !== lw || this.low.height !== lh) { this.low.width = lw; this.low.height = lh; }
-      g = this.lowCtx!;
+      if (perf) {
+        if (!this.fast) { this.fast = document.createElement('canvas'); this.fastCtx = this.fast.getContext('2d'); }
+      } else if (!this.low) { this.low = document.createElement('canvas'); this.lowCtx = this.low.getContext('2d', { willReadFrequently: true }); }
+      const lc = perf ? this.fast! : this.low!;
+      if (lc.width !== lw || lc.height !== lh) { lc.width = lw; lc.height = lh; }
+      g = perf ? this.fastCtx! : this.lowCtx!;
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.clearRect(0, 0, lw, lh);
       g.setTransform(res, 0, 0, res, q * r.x - res * layout.viewX0, q * r.y - res * layout.viewY0);
@@ -183,11 +190,13 @@ export class Renderer {
     order.sort(sortFighters);
     order.push(world.player);
 
-    // Reflections (dither key), clipped below the floor line.
-    g.save();
-    g.beginPath(); g.rect(-2600, G + fw / 2, WORLD.arenaW + 5200, 2000); g.clip();
-    for (const f of order) inkReflection(g, f, alpha, time, wpp);
-    g.restore();
+    // Reflections (dither key), clipped below the floor line. Mobile Performance skips them.
+    if (!perf) {
+      g.save();
+      g.beginPath(); g.rect(-2600, G + fw / 2, WORLD.arenaW + 5200, 2000); g.clip();
+      for (const f of order) inkReflection(g, f, alpha, time, wpp);
+      g.restore();
+    }
 
     for (const f of order) drawInkFighter(g, f, alpha, time, wpp);
     drawWeaponFx(g, world, alpha, time, wpp);
@@ -201,10 +210,11 @@ export class Renderer {
     g.restore();
 
     if (pixel) {
-      quantize(g, lw, lh);
+      // The palette snap reads the layer back from the GPU every frame: the main cost on phones.
+      if (!perf) quantize(g, lw, lh);
       this.cssTransform();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(this.low!, 0, 0, lw, lh, 0, 0, lw / q, lh / q);
+      ctx.drawImage(g.canvas, 0, 0, lw, lh, 0, 0, lw / q, lh / q);
       ctx.imageSmoothingEnabled = true;
     }
     this.cssTransform();

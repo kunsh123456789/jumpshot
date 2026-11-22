@@ -163,7 +163,9 @@ export class Menus {
     this.btn(p, 'QUIT TO TITLE', onQuit);
     const h = document.createElement('div');
     h.className = 'hint';
-    h.innerHTML = 'Lower half of the screen: drag slowly = move · flick = attack in that direction · long fast flick = HEAVY<br>Flick ↑ = JUMPSHOT launcher · flick ↓ in air = SPIKE · tap = dodge / parry<br>Keyboard: A/D or ←/→ move · I/J/K/L attack (+Shift heavy) · Space = tap · ` = debug';
+    const tapTxt = settings.tapAction === 'jump' ? 'tap = jump (again in the air = double jump) · double-tap = dodge / parry' : 'tap = dodge / parry';
+    const keyTxt = settings.tapAction === 'jump' ? 'Space = jump · Shift+Space or F = dodge' : 'Space = dodge';
+    h.innerHTML = `Lower half of the screen: drag slowly = move · flick = attack in that direction · long fast flick = HEAVY<br>Flick ↑ = JUMPSHOT launcher · flick ↓ in air = SPIKE · ${tapTxt}<br>Keyboard: A/D or ←/→ move · I/J/K/L attack (+Shift heavy) · ${keyTxt} · \` = debug`;
     p.appendChild(h);
     el.appendChild(p);
   }
@@ -188,7 +190,7 @@ export class Menus {
       row.appendChild(span); row.appendChild(inp);
       p.appendChild(row);
     };
-    const check = (label: string, key: 'leftHanded' | 'debug' | 'reduceFlashes' | 'rhythmMode' | 'beatHud' | 'boil' | 'highContrast' | 'cheatGod' | 'cheatRayGun' | 'cheatNuke', after?: () => void) => {
+    const check = (label: string, key: 'leftHanded' | 'debug' | 'reduceFlashes' | 'rhythmMode' | 'beatHud' | 'boil' | 'highContrast' | 'cheatGod' | 'cheatRayGun' | 'cheatNuke' | 'mobilePerf', after?: () => void) => {
       const row = document.createElement('label');
       row.className = 'row';
       const span = document.createElement('span');
@@ -200,6 +202,14 @@ export class Menus {
       row.appendChild(span); row.appendChild(inp);
       p.appendChild(row);
     };
+    // Mobile Performance first: it's the one switch phone players look for.
+    check('📱 Mobile performance (less lag on phones)', 'mobilePerf', () => { applyPerfClass(); window.dispatchEvent(new Event('resize')); });
+    {
+      const h = document.createElement('div');
+      h.className = 'hint'; h.style.cssText = 'text-align:left;margin:-6px 0 8px';
+      h.textContent = 'Lower pixel density, no floor reflections, no palette snap or menu blur. Gameplay is identical.';
+      p.appendChild(h);
+    }
     // ---- Look & animation (revision pass 5) ----
     const select = (label: string, id: string, opts: [string, string][], get: () => string, set: (v: string) => void) => {
       const row = document.createElement('label');
@@ -519,4 +529,9 @@ function pickByKey(code: string, btns: HTMLButtonElement[], isSel: (b: HTMLButto
   btns[i].click();
   btns[i].scrollIntoView?.({ block: 'nearest' });
   return true;
+}
+
+/** Mobile Performance also drops costly CSS (menu blur, looping animations). */
+export function applyPerfClass(): void {
+  document.body.classList.toggle('perf', settings.mobilePerf);
 }

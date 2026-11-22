@@ -43,6 +43,16 @@ export interface Settings {
   boil: boolean;
   /** High contrast: plain white paper, no doodles, darker lines. */
   highContrast: boolean;
+  /**
+   * Mobile Performance: renders at 1x pixel density, skips the Pixel Look's per-frame palette
+   * snap (a GPU read-back), floor reflections and the menu blur. On by default on touch devices.
+   */
+  mobilePerf: boolean;
+}
+
+/** Touch-first device (phones / tablets): turns Mobile Performance on by default. */
+export function isTouchDevice(): boolean {
+  try { return matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints > 0 && Math.min(screen.width, screen.height) < 820); } catch { return false; }
 }
 
 const KEY = 'jumpshot.settings.v1';
@@ -75,13 +85,16 @@ export const settings: Settings = {
   page: 'auto',
   boil: true,
   highContrast: false,
+  mobilePerf: false,
 };
 
 const DEFAULTS_REV = 2;
 
 export function loadSettings(): void {
+  let hasChoice = false;
   try {
     const raw = localStorage.getItem(KEY);
+    hasChoice = !!raw && 'mobilePerf' in JSON.parse(raw);
     if (raw) {
       const saved = JSON.parse(raw) as Partial<Settings> & { defaultsRev?: number };
       // Defaults revision 2: step rate 12 fps and Low attack smoothness. Older saves picked up the
@@ -90,6 +103,8 @@ export function loadSettings(): void {
       Object.assign(settings, saved);
     }
   } catch { /* ignore */ }
+  // Never chosen yet (new players and saves from before the setting): follow the device.
+  if (!hasChoice) settings.mobilePerf = isTouchDevice();
 }
 export function saveSettings(): void {
   try { localStorage.setItem(KEY, JSON.stringify({ ...settings, defaultsRev: DEFAULTS_REV })); } catch { /* ignore */ }

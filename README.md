@@ -62,6 +62,8 @@ These are the **Fists** moves (the default weapon). Other weapons replace the mo
   - **FLURRY**: in a 15+ hit combo, do a long heavy flick in any direction.
 - The style rank (D → SSS) multiplies your score and fills the Super Meter. An elite arrives every 5th wave and a boss every 10th.
 - **Between waves** there is a 3-second breather: the arena is clear, you heal 35%, the floor cracks reset and the next wave's title comes up. It continues on its own (in Rhythm Mode the next wave starts on a bar line). A small **Swap weapon** strip is available during the breather.
+- **📱 Mobile performance** (top of Settings, on by default on phones and tablets) cuts lag in big fights: it renders at 1x pixel density, skips the Pixel Look's per-frame palette snap (a GPU read-back that phones are slow at), the floor reflections and the menu blur. Gameplay is identical. With it, a 15-enemy fight on an emulated phone at 4x CPU throttle went from ~20 fps to ~45-50 fps.
+- Menus (Settings, Loadout, Pause) scroll with a finger swipe; on short or narrow screens the loadout becomes a single scrolling page with a smaller preview.
 - **Settings** include volume, screen shake, hit-stop strength, **Flick sensitivity**, the **Touch area** height (35–60% of the screen), left-handed mode, reduced flashes and the debug overlay.
 
 **Keyboard**

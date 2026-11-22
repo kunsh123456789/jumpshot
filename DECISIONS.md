@@ -320,3 +320,14 @@ Chain Whip, Giant Hammer, Twin Daggers, Boomerang Shield, Ink Brush, Yo-Yo, Bubb
 **Bosses resist control.** Freeze, bubble and snare don't lock down bosses (a freeze chips a quarter of a boss's poise instead), so boss fights can't be trivialized.
 
 **Balance.** A 6-wave bot run per weapon: every one clears with no near-deaths; the Whip, Brush and Bubble Gun were ~50% slower to clear and got damage buffs. Daggers and Lightning Fist score highest (bleed ticks and chain arcs both feed the combo). 60 fps with 13-16 enemies and swarms of projectiles.
+
+## Mobile pass
+
+**Scrolling.** Menus couldn't scroll on phones because one document-wide `touchmove` handler cancelled every swipe (to stop page bounce / pinch zoom during play). It now lets a swipe through when the finger is on something that can actually scroll (settings, loadout, pause); everything else is still blocked. Panels use `overscroll-behavior: contain` so a scroll never drags the page. The loadout on short or narrow screens drops its inner scroll box (no box-in-a-box) and shrinks the preview.
+
+**Mobile performance setting.** Profiling a 15-enemy fight on an emulated phone (915x412, DPR 2.6, CPU x4) showed ~27% of the time in `getImageData`: the Pixel Look snaps every pixel to the palette, which reads the layer back from the GPU each frame (a sync that phones are especially slow at). The setting:
+- renders the low-res layer on a normal GPU canvas and skips the palette snap (edges keep a little anti-aliasing; the look is otherwise the same);
+- renders the main canvas at 1x density instead of up to 2x;
+- skips the floor reflections (each fighter drawn twice) and merges the paper's two layers into one blit (the margin doodles stop bouncing to the beat);
+- drops the menu backdrop blur and looping CSS animations.
+It never touches the simulation (Classic fingerprint identical). It defaults on for touch devices (`pointer: coarse`) until the player chooses; render time went from ~21 ms to ~9-12 ms per frame in the emulated test (20 -> 45-50 fps).

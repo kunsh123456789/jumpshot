@@ -7,7 +7,7 @@ import { audio } from '../core/audio';
 export const HAND = '"Patrick Hand", "Comic Sans MS", "Chalkboard SE", cursive';
 export const MARKER = '"Permanent Marker", "Patrick Hand", "Comic Sans MS", cursive';
 
-type Variant = { page: HTMLCanvasElement; bounce: HTMLCanvasElement };
+type Variant = { page: HTMLCanvasElement; bounce: HTMLCanvasElement; flat?: HTMLCanvasElement };
 
 /**
  * The sheet of paper behind the fight (screen space; paper doesn't parallax).
@@ -78,6 +78,17 @@ export class Paper {
     const vi = settings.boil && !settings.highContrast ? Math.floor(time * PAPER.boilFps) % v.length : 0;
     const smooth = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = false;
+    if (settings.mobilePerf && !(this.flipT >= 0 && this.flipFrom)) {
+      // Mobile Performance: page + margin doodles pre-merged into one blit (the doodles don't bounce).
+      const V = v[vi];
+      if (!V.flat) {
+        V.flat = document.createElement('canvas'); V.flat.width = V.page.width; V.flat.height = V.page.height;
+        const f = V.flat.getContext('2d')!; f.drawImage(V.page, 0, 0); f.drawImage(V.bounce, 0, 0);
+      }
+      ctx.drawImage(V.flat, 0, 0, this.w, this.h);
+      ctx.imageSmoothingEnabled = smooth;
+      return;
+    }
     ctx.drawImage(v[vi].page, 0, 0, this.w, this.h);
     if (this.flipT >= 0 && this.flipFrom) this.drawFlip(ctx);
     else ctx.drawImage(v[vi].bounce, 0, pulse > 0.55 ? -3 : 0, this.w, this.h);
