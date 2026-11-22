@@ -29,6 +29,8 @@ export interface SimEvents {
   shockwave: { x: number; y: number; radius: number; color: string; power: number };
   ko: { x: number; y: number; victim: Fighter; last: boolean };
   dissolve: { x: number; y: number; victim: Fighter };
+  /** A launched KO left the page (star twinkle where it exited). */
+  koStar: { x: number; y: number };
   playerHurt: { damage: number; x: number; y: number; dirX: number };
   parry: { x: number; y: number; projectile: boolean };
   dodge: { x: number; y: number };

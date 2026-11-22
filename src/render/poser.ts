@@ -8,6 +8,7 @@ import { ANIMS, getAnim } from '../data/anims';
 import type { AnimDef } from '../data/anims/types';
 import { RIGS } from './rig';
 import '../data/anims/heroSet';
+import '../data/anims/enemySet';
 import { gripPose, gripWeight, WEAPON_VICTORY, type GripState } from '../data/weapons/grips';
 import { PLAYER } from '../data/tuning';
 

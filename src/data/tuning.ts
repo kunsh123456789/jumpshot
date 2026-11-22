@@ -298,6 +298,17 @@ export const SUPER = {
   flurryMinCombo: 15,
 } as const;
 
+/** Enemy death variants (pass 8): the launched-off-the-page KO. */
+export const DEATH = {
+  launchVy: -1650,
+  launchVx: 1050,
+  launchGravity: 0.55,
+  /** Removed (with a star twinkle) once this high above the floor or past the arena edge. */
+  exitHeight: 820,
+  /** Frames the scribble-out takes before the body is gone. */
+  scribbleFrames: 30,
+} as const;
+
 export const SCORE = {
   perDamage: 10,
   koBonus: 250,

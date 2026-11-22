@@ -188,12 +188,15 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
   const a = f.anim;
   const step = Math.floor(time * 12);
   // Fades are impossible in 1-bit: dying and invulnerable figures blink on alternate drawings instead.
-  if (f.state === 'dead' && f.deadTimer > 14 && (step & 1)) return;
+  const scribbled = f.state === 'dead' && f.deathStyle === 2;
+  if (!scribbled && f.state === 'dead' && f.deadTimer > 14 && (step & 1)) return;
   if (f.state === 'dead' && f.deadTimer > 30) return;
   if (f.team === 'player' && f.invuln > 0 && f.state !== 'dodge' && f.state !== 'move' && (step & 1)) return;
   let col = inkColor(f);
   const winding = f.team === 'enemy' && (f.state === 'windup' || f.telegraph > 0) && f.alive;
   if (winding && (step & 1)) col = col === INK.red ? INK.ink : INK.red;
+  // Spawn-in: drawn in the dithered gray, then flickering into its solid color.
+  if (f.spawnFade > 12 || (f.spawnFade > 0 && (step & 1))) col = INK.dither;
 
   // Echo copies: 2-3 full copies evenly spaced back along the path since the last drawing.
   if (a.dEcho > 0) {
@@ -289,6 +292,7 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
     ctx.lineTo(hx - face * headR * 2.8, hy + headR * 0.4);
     ctx.stroke();
   }
+  if (scribbled) scribbleOut(ctx, j, f, wpp);
   if (f.state === 'stunned' || f.dizzy > 0) {
     ctx.strokeStyle = INK.ink; ctx.lineWidth = 1.5 * wpp;
     ctx.beginPath();
@@ -299,4 +303,25 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
     }
     ctx.stroke();
   }
+}
+
+/** Scribbled-out death: a pen scribble covers the body, denser each drawing (seeded per fighter). */
+function scribbleOut(ctx: CanvasRenderingContext2D, j: Float32Array, f: Fighter, wpp: number): void {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let q = 0; q < JOINT_N; q++) { const x = j[q * 2], y = j[q * 2 + 1]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const pad = 10 * f.scale;
+  x0 -= pad; x1 += pad; y0 -= pad * 2; y1 += pad * 0.3;
+  const k = Math.min(1, f.deadTimer / 22);
+  const n = 4 + Math.floor(k * 22);
+  let sd = f.id * 977 + 13;
+  const rnd = () => ((sd = (Math.imul(sd, 1103515245) + 12345) | 0) >>> 8) / 16777216;
+  ctx.strokeStyle = INK.ink; ctx.lineWidth = 2.2 * wpp; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  let x = x0 + rnd() * (x1 - x0), y = y0 + rnd() * (y1 - y0);
+  ctx.moveTo(x, y);
+  for (let i = 0; i < n; i++) {
+    x = x0 + rnd() * (x1 - x0); y = y0 + rnd() * (y1 - y0);
+    ctx.lineTo(x, y);
+  }
+  ctx.stroke();
 }

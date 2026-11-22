@@ -18,6 +18,9 @@ import { ko } from './combat';
 import { WEAPONS, weaponById, type WeaponDef } from '../data/weapons';
 import { SpecialSystem } from './special';
 
+/** Frames of the dithered-gray spawn-in fade. */
+const ENEMY_FADE = 24;
+
 /** The simulation container. Advanced only in fixed 60 Hz steps. */
 export class World {
   readonly events = new EventBus<SimEvents>();
@@ -129,6 +132,9 @@ export class World {
     this.ai.distribute(this);
     if (p.impact > 0 && p.hitstop === 0) p.impact--;
     for (const e of this.enemies) {
+      // Spawn-in fade (presentation): starts when the enemy first walks into view.
+      if (e.spawnFade < 0 && e.x > this.camLeft + 10 && e.x < this.camRight - 10) e.spawnFade = ENEMY_FADE;
+      else if (e.spawnFade > 0) e.spawnFade--;
       if (e.flash > 0) e.flash--;
       if (e.impact > 0 && e.hitstop === 0) e.impact--;
       if (e.hitstop > 0) {

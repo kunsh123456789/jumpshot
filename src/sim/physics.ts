@@ -1,6 +1,6 @@
 import type { World } from './world';
 import type { Fighter } from './fighter';
-import { ANIM, PHYS, WORLD } from '../data/tuning';
+import { ANIM, DEATH, PHYS, WORLD } from '../data/tuning';
 import { WEAPON_T } from '../data/weapons/tuning';
 import { isBoss } from '../data/enemies';
 
@@ -26,6 +26,12 @@ const WALL_R = WORLD.arenaW - WORLD.wallMargin;
 
 /** Enemy physics: gravity, juggle stall, ground/wall bounces, landings, reaction timers. */
 export function enemyPhysics(w: World, e: Fighter): void {
+  // Launched-off-the-page KO: gone (with a star) once it leaves the page.
+  if (e.state === 'ko' && e.deathStyle === 1 && (WORLD.groundY - e.y > DEATH.exitHeight || e.x < -40 || e.x > WORLD.arenaW + 40)) {
+    w.events.emit('koStar', { x: Math.max(40, Math.min(WORLD.arenaW - 40, e.x)), y: Math.max(WORLD.groundY - DEATH.exitHeight, e.y) });
+    e.remove = true; e.y = WORLD.groundY; w.dropLoot(e);
+    return;
+  }
   if (e.splat > 0) e.splat--;
   const airState = e.state === 'air' || e.state === 'ko';
   if (airState || !e.grounded) {
@@ -145,7 +151,7 @@ export function enemyPhysics(w: World, e: Fighter): void {
     case 'dead':
       e.deadTimer++;
       if (e.deadTimer === 18) w.events.emit('dissolve', { x: e.x, y: e.y - 20, victim: e });
-      if (e.deadTimer >= 36) { e.remove = true; w.dropLoot(e); }
+      if (e.deadTimer >= (e.deathStyle === 2 ? DEATH.scribbleFrames + 6 : 36)) { e.remove = true; w.dropLoot(e); }
       break;
   }
   if (e.state === 'idle' && e.juggleHits > 0) { e.juggleHits = 0; e.gravityScale = 1; }

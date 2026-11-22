@@ -1,7 +1,7 @@
 import type { World } from './world';
 import type { Fighter } from './fighter';
 import type { MoveDef } from '../data/moves';
-import { ANIM, COMBO, JUICE, PHYS, PLAYER, SCORE, SUPER } from '../data/tuning';
+import { ANIM, COMBO, DEATH, JUICE, PHYS, PLAYER, SCORE, SUPER } from '../data/tuning';
 import { settings } from '../core/settings';
 import { simRng } from '../core/rng';
 import { isBoss, type EnemyAttack } from '../data/enemies';
@@ -321,6 +321,10 @@ export function ko(w: World, v: Fighter, dirX: number): void {
   v.gravityScale = 1;
   v.koLaunched = true;
   v.bowlCount = 0;
+  // Death variant (pass 8): flat collapse / launched off the page with a star / scribbled out.
+  // Deterministic per enemy (no RNG draw, so spawns stay identical). Bosses get their own KO.
+  v.deathStyle = isBoss(v) ? 0 : v.id % 3;
+  if (v.deathStyle === 1) { v.vy = DEATH.launchVy; v.vx = dirX * DEATH.launchVx; v.gravityScale = DEATH.launchGravity; }
   w.combo.totalKOs++;
   w.combo.addStyle(5);
   w.combo.score += (v.def?.score ?? 100) + SCORE.koBonus + (wasAirborne ? SCORE.koLaunchBonus : 0);

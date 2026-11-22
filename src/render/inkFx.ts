@@ -76,6 +76,8 @@ export class InkFx {
     ev.on('parry', (e) => { if (DRAW.ink) for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; spawn(1, e.x, e.y, Math.cos(a) * 420, Math.sin(a) * 420, 0.25, 14, 0, a); } });
     ev.on('playerHurt', (e) => { if (DRAW.ink) this.splatter(e.x, e.y, 0, 10); });
     ev.on('waveStart', () => this.clearFloor());
+    // Launched KO leaving the page: a big twinkling star where it exited.
+    ev.on('koStar', (e) => { if (DRAW.ink) { for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU; spawn(1, e.x, e.y, Math.cos(a) * 260, Math.sin(a) * 260, 0.35, 18, 2, a); } this.scribble(e.x, e.y, 46, 2); } });
   }
 
   /** Starburst strokes + specks + splatter in the victim's colour. */

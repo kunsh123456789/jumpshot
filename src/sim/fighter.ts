@@ -150,7 +150,7 @@ export class Fighter {
   cineAnim = '';
   cineT = 0;
   /** Spawn-in fade (enemies): frames left of the dithered fade from gray to solid. */
-  spawnFade = 0;
+  spawnFade = -1;
   /** Death variant (0 flat collapse, 1 launched off-screen, 2 scribbled out) and its timer. */
   deathStyle = 0;
 
