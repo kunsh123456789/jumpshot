@@ -51,7 +51,7 @@ function faceTo(p: Fighter, x: number): void { if (x !== p.x) p.facing = x > p.x
 
 // ======================================================================= AIR FINISHERS (A4.1)
 const airFists: CineScript = {
-  id: 'air.fists', name: 'METEOR AXE KICK', len: () => 50,
+  id: 'air.fists', name: 'JUMPSHOT FINISHER', len: () => 50,
   start: (c) => { c.v.x0 = c.p.x; c.v.y0 = c.p.y; c.v.tx = c.main!.x; c.v.ty = c.main!.y; },
   frame: (c) => {
     const p = c.p, m = c.main!, f = c.f;
@@ -266,7 +266,9 @@ function bossKO(base: CineScript): CineScript {
       if (c.f < PRE) {
         const m = c.main!, f = c.f;
         const k = strikes.findIndex((s) => f < s + 10);
-        heroHit(c, k === 1 ? 'cross' : k === 2 ? 'launcherH' : 'jab1', strikes[Math.max(0, k)] ?? strikes[2]);
+        // Fists: the hundred-fist FLURRY; other weapons: three heavy blows.
+        if (base.id === 'ko.fists') heroLoop(c, 'flurry', 0);
+        else heroHit(c, k === 1 ? 'cross' : k === 2 ? 'launcherH' : 'jab1', strikes[Math.max(0, k)] ?? strikes[2]);
         pose(m, 'hurtHeavy', (f % 16));
         if (strikes.includes(f)) { const i = strikes.indexOf(f); fx(c, 'invert', m.x, m.cy); fx(c, 'shake', m.x, m.cy, 0.8 + i * 0.4); fx(c, i === 2 ? 'bigCrack' : 'crack', m.x, G, 1 + i * 0.4); fx(c, 'scribble', m.x, m.cy, 60 + i * 30); place(m, m.x + facing(c) * 18, G); }
         return;

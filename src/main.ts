@@ -7,6 +7,9 @@ import { applyPerfClass } from './ui/menus';
 import { layout } from './core/layout';
 import { save } from './core/settings';
 import { audio } from './core/audio';
+import { ANIMS } from './data/anims';
+import { WEAPONS } from './data/weapons';
+import { MOVES } from './data/moves';
 import { SIM_DT } from './data/tuning';
 import { loadSave, loadSettings } from './core/settings';
 
@@ -21,6 +24,8 @@ const W = window as unknown as Record<string, unknown>;
 W.__jumpshot = game;
 W.__layout = layout;
 W.__inkFx = inkFx;
+// Dev / tests: the animation registry, weapons and moves (animation audit, Lab sheets).
+W.__anims = ANIMS; W.__weapons = WEAPONS; W.__moves = MOVES;
 
 const qs = new URLSearchParams(location.search);
 // Dev/testing: ?wave=N starts a run at wave N (skips the tutorial).

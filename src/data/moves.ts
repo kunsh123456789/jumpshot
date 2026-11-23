@@ -133,7 +133,6 @@ const C_HEAVY = '#ffa040';
 const C_LAUNCH = '#ffe14a';
 const C_AIR = '#9fd8ff';
 const C_SPIKE = '#ff5a3c';
-const C_SPECIAL = '#ff4dd2';
 
 const LIGHT_CANCEL: MoveTag[] = ['light', 'heavy', 'launcher', 'down', 'sweep', 'dodge', 'special', 'air'];
 const HEAVY_CANCEL: MoveTag[] = ['launcher', 'down', 'dodge', 'special'];
@@ -437,45 +436,9 @@ add({
 });
 
 // ---------------- Specials ----------------
-add({
-  id: 'jumpshotFinisher', family: 'finisher', name: 'JUMPSHOT FINISHER', tags: ['air', 'down', 'special', 'finisher'],
-  startup: 16, active: 4, recovery: 22, damage: 38, hitstun: 60, kbX: 0, kbY: 2900,
-  hitstop: 9, shake: 22, zoom: 1, poise: 6, hitbox: { x: 40, y: 70, r: 60 }, reach: 48,
-  spike: true, selfVY: -420, cancelInto: ['dodge'], sound: 'finisher', weight: 1, afterimage: true,
-  impactShock: { radius: 340, damage: 22 },
-  trail: { limb: 'footA', color: C_SPECIAL, width: 22 },
-  poses: {
-    antic: { spin: -5.4, laU: 2.9, laL: -0.2, lbU: 0.4, lbL: -1.6, aU: 2.8, aL: 0.3, bU: 2.6, bL: 0.3, lean: -0.1 },
-    strike: { spin: -6.28 + 0.55, laU: 0.6, laL: 0.0, lbU: -0.6, lbL: -1.0, lean: 0.5, aU: -0.8, aL: 0.6, bU: -1.0, bL: 0.6 },
-    follow: { spin: -6.28 + 0.4, laU: 0.7, laL: -0.3, lean: 0.4, aU: -0.5 },
-  },
-});
-add({
-  id: 'flurry', family: 'flurry', name: 'FLURRY', tags: ['special', 'finisher'],
-  startup: 4, active: 28, recovery: 2, damage: 4, hitstun: 30, kbX: 30, kbY: 0,
-  hitstop: 2, shake: 4, zoom: 0.2, poise: 1.5, hitbox: { x: 56, y: 88, r: 46 }, reach: 68,
-  multiHit: { interval: 3, count: 9, then: 'flurryEnd' }, cancelFrom: 99, cancelInto: [],
-  sound: 'punch', weight: 0.4, afterimage: true,
-  trail: { limb: 'handA', color: C_SPECIAL, width: 13 },
-  poses: {
-    antic: { lean: 0.1, aU: 0.8, aL: 2.2, bU: 0.6, bL: 2.3, rootX: -4 },
-    strike: { lean: 0.4, rootX: 12, aU: 1.6, aL: 0.05, bU: 0.6, bL: 2.0, footA: 30 },
-    strikeAlt: { lean: 0.42, rootX: 13, bU: 1.6, bL: 0.05, aU: 0.7, aL: 2.0, footA: 30 },
-    follow: { lean: 0.38, rootX: 11, aU: 1.4, aL: 0.4, footA: 28 },
-  },
-});
-add({
-  id: 'flurryEnd', family: 'flurry', name: 'FLURRY', tags: ['special', 'finisher'],
-  startup: 3, active: 4, recovery: 22, damage: 22, hitstun: 50, kbX: 1150, kbY: -420,
-  hitstop: 9, shake: 18, zoom: 0.8, poise: 5, hitbox: { x: 62, y: 90, r: 52 }, reach: 72,
-  dash: false, cancelInto: ['dodge', 'launcher'], sound: 'heavy', weight: 1, afterimage: true,
-  trail: { limb: 'footA', color: C_SPECIAL, width: 20 },
-  poses: {
-    antic: { lean: -0.2, laU: 0.9, laL: -2.0, spin: -0.3, aU: 2.0 },
-    strike: { plant: 0, lean: -0.5, laU: 1.7, laL: 0.0, lbU: -0.3, aU: -0.8, aL: 1.0, bU: 2.0, spin: 0.15 },
-    follow: { plant: 0.3, lean: -0.4, laU: 1.5, laL: -0.3, aU: -0.6, spin: 0.1 },
-  },
-});
+// Revision pass 8: the old super-meter Jumpshot Finisher and Flurry moves are gone. The Jumpshot
+// finisher lives on as the Fists AIR FINISHER cinematic and the Flurry as the Fists boss-KO flurry
+// (data/cines.ts); their drawings stay in the animation set for those cinematics.
 
 /** Direction indices: 0=E,1=NE,2=N,3=NW,4=W,5=SW,6=S,7=SE (counter-clockwise, screen-up = N). */
 export const DIR_NAMES = ['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'] as const;

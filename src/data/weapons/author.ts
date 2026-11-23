@@ -34,7 +34,49 @@ function spread(total: number, n: number): number[] {
   return out;
 }
 
-export function strikeAnim(id: string, m: MoveDef, d: StrikeDrawings): AnimDef {
+/** Blend two pose specs (missing channels take the other side's value). */
+function mixPose(a: PoseSpec, b: PoseSpec, k: number): PoseSpec {
+  const o: PoseSpec = {};
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof PoseSpec>;
+  for (const ch of keys) { const va = a[ch] ?? b[ch]!, vb = b[ch] ?? a[ch]!; o[ch] = va + (vb - va) * k; }
+  return o;
+}
+/** Push a pose further along the motion that led into it (overshoot / tightened anticipation). */
+function pushPose(from: PoseSpec, to: PoseSpec, k: number): PoseSpec {
+  const o: PoseSpec = { ...to };
+  for (const ch of Object.keys(to) as (keyof PoseSpec)[]) {
+    if (ch === 'rootX' || ch === 'rootY' || ch === 'footA' || ch === 'footB' || ch === 'plant' || ch === 'liftA' || ch === 'liftB') continue;
+    const f = from[ch];
+    if (f === undefined) continue;
+    o[ch] = to[ch]! + (to[ch]! - f) * k;
+  }
+  if (to.stretch !== undefined) o.stretch = 1 + (to.stretch - 1) * 0.8;
+  return o;
+}
+
+/**
+ * Revision pass 8 (A3 audit): every weapon attack gets at least a two-step
+ * anticipation (a settle breakdown into the wind-up, plus a tightened extreme
+ * on longer startups), an overshoot drawing straight after contact (the
+ * follow-through), a smear on the striking limb and generated in-betweens on
+ * heavy / launcher / spike moves. Holds are re-spread so the CONTACT drawing
+ * still starts exactly on the first active frame.
+ */
+function refine(m: MoveDef, d: StrikeDrawings): StrikeDrawings {
+  const base = d.base === 'air' ? AIRP : LOW;
+  const antic = [...d.antic];
+  if (m.startup >= 5 && antic.length < 2) antic.unshift(mixPose(base, antic[0], 0.5));
+  if (m.startup >= 9 && antic.length < 3) antic.push(pushPose(antic[antic.length - 2] ?? base, antic[antic.length - 1], 0.15));
+  const follow = [...d.follow];
+  if (follow.length < 3) follow.unshift(pushPose(antic[antic.length - 1], d.hit2 ?? d.hit, 0.12));
+  const strike = d.strike ?? 'arm';
+  const smear = d.smear ?? (strike === 'leg' ? ['footA'] : strike === 'body' ? ['handA', 'handB'] : ['handA']) as LimbId[];
+  const major = m.tags.includes('heavy') || m.tags.includes('launcher') || !!m.spike;
+  return { ...d, antic, follow, smear, inbetweens: Math.max(d.inbetweens ?? 0, major ? 1 : 0) };
+}
+
+export function strikeAnim(id: string, m: MoveDef, d0: StrikeDrawings): AnimDef {
+  const d = refine(m, d0);
   const drawings: DrawingSpec[] = [];
   const S = m.startup, A = m.active, R = m.recovery;
   const ah = spread(S, d.antic.length);

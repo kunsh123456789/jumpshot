@@ -12,7 +12,7 @@ export const SPECIAL = {
 
   // ---- charge sources ----
   /** Every landed hit, x (1 + combo hits * perComboHit, capped), + bonuses for air hits and multi-enemy hits. */
-  perHit: 0.9,
+  perHit: 0.8,
   perComboHit: 0.04,
   comboCap: 2.2,
   airBonus: 0.5,
