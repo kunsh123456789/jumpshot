@@ -1,8 +1,11 @@
 import '@fontsource/patrick-hand/latin-400.css';
 import '@fontsource/permanent-marker/latin-400.css';
+// Arcade Fighter UI type (pass 8 UI): Russo One display, Oswald labels and body.
+import '@fontsource/russo-one/latin-400.css';
+import '@fontsource/oswald/latin-500.css';
+import '@fontsource/oswald/latin-700.css';
 import { inkFx } from './render/inkFx';
 import { Game } from './game';
-import { initSketchDom } from './ui/sketchDom';
 import { applyPerfClass } from './ui/menus';
 import { layout } from './core/layout';
 import { save } from './core/settings';
@@ -18,7 +21,6 @@ loadSave();
 
 applyPerfClass();
 const canvas = document.getElementById('game') as HTMLCanvasElement;
-initSketchDom();
 const game = new Game(canvas);
 const W = window as unknown as Record<string, unknown>;
 W.__jumpshot = game;

@@ -182,27 +182,6 @@ export function drawWeaponFx(ctx: CanvasRenderingContext2D, w: World, alpha: num
   ctx.restore();
 }
 
-/**
- * Plain heat bar for heat-limited weapons (laser), drawn by both HUDs under the super meter.
- * TODO(ui-pass): placeholder styling.
- */
-export function drawHeatBar(ctx: CanvasRenderingContext2D, w: World, x: number, y: number, width: number, h: number, u: number, ink: string, font: string): void {
-  if (!w.weapon.heat) return;
-  const ws = w.wpn;
-  const over = ws.overheat > 0;
-  ctx.save();
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = ink;
-  ctx.strokeRect(x, y, width, h);
-  ctx.fillStyle = over ? '#e22424' : ws.heat > 0.7 ? '#e8822a' : ink;
-  ctx.fillRect(x + 1, y + 1, Math.max(0, (width - 2) * (over ? ws.overheat / Math.max(1, w.weapon.heat.overheatSec * 60) : ws.heat)), h - 2);
-  ctx.font = `${Math.round(11 * u)}px ${font}`;
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = over ? '#e22424' : ink;
-  ctx.fillText(over ? 'OVERHEAT' : 'heat', x + width + 6 * u, y + h / 2);
-  ctx.restore();
-}
-
 // ------------------------------------------------------------ reference FX (second upload)
 /**
  * Lightning (gif2 158-166): jagged bolts from the top of the page to a victim,

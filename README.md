@@ -89,6 +89,20 @@ These are the **Fists** moves (the default weapon). Other weapons replace the mo
 | **]** | Freeze and step one frame per press |
 | **\** | Resume normal speed |
 
+**Menus (keyboard).** Arrow keys move focus, Enter selects, and Esc goes back or closes. On a slider or select, ←/→ change the value.
+
+**Gamepad** (any standard-mapping controller)
+
+| Button | In play | In menus |
+|---|---|---|
+| **Left stick / d-pad** | Move | Move focus |
+| **X** | Attack toward the stick direction (neutral = forward) | |
+| **Y** | Heavy attack toward the stick | |
+| **A** | Jump (again in the air for a double jump) | Select |
+| **B / LB** | Dodge / parry | Back |
+| **RT / RB** | Special (when READY) | |
+| **Start** | Pause / resume | |
+
 **Dev URL flags**
 - `?wave=N` starts a run at wave N.
 - `?weapon=fists|hook|throw|staff|laser` equips that weapon.
@@ -96,9 +110,20 @@ These are the **Fists** moves (the default weapon). Other weapons replace the mo
 - Look and animation style come from Settings (stored in `localStorage` as `jumpshot.settings.v1`: `look`, `animStyle`, `stepRate`, `pixelRes`).
 - `?manual` drives the loop from `window.__advance(ms)`, for deterministic refresh-rate tests.
 
-## UI redesign (in progress)
+## UI: Arcade Fighter
 
-The current paper UI is being replaced. Four complete directions (Arcade Fighter, Ink & Manga, Minimal Diegetic, Refined Sketchbook) are mocked up over the running game in **`ui-options/index.html`**: open the file in a browser. The problems with the current UI are listed in `UI_AUDIT.md`.
+The interface is a bold arcade-fighter design: navy plates, a cyan / magenta / gold palette, skewed corner-cut panels, Russo One and Oswald type, one SVG icon set and slam-in motion. It was chosen from four directions mocked up over the running game (`ui-options/index.html`). Before and after screenshots at desktop, phone landscape and phone portrait are in `ui-options/current/` and `ui-options/after/`, and `UI_AUDIT.md` lists each problem and its fix.
+
+**HUD layout.** All of it stays out of the bottom-half touch area and respects phone safe areas.
+- **Top left:** HP bar, weapon chip and heat bar.
+- **Top centre:** Special Bar (charging → gold READY → active).
+- **Top right:** score plate, wave and KO count, pause button.
+- **Under HP:** combo count with damage %, the style-rank hex and the AIR FINISHER hint.
+- **Bosses:** a boss bar.
+
+**Drawn on the canvas** (they track the world): damage numbers, the Rhythm beat lane and judgments, and the Special trace and QTE.
+
+**Menus** (title, loadout, settings, pause, results, song picker, calibration) work with touch, mouse, keyboard and gamepad.
 
 ## Weapons
 
@@ -187,14 +212,11 @@ Attacks stay stepped, but each swing now has proper animation in-betweens:
 - Every swing leaves a **smear chain**: the fastest drawing carries the densest hatch, then the contact and follow-through drawings carry thinning trails along the same arc. Fast drawings also get limb-stretch wedges and a thin swoosh line. Spins get spin arcs; dashes get speed bars.
 - The Flurry finisher is back: two coils into nine alternating punches with "hundred fists" ghost arms, then the big finishing blow.
 
-### Paper world and hand-drawn UI (pass 6)
+### Paper world (pass 6)
 
-- The whole screen is a sheet of paper: fiber texture, a soft edge vignette and low-contrast pencil doodles that boil at ~7 fps and stay clear of the fight area. Pages rotate every 3 waves (Blank, Lined notebook, Graph paper, Sketchbook); every 10th wave is Kraft paper.
-- Wave start flips the page, a cleared wave gets a big pen check and "cleared!", and game over crumples the page.
-- The HUD is drawn in pen: a heart and a scribble-filled HP box, hatched super segments, a scoreboard with K.O. tally marks, a pen-circled rank letter, sticky-note combo summaries and handwritten damage numbers.
-- The Rhythm HUD is a pencil tick track with a doodled metronome. Judgments are marker-lettered, each with its own shape (star, circle, dot, cross), so they don't rely on color.
-- The pad is a dashed pencil line with a doodled stick ring and an ink trail. Every menu is a notebook page with wobbly pen borders; loadout cards are sticky notes; results are a stamped report card.
-- Fonts: Patrick Hand and Permanent Marker (SIL OFL, bundled via @fontsource, inlined into the build). Paper sounds: pencil taps, page rustles, a page flip, a pen scratch and a crumple.
+- The fight takes place on a sheet of paper: fiber texture, a soft edge vignette and low-contrast pencil doodles that boil at ~7 fps and stay clear of the fight area. Pages rotate every 3 waves (Blank, Lined notebook, Graph paper, Sketchbook); every 10th wave is Kraft paper.
+- Wave start flips the page, and game over crumples the page.
+- The pass-6 hand-drawn HUD and menus were replaced by the Arcade Fighter UI (see **UI: Arcade Fighter**). Patrick Hand and Permanent Marker are still bundled for the doodles on the paper. Paper sounds (page rustles, page flip, pen scratch, crumple) still play.
 
 In Rhythm Mode, Hand-Drawn steps fall on the musical subdivision nearest the step rate, so drawings change on the grid the hits already land on.
 

@@ -2,12 +2,8 @@ import { MOVE, PAD } from '../data/tuning';
 import { layout } from '../core/layout';
 import { settings } from '../core/settings';
 import { angleDiff, clamp } from '../core/math';
-import { DRAW } from '../render/drawStyle';
-import { penArrow, penCircle, penLine, seedSketch, srand } from '../render/sketch';
+import { getUiScale } from './arcadeHud';
 
-/** Pen colours for the paper pad: movement = pencil, light = ink, heavy = red, others = blue. */
-const PEN_TRAIL = ['#7d7a73', '#1b1a17', '#d42a2a', '#d42a2a', '#2f55c8'];
-const PAPER_INK = '#1b1a17';
 
 export type SwipeKind = 'swipe' | 'tap' | 'promote' | 'jump' | 'hold';
 export interface SwipeEvent {
@@ -95,8 +91,6 @@ export class DrawPad {
   private tBreak = new Uint8Array(TRAIL_CAP);
   private tHead = 0; private tCount = 0;
   private curColor = 0;
-  private edgeGrad: CanvasGradient | null = null;
-  private edgeKey = '';
 
   // feedback fx
   private fxT = new Float64Array(8); private fxX = new Float32Array(8); private fxY = new Float32Array(8);
@@ -405,304 +399,146 @@ export class DrawPad {
   /** Low stance: the finger has slid down from its anchor (and isn't flicking). */
   get crouching(): boolean { return this.pointerId !== -1 && !this.rawSink && this.stickDY > PAD.crouchPx && this.mode !== 'attacking'; }
 
-  // ---------------- Rendering (css px space) ----------------
-  draw(ctx: CanvasRenderingContext2D, now: number, dt: number): void {
-    if (DRAW.ink) { this.drawPaper(ctx, now, dt); return; }
-    const p = layout.pad;
-    this.pulse = Math.max(0, this.pulse - dt * 3.2);
-    ctx.save();
-    // Transparent pad: only a faint gradient + hairline at its top edge.
-    const edge = Math.min(48, p.h * 0.14);
-    const key = p.y + ':' + edge;
-    if (!this.edgeGrad || key !== this.edgeKey) {
-      const g = ctx.createLinearGradient(0, p.y, 0, p.y + edge);
-      g.addColorStop(0, 'rgba(160,220,255,0.09)');
-      g.addColorStop(1, 'rgba(160,220,255,0)');
-      this.edgeGrad = g; this.edgeKey = key;
-    }
-    ctx.globalAlpha = 0.8 + this.pulse * 0.9;
-    ctx.fillStyle = this.edgeGrad;
-    ctx.fillRect(p.x, p.y, p.w, edge);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = `rgba(190,235,255,${0.14 + this.pulse * 0.3})`;
-    ctx.fillRect(p.x, p.y, p.w, 1);
-
-    if (this.labelAlpha > 0.01) {
-      ctx.globalAlpha = Math.min(1, this.labelAlpha) * 0.75;
-      ctx.fillStyle = '#e8f6ff';
-      ctx.font = `800 ${Math.round(Math.max(11, Math.min(15, p.h * 0.04)))}px system-ui, sans-serif`;
-      ctx.textAlign = settings.leftHanded ? 'left' : 'right';
-      ctx.textBaseline = 'top';
-      const lx = settings.leftHanded ? p.x + 14 : p.x + p.w - 14;
-      ctx.fillText('DRAG = MOVE · FLICK = ATTACK · TAP = DODGE', lx, p.y + 8);
-      ctx.globalAlpha = 1;
-    }
-
-    if (this.hint !== -1 || this.demo) this.drawHint(ctx, now);
-    this.drawStick(ctx, dt);
-    this.drawTrail(ctx, now);
-
-    // commit fx
-    for (let i = 0; i < 8; i++) {
-      const age = (now - this.fxT[i]) / 1000;
-      if (age < 0 || age > 0.35 || this.fxT[i] === 0) continue;
-      const k = age / 0.35;
-      const e = 1 - (1 - k) * (1 - k);
-      const col = TRAIL_COLORS[this.fxC[i]];
-      // dark under-stroke keeps feedback readable over bright arenas
-      ctx.globalAlpha = (1 - k) * 0.35;
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.arc(this.fxX[i], this.fxY[i], 10 + e * 46, 0, Math.PI * 2); ctx.stroke();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = (1 - k) * 0.9;
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 3 * (1 - k) + 1;
-      ctx.beginPath(); ctx.arc(this.fxX[i], this.fxY[i], 10 + e * 46, 0, Math.PI * 2); ctx.stroke();
-      if (this.fxDir[i] >= 0) {
-        const a = -this.fxDir[i] * Math.PI / 4;
-        const d = 26 + e * 30;
-        drawArrow(ctx, this.fxX[i] + Math.cos(a) * d, this.fxY[i] + Math.sin(a) * d, a, 22 * (1 - k * 0.5), col);
-      }
-      ctx.globalCompositeOperation = 'source-over';
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-
-  // ------------------------------------------------------------ paper look (revision pass 6)
+  // ---------------- Rendering (css px space): Arcade Fighter feedback (pass 8 UI) ----------------
   /**
-   * The pad stays fully transparent. Feedback is drawn in pen and pencil: the
-   * swipe trail is a jittered ink stroke that scribbles in and fades out in
-   * steps, the floating stick a doodled circle and dot, a committed swipe a
-   * hand-drawn circle and arrow in the pen colour of its kind. On first launch
-   * a dashed pencil line marks the pad's top edge with a "swipe here" arrow.
+   * The pad stays transparent. Feedback uses the Arcade palette with a navy
+   * under-stroke so it reads on the light page: the trail is a neon core
+   * (steel = move, cyan = light, magenta = heavy, gold = launcher, pink = tap)
+   * that thins and fades, the floating stick a steel ring with a white dot, a
+   * committed flick a ring + arrow burst. First launch: a dashed cyan line at
+   * the pad's top edge with a labelled plate.
    */
-  private drawPaper(ctx: CanvasRenderingContext2D, now: number, dt: number): void {
+  draw(ctx: CanvasRenderingContext2D, now: number, dt: number): void {
     const p = layout.pad;
-    const step = Math.floor(now / 1000 * 8);
+    const u = getUiScale();
+    this.pulse = Math.max(0, this.pulse - dt * 3.2);
     ctx.save();
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     if (this.labelAlpha > 0.01) {
       const a = Math.min(1, this.labelAlpha);
-      ctx.globalAlpha = a * 0.8;
-      ctx.strokeStyle = '#7d7a73'; ctx.lineWidth = 1.5;
-      ctx.setLineDash([8, 7]);
-      seedSketch(5);
-      ctx.beginPath(); penLine(ctx, p.x + 10, p.y + 2, p.x + p.w - 10, p.y + 3, 1, 0); ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = PAPER_INK;
-      ctx.font = `${Math.round(Math.max(15, Math.min(20, p.h * 0.05)))}px "Patrick Hand", "Comic Sans MS", cursive`;
-      ctx.textAlign = settings.leftHanded ? 'left' : 'right'; ctx.textBaseline = 'top';
-      const lx = settings.leftHanded ? p.x + 14 : p.x + p.w - 14;
-      const full = 'swipe here! drag = move · flick = attack · tap = dodge';
-      if (ctx.measureText(full).width <= p.w - 28) ctx.fillText(full, lx, p.y + 10);
-      else { // narrow screens: two lines, shrunk to fit
-        const l2 = 'drag = move · flick = attack · tap = dodge';
-        ctx.fillText('swipe here!', lx, p.y + 10);
-        const fs = Math.max(11, Math.floor(15 * Math.min(1, (p.w - 28) / Math.max(1, ctx.measureText(l2).width))));
-        ctx.font = `${fs}px "Patrick Hand", "Comic Sans MS", cursive`;
-        ctx.fillText(l2, lx, p.y + 30);
-      }
-      ctx.strokeStyle = PAPER_INK; ctx.lineWidth = 2;
-      seedSketch(6);
-      ctx.beginPath(); penArrow(ctx, p.x + p.w * 0.5, p.y - 22, p.x + p.w * 0.5, p.y + 22, 9, 1); ctx.stroke();
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = 'rgba(46,230,255,0.8)'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]);
+      ctx.beginPath(); ctx.moveTo(p.x + 8, p.y + 1); ctx.lineTo(p.x + p.w - 8, p.y + 1); ctx.stroke(); ctx.setLineDash([]);
+      const txt = 'TOUCH AREA · DRAG = MOVE · FLICK = ATTACK · SLOW DRAG ↑ = JUMP · HOLD = SPECIAL';
+      let fs = Math.round(13 * u);
+      ctx.font = `700 ${fs}px "Oswald", sans-serif`;
+      const maxW = p.w - 40;
+      if (ctx.measureText(txt).width > maxW) { fs = Math.max(9, Math.floor(fs * maxW / ctx.measureText(txt).width)); ctx.font = `700 ${fs}px "Oswald", sans-serif`; }
+      const tw = ctx.measureText(txt).width + fs * 1.6;
+      const lx = p.x + p.w / 2, ly = p.y + 16 * u;
+      ctx.save(); ctx.translate(lx, ly); ctx.transform(1, 0, -0.25, 1, 0, 0);
+      ctx.fillStyle = 'rgba(11,16,38,0.86)'; ctx.fillRect(-tw / 2, -fs * 0.85, tw, fs * 1.7); ctx.restore();
+      ctx.fillStyle = '#2ee6ff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(txt, lx, ly + 0.5);
       ctx.globalAlpha = 1;
     }
-    if (this.hint !== -1 || this.demo) this.drawPaperHint(ctx, now);
-    // floating stick: doodled ring + dot (pencil)
+    if (this.hint !== -1 || this.demo) this.drawHint(ctx, now, u);
+    // floating stick
     const touching = this.pointerId !== -1;
     this.stickAlpha += ((touching ? 1 : 0) - this.stickAlpha) * Math.min(1, dt * (touching ? 14 : 6));
-    if (this.stickAlpha > 0.05) {
-      ctx.globalAlpha = 0.55 * this.stickAlpha;
-      ctx.strokeStyle = '#7d7a73'; ctx.lineWidth = 1.5;
-      seedSketch(7 + (step % 3));
-      ctx.beginPath(); penCircle(ctx, this.anchorX, this.anchorY, MOVE.maxRadius, MOVE.maxRadius, 1.5); ctx.stroke();
+    if (this.stickAlpha > 0.03) {
+      const a = this.stickAlpha;
+      ctx.globalAlpha = 0.5 * a;
+      ctx.strokeStyle = '#0b1026'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(this.anchorX, this.anchorY, MOVE.maxRadius, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#8d99b8'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(this.anchorX, this.anchorY, MOVE.maxRadius, 0, Math.PI * 2); ctx.stroke();
       if (touching) {
-        ctx.fillStyle = PAPER_INK; ctx.globalAlpha = 0.75 * this.stickAlpha;
-        ctx.beginPath(); ctx.arc(this.lastX, this.lastY, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 0.9 * a;
+        ctx.fillStyle = '#fff'; ctx.strokeStyle = '#0b1026'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(this.lastX, this.lastY, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       }
       ctx.globalAlpha = 1;
     }
-    // swipe trail: ink stroke, fading in steps (4 levels), slightly jittered
+    // trail: navy under-stroke + neon core, thinning with age
     if (this.tCount >= 2) {
       const fade = PAD.trailFadeMs;
       const start = (this.tHead - this.tCount + TRAIL_CAP) % TRAIL_CAP;
-      seedSketch(step * 13 + 1);
-      for (let lvl = 3; lvl >= 0; lvl--) {
-        let prev = start, open = false;
-        ctx.beginPath();
+      for (let pass = 0; pass < 2; pass++) {
+        let prev = start;
         for (let n = 1; n < this.tCount; n++) {
           const i = (start + n) % TRAIL_CAP;
-          if (this.tBreak[prev]) { prev = i; open = false; continue; }
+          if (this.tBreak[prev]) { prev = i; continue; }
           const age = now - this.tt[i];
-          const l = age > fade || age < -50 ? -1 : 3 - Math.min(3, Math.floor((age / fade) * 4));
-          if (l !== lvl) { prev = i; open = false; continue; }
-          const c = this.tc[i];
-          ctx.strokeStyle = PEN_TRAIL[c] ?? PAPER_INK;
-          if (!open) { ctx.moveTo(this.tx[prev] + (srand() - 0.5) * 2, this.ty[prev] + (srand() - 0.5) * 2); open = true; }
-          ctx.lineTo(this.tx[i] + (srand() - 0.5) * 2.4, this.ty[i] + (srand() - 0.5) * 2.4);
+          if (age > fade || age < -50) { prev = i; continue; }
+          const k = 1 - clamp(age / fade, 0, 1);
+          const strong = this.tc[i] !== 0 ? 1 : 0.5;
+          ctx.globalAlpha = k * strong;
+          ctx.strokeStyle = pass === 0 ? '#0b1026' : ARC_TRAIL[this.tc[i]];
+          ctx.lineWidth = pass === 0 ? 4 + 9 * k : 2 + 5 * k;
+          ctx.beginPath(); ctx.moveTo(this.tx[prev], this.ty[prev]); ctx.lineTo(this.tx[i], this.ty[i]); ctx.stroke();
           prev = i;
         }
-        ctx.globalAlpha = [0.25, 0.45, 0.7, 0.95][lvl];
-        ctx.lineWidth = [1.5, 2.2, 3, 3.6][lvl];
-        ctx.stroke();
       }
       ctx.globalAlpha = 1;
     }
-    // committed swipe: hand-drawn circle + arrow, stepped growth
+    // committed swipe: ring + arrow burst
     for (let i = 0; i < 8; i++) {
       const age = (now - this.fxT[i]) / 1000;
-      if (age < 0 || age > 0.35 || this.fxT[i] === 0) continue;
-      const k = Math.floor((age / 0.35) * 4) / 4;
-      const col = PEN_TRAIL[this.fxC[i]] ?? PAPER_INK;
-      ctx.strokeStyle = col; ctx.lineWidth = 2.5 - k * 1.5;
-      ctx.globalAlpha = 1 - k * 0.8;
-      seedSketch(i * 31 + 3);
-      ctx.beginPath(); penCircle(ctx, this.fxX[i], this.fxY[i], 12 + k * 40, 12 + k * 40, 1.6);
+      if (age < 0 || age > 0.32 || this.fxT[i] === 0) continue;
+      const k = age / 0.32, e = 1 - (1 - k) * (1 - k);
+      const col = ARC_TRAIL[this.fxC[i]];
+      const r = 12 + e * 42;
+      ctx.globalAlpha = 1 - k;
+      ctx.strokeStyle = '#0b1026'; ctx.lineWidth = 7 * (1 - k) + 2;
+      ctx.beginPath(); ctx.arc(this.fxX[i], this.fxY[i], r, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = col; ctx.lineWidth = 3.5 * (1 - k) + 1;
+      ctx.beginPath(); ctx.arc(this.fxX[i], this.fxY[i], r, 0, Math.PI * 2); ctx.stroke();
       if (this.fxDir[i] >= 0) {
-        const a = -this.fxDir[i] * Math.PI / 4, d0 = 20 + k * 22, d1 = d0 + 30;
-        penArrow(ctx, this.fxX[i] + Math.cos(a) * d0, this.fxY[i] + Math.sin(a) * d0, this.fxX[i] + Math.cos(a) * d1, this.fxY[i] + Math.sin(a) * d1, 10, 1);
+        const a = -this.fxDir[i] * Math.PI / 4, d = 28 + e * 28;
+        drawArrow(ctx, this.fxX[i] + Math.cos(a) * d, this.fxY[i] + Math.sin(a) * d, a, 24 * (1 - k * 0.4), col);
       }
-      ctx.stroke();
     }
     ctx.globalAlpha = 1;
     ctx.restore();
   }
 
-  private drawPaperHint(ctx: CanvasRenderingContext2D, now: number): void {
-    const p = layout.pad;
-    const cx = p.x + p.w / 2, cy = p.y + p.h * 0.45;
-    let dir = this.hint;
-    if (this.demo) dir = [0, 2, 4, 6][Math.floor(now / 1400) % 4];
-    const t = (now / 1000) % 1.4;
-    const st = Math.floor(t * 8) / 8;
-    ctx.strokeStyle = '#d42a2a'; ctx.fillStyle = '#d42a2a'; ctx.lineWidth = 3;
-    seedSketch(Math.floor(now / 140) % 3 + 40);
-    ctx.beginPath();
-    if (dir === -2) { penCircle(ctx, cx, cy, 14 + (st % 0.7) * 60, 14 + (st % 0.7) * 60, 2); }
-    else if (dir === -3) { const off = Math.sin(st * 4.5) * MOVE.maxRadius * 0.9; penCircle(ctx, cx, cy, MOVE.maxRadius, MOVE.maxRadius, 2); ctx.moveTo(cx + off + 9, cy); ctx.arc(cx + off, cy, 9, 0, Math.PI * 2); }
-    else if (dir >= 0) {
-      const a = -dir * Math.PI / 4, len = Math.min(p.w, p.h) * 0.3, e = Math.min(1, st / 0.35);
-      const x0 = cx - Math.cos(a) * len * 0.5, y0 = cy - Math.sin(a) * len * 0.5;
-      penArrow(ctx, x0, y0, x0 + Math.cos(a) * len * e, y0 + Math.sin(a) * len * e, 16, 2);
-    }
-    ctx.stroke();
-    if (this.hintLabel) {
-      ctx.fillStyle = PAPER_INK;
-      ctx.font = `${Math.round(Math.max(16, Math.min(22, p.h * 0.055)))}px "Patrick Hand", "Comic Sans MS", cursive`;
-      ctx.textAlign = 'center';
-      ctx.fillText(this.hintLabel, cx, p.y + p.h - Math.max(18, p.h * 0.1));
-    }
-  }
-
-  /** Faint floating-stick indicator: dim ring at the anchor, dot at the finger. */
-  private drawStick(ctx: CanvasRenderingContext2D, dt: number): void {
-    const touching = this.pointerId !== -1;
-    this.stickAlpha += ((touching ? 1 : 0) - this.stickAlpha) * Math.min(1, dt * (touching ? 14 : 6));
-    if (this.stickAlpha < 0.02) return;
-    const a = this.stickAlpha;
-    const ax = this.anchorX, ay = this.anchorY;
-    ctx.globalAlpha = 0.16 * a;
-    ctx.strokeStyle = '#cfefff';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(ax, ay, MOVE.maxRadius, 0, Math.PI * 2); ctx.stroke();
-    ctx.globalAlpha = 0.28 * a;
-    ctx.beginPath(); ctx.arc(ax, ay, MOVE.deadZone + 4, 0, Math.PI * 2); ctx.stroke();
-    if (touching) {
-      const fx = this.lastX, fy = this.lastY;
-      ctx.globalAlpha = (0.12 + 0.3 * Math.abs(this.moveX)) * a;
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(fx, fy); ctx.stroke();
-      ctx.globalAlpha = 0.45 * a;
-      ctx.fillStyle = '#e8f8ff';
-      ctx.beginPath(); ctx.arc(fx, fy, 6, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  private drawTrail(ctx: CanvasRenderingContext2D, now: number): void {
-    if (this.tCount < 2) return;
-    const fade = PAD.trailFadeMs;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    const start = (this.tHead - this.tCount + TRAIL_CAP) % TRAIL_CAP;
-    for (let pass = 0; pass < 3; pass++) {
-      ctx.globalCompositeOperation = pass === 0 ? 'source-over' : 'lighter';
-      let prev = start;
-      for (let n = 1; n < this.tCount; n++) {
-        const i = (start + n) % TRAIL_CAP;
-        if (this.tBreak[prev]) { prev = i; continue; }
-        const age = now - this.tt[i];
-        if (age > fade || age < -50) { prev = i; continue; }
-        const k = 1 - clamp(age / fade, 0, 1);
-        const kk = k * k;
-        // movement strokes (white) stay faint; attack strokes glow
-        const strong = this.tc[i] !== 0 ? 1 : 0.35;
-        if (pass === 0) { ctx.strokeStyle = '#000'; ctx.globalAlpha = kk * 0.25 * strong; ctx.lineWidth = 6 + 12 * k; }
-        else { ctx.strokeStyle = TRAIL_COLORS[this.tc[i]]; ctx.globalAlpha = (pass === 1 ? kk * 0.25 : kk * 0.95) * strong; ctx.lineWidth = pass === 1 ? 4 + 18 * k : 2 + 5 * k; }
-        ctx.beginPath();
-        ctx.moveTo(this.tx[prev], this.ty[prev]);
-        ctx.lineTo(this.tx[i], this.ty[i]);
-        ctx.stroke();
-        prev = i;
-      }
-    }
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
-  }
-
-  private drawHint(ctx: CanvasRenderingContext2D, now: number): void {
+  /** Tutorial / title demo gesture: a glowing cyan arrow (or tap ring, or drag dot) with a label plate. */
+  private drawHint(ctx: CanvasRenderingContext2D, now: number, u: number): void {
     const p = layout.pad;
     const cx = p.x + p.w / 2, cy = p.y + p.h * 0.45;
     const t = (now / 1000) % 1.4;
     let dir = this.hint;
     if (this.demo) dir = [0, 2, 4, 6][Math.floor(now / 1400) % 4];
     ctx.save();
+    ctx.shadowColor = '#2ee6ff';
     if (dir === -2) {
       const k = (t % 0.7) / 0.7;
-      ctx.globalAlpha = 1 - k;
-      ctx.strokeStyle = '#ff9ff0';
-      ctx.lineWidth = 4;
+      ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ff8ad8'; ctx.lineWidth = 4; ctx.shadowBlur = 10;
       ctx.beginPath(); ctx.arc(cx, cy, 14 + k * 50, 0, Math.PI * 2); ctx.stroke();
-      ctx.globalAlpha = 0.9;
-      ctx.fillStyle = '#ff9ff0';
+      ctx.globalAlpha = 0.95; ctx.fillStyle = '#ff2e88';
       ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI * 2); ctx.fill();
     } else if (dir === -3) {
-      // slow drag demo: a dot gliding left and right around an anchor ring
       const off = Math.sin((now / 1000) * 1.6) * MOVE.maxRadius * 0.9;
-      ctx.globalAlpha = 0.35; ctx.strokeStyle = '#cfefff'; ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.6; ctx.strokeStyle = '#8d99b8'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(cx, cy, MOVE.maxRadius, 0, Math.PI * 2); ctx.stroke();
-      ctx.globalAlpha = 0.9; ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(cx + off, cy, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#0b1026'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(cx + off, cy, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     } else if (dir >= 0) {
       const a = -dir * Math.PI / 4;
       const len = Math.min(p.w, p.h) * 0.3;
-      const k = Math.min(1, t / 0.35);
-      const e = 1 - Math.pow(1 - k, 3);
+      const k = Math.min(1, t / 0.35), e = 1 - Math.pow(1 - k, 3);
       const x0 = cx - Math.cos(a) * len * 0.5, y0 = cy - Math.sin(a) * len * 0.5;
       const x1 = x0 + Math.cos(a) * len * e, y1 = y0 + Math.sin(a) * len * e;
       const fadeOut = 1 - Math.max(0, t - 0.6) / 0.8;
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 0.35 * fadeOut;
-      ctx.strokeStyle = '#ffe96a';
-      ctx.lineCap = 'round';
-      ctx.lineWidth = 22;
+      ctx.globalAlpha = fadeOut;
+      ctx.strokeStyle = '#0b1026'; ctx.lineWidth = 14;
       ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
-      ctx.globalAlpha = 0.95 * fadeOut;
-      ctx.lineWidth = 6;
+      ctx.shadowBlur = 12; ctx.strokeStyle = '#2ee6ff'; ctx.lineWidth = 7;
       ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
-      drawArrow(ctx, x1, y1, a, 26, '#ffe96a');
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(x1, y1, 10, 0, Math.PI * 2); ctx.fill();
+      drawArrow(ctx, x1, y1, a, 28, '#2ee6ff');
     }
+    ctx.shadowBlur = 0;
     if (this.hintLabel) {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.globalAlpha = 0.9;
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `800 ${Math.round(Math.max(13, Math.min(20, p.h * 0.05)))}px system-ui, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText(this.hintLabel, cx, p.y + p.h - Math.max(18, p.h * 0.1));
+      ctx.globalAlpha = 1;
+      const fs = Math.round(16 * u);
+      ctx.font = `italic ${fs}px "Russo One", sans-serif`;
+      const tw = ctx.measureText(this.hintLabel).width + fs * 1.6;
+      const ly = p.y + p.h - Math.max(22, p.h * 0.12);
+      ctx.save(); ctx.translate(cx, ly); ctx.transform(1, 0, -0.25, 1, 0, 0);
+      ctx.fillStyle = 'rgba(11,16,38,0.86)'; ctx.fillRect(-tw / 2, -fs * 0.85, tw, fs * 1.7); ctx.restore();
+      ctx.fillStyle = '#ffd23f'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(this.hintLabel, cx, ly + 1);
     }
     ctx.restore();
   }
@@ -723,6 +559,7 @@ function drawArrow(ctx: CanvasRenderingContext2D, x: number, y: number, a: numbe
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(a);
+  ctx.strokeStyle = '#0b1026'; ctx.lineWidth = 3; ctx.lineJoin = 'round';
   ctx.fillStyle = col;
   ctx.beginPath();
   ctx.moveTo(size * 0.6, 0);
@@ -730,6 +567,10 @@ function drawArrow(ctx: CanvasRenderingContext2D, x: number, y: number, a: numbe
   ctx.lineTo(-size * 0.15, 0);
   ctx.lineTo(-size * 0.4, size * 0.45);
   ctx.closePath();
+  ctx.stroke();
   ctx.fill();
   ctx.restore();
 }
+
+/** Trail / flash colors by stroke kind: move, light, heavy, launcher, tap. */
+const ARC_TRAIL = ['#e9eef8', '#2ee6ff', '#ff2e88', '#ffd23f', '#ff8ad8'];

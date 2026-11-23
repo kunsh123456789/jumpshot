@@ -340,9 +340,11 @@ class Audio {
     this.tone(t, 'sine', n * 2, n * 2, 0.3, 0.1);
   }
 
-  ui(kind: 'click' | 'select' | 'wave' | 'clear' | 'gameover'): void {
+  ui(kind: 'click' | 'select' | 'wave' | 'clear' | 'gameover' | 'move'): void {
     if (!this.ok('ui' + kind, 0.03)) return;
     const t = this.ctx!.currentTime;
+    // Arcade UI focus tick (keyboard / gamepad navigation): a short bright blip.
+    if (kind === 'move') { this.tone(t, 'square', 1320, 1500, 0.035, 0.05); return; }
     switch (kind) {
       case 'click': this.paper('tap'); break;
       case 'select': this.tone(t, 'triangle', 660, 1320, 0.16, 0.18); this.tone(t + 0.08, 'sine', 1320, 1760, 0.2, 0.12); break;

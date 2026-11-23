@@ -354,7 +354,7 @@ It never touches the simulation (Classic fingerprint identical). It defaults on 
 
 **Balance.** The bot played 6 waves with each of the five scripted weapons, firing Specials whenever READY (random-quality results). Every run cleared with no errors and no near-deaths, at 7-13 Specials per 6 waves, roughly 1-2 per wave. Per-hit charge dropped from 0.9 to 0.8 after a first measurement read 0.7-2.7 per wave. Bosses take at most 22% of their HP from one cinematic (×0.6 damage); elites take ×0.75.
 
-## Revision pass 8, Part C: UI directions (awaiting a choice)
+## Revision pass 8, Part C: UI directions (Arcade Fighter chosen)
 
 **Mockups over the real game.** `ui-options/tools/capture.cjs` drives the current build with Playwright (manual frame stepping, so the stills are deterministic) and saves clean frames: no HUD, pad, menus or Special overlay. It also saves the current UI for the audit, plus the hero's and enemies' screen positions (`shots/meta.js`) so the diegetic option can place its ring on the hero. Each direction is a self-contained HTML mockup (`ui-options/mockups/optionN-*.html`) laid over those frames. All four share one data file (`mockups/data.js`) holding the same real information, so they compare like for like. `tools/render.cjs` exports every screen at desktop (1280×720) and phone landscape (844×390), and the PNGs are quantized to 256 colors so the gallery stays light (about 6 MB for 60 images).
 
@@ -365,3 +365,35 @@ It never touches the simulation (Classic fingerprint identical). It defaults on 
 **Keeping the pad clear.** Every option keeps the bottom half free of UI. The Arcade option moves its Special Bar from the genre's usual bottom position to the top centre. The Minimal option draws its ring around the hero, which is inside the touch area visually but never takes touches.
 
 **Implementation plan once a direction is chosen.** Menus and screen text go in a DOM/CSS overlay (crisp, accessible, easy to style, keyboard and gamepad focus). In-world pops, damage numbers and the Special trace stay on the canvas. Both read one set of design tokens. The game is not changed until the choice is made.
+
+## Revision pass 8: Arcade Fighter UI (implementation)
+
+**Architecture: DOM for screens, canvas for the world.** Menus, the HUD (HP, Special Bar, combo/rank, score/wave, boss bar, heat, combo card, pop-up banners), the tutorial, banners and results are DOM elements in `#ui`, styled by one stylesheet (`src/ui/style.css`). Anything tied to world positions or drawn in sync with the sim stays on the canvas: damage numbers and world texts (`render/effects.ts`), the Special trace and QTE (`ui/specialInput.ts`), the rhythm beat lane and judgments (`rhythm/hud.ts`) and pad feedback (`ui/pad.ts`). Both sides use the same palette and the same `--u` scale. DOM text is crisp at any DPR, accessible, and gets focus states and CSS animation for free. The canvas parts need per-frame positions that the DOM would only lag behind.
+
+**The HUD is built once and patched.** `ArcadeHud` creates its elements once. Each frame `set(key, value, apply)` writes to the DOM only when a value's string form changes, so a quiet frame touches no DOM. Score counts up toward the real value. The HP lag bar eases down after a hit. `.hud.spmode` hides the combo, combo card and pop-ups during the Special intro and input, so the overlay has the screen to itself, which matters most in portrait.
+
+**Tokens.** All tokens live on `:root`:
+- **Colors:** navy #0b1026 (plates), steel, cyan #2ee6ff (info / focus), magenta #ff2e88 (action / Special charge), gold #ffd23f (READY, selection, best), red (danger).
+- **Type:** a type scale `--fs-xs … --fs-xxl`.
+- **Spacing:** steps `--s1 … --s6`.
+- **Shape:** a −14° skew, corner-cut clip paths, glow shadows.
+- **Easing:** curves for slam and pop.
+
+`--u` is set from JS (`applyUiScale`: clamp(min(w/1280, h/720), 0.6, 1.2)), so canvas code can read the same number (`getUiScale()`). Touch targets have pixel minimums on top of `--u`, so a small phone never shrinks a button below 36-42 px. The page shell is always dark (the artifact's tokens are pinned to navy in both color schemes), and the paper world inside the canvas is unchanged.
+
+**Fonts.** Russo One (display, italic via skew) and Oswald 500/700 (body, labels) are bundled from @fontsource (OFL). Patrick Hand and Permanent Marker stay only for the hand-drawn doodles painted on the paper backdrop, which is world art, not UI.
+
+**Icons.** `src/ui/icons.ts` holds single-path inline SVGs drawn on a 24-unit grid with `currentColor`, so icons follow button states. They replace every emoji, which rendered differently per platform.
+
+**Motion.** A short set of named keyframes (slamIn, bannerIn, popIn, comboPop, rankSlam, readyPulse, flame, march) is used everywhere instead of one-off transitions. `prefers-reduced-motion` reduces them to an instant final state, and the in-game Reduce Flashes setting (`body.calm`) plays looping pulses once and holds them. `body.perf` (Mobile performance) drops glows and backdrop blur.
+
+**Keyboard and gamepad navigation (`src/ui/nav.ts`).**
+- **Keyboard:** one capture-phase listener works whenever a menu layer is open. Arrows / d-pad move focus spatially (nearest element in that direction), Enter / A activates, Esc / B triggers the layer's `data-back` button, and ←/→ adjust sliders and selects on settings rows. Focus is shown with a `.focus` class, so mouse users never see a stray ring. A soft UI tick plays on each focus move. On the title, Space still starts through the pad as before.
+- **Gamepad in play (standard mapping, polled each frame):** the left stick / d-pad moves, X attacks toward the stick direction (Y for heavy), A jumps, B or LB dodges, RT or RB is Special (hold), and Start pauses. Pad inputs go through the same `pad.inject` path as touch, so the sim and its fingerprint do not change.
+
+**What was removed.**
+The pass-6 paper HUD (`render/hud.ts`, `render/paperHud.ts`), the sketch-border DOM utility (`ui/sketchDom.ts`), and the paper/neon branches of the pad renderer and world texts.
+
+**The swap strip** sits at 51% of the height, under the WAVE CLEAR banner and its reward line. Earlier positions covered the banner text.
+
+**The single-file artifact** is the Vite build inlined into one HTML file: the CSS (fonts as data URIs) plus the module script. It needs an explicit `<meta charset="utf-8">`, or the arrows and dots in labels turn into mojibake.

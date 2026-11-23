@@ -42,7 +42,7 @@ export function placeFighter(f: Fighter, def: AnimDef, t: number, x: number, y: 
 
 /**
  * Loadout preview: loops a weapon's moves on a dummy in a small canvas.
- * // TODO(ui-pass): framing, background and captions are placeholders.
+ * Framed by the Arcade loadout detail panel (.lo-detail in style.css).
  */
 export class MovePreview {
   private hero = new Fighter('player', null);

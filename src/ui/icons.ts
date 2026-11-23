@@ -1,0 +1,47 @@
+/**
+ * The Arcade UI icon set (revision pass 8 UI): 24x24 line icons drawn with one
+ * stroke style (round caps, 2.4 px at 24 px). Weapons, UI actions, rhythm sources.
+ */
+export const ICON: Record<string, string> = {
+  fists: 'M6 10V7a2 2 0 0 1 4 0v3M10 9V6a2 2 0 0 1 4 0v3M14 9V7a2 2 0 0 1 4 0v6a6 6 0 0 1-6 6H10a4 4 0 0 1-4-4v-5a2 2 0 0 1 4 0',
+  hook: 'M12 3v10a4 4 0 1 1-4-4M12 3l3 3',
+  throw: 'M5 12a7 7 0 1 0 14 0M8 8l4-4 4 4M12 4v9',
+  staff: 'M4 20L20 4M7 20l-3-3M20 7l-3-3',
+  laser: 'M3 10h11v4H3zM14 11h3M17 9l4 3-4 3M5 14v4',
+  whip: 'M4 20c4-4 2-10 8-12s8 2 8 2',
+  hammer: 'M10 4h8v6h-8zM14 10v10',
+  daggers: 'M6 3l3 9-3 3-3-3zM18 3l3 9-3 3-3-3zM6 15v5M18 15v5',
+  shield: 'M12 3l7 3v6c0 5-3 8-7 9-4-1-7-4-7-9V6z',
+  brush: 'M14 4l6 6-8 8-4-4zM8 14l-4 6 6-4',
+  yoyo: 'M12 3v7M12 14a4 4 0 1 0 0 .01',
+  bubble: 'M8 14a4 4 0 1 0 0 .01M16 8a3 3 0 1 0 0 .01M17 17a2 2 0 1 0 0 .01',
+  rocket: 'M12 3c3 3 4 7 4 11h-8c0-4 1-8 4-11zM9 18l-2 3M15 18l2 3M12 18v3',
+  ice: 'M12 2v20M5 6l14 12M19 6L5 18',
+  planes: 'M3 12l18-8-6 16-3-7z',
+  thunder: 'M13 2L5 14h6l-1 8 8-12h-6z',
+  scythe: 'M5 21L16 6M16 6c-3-3-9-3-12 1 4-1 8 0 12 3',
+  raygun: 'M3 9h10l3 3-3 3H3zM16 12h5M7 15v4M19 9l2-2M19 15l2 2',
+  pause: 'M8 5v14M16 5v14',
+  gear: 'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2',
+  heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+  bolt: 'M13 2L5 14h6l-1 8 8-12h-6z',
+  star: 'M12 3l2.6 5.6 6 .7-4.5 4 1.3 6-5.4-3-5.4 3 1.3-6-4.5-4 6-.7z',
+  music: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zM20 16a3 3 0 1 1-3-3 3 3 0 0 1 3 3z',
+  drum: 'M4 9c0-2 3.6-3 8-3s8 1 8 3-3.6 3-8 3-8-1-8-3zM4 9v7c0 2 3.6 3 8 3s8-1 8-3V9M8 4l3 5M16 4l-3 5',
+  mic: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM6 11a6 6 0 0 0 12 0M12 17v4M9 21h6',
+  file: 'M6 3h8l4 4v14H6zM14 3v4h4M10 17v-5l5-1v5M10 17a1.5 1.5 0 1 1-1.5-1.5M15 16a1.5 1.5 0 1 1-1.5-1.5',
+  volcano: 'M3 20l6-9h6l6 9zM10 11l1-4M14 11l-1-4M12 7V3',
+  check: 'M4 12l5 5L20 6',
+  close: 'M6 6l12 12M18 6L6 18',
+  back: 'M15 5l-7 7 7 7',
+  play: 'M7 4l13 8-13 8z',
+  retry: 'M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5',
+  home: 'M3 11l9-8 9 8M5 10v10h14V10',
+  nuke: 'M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0M12 10L8 3a9 9 0 0 1 8 0zM10.3 13L4 17a9 9 0 0 0 4 6.5zM13.7 13l6.3 4a9 9 0 0 1-4 6.5z',
+  lock: 'M6 11h12v10H6zM8 11V8a4 4 0 0 1 8 0v3',
+  phone: 'M8 2h8a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM11 18h2',
+  target: 'M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0-16 0M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0M12 2v4M12 18v4M2 12h4M18 12h4',
+};
+export function icon(id: string, cls = ''): string {
+  return `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON[id] ?? ICON.star}"/></svg>`;
+}

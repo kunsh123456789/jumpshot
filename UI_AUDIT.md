@@ -28,6 +28,31 @@ Captured with `ui-options/tools/capture.cjs` at desktop (1280×720) and phone la
 - Cover the HUD (health, combo, style rank, Special Bar states, weapon indicator, heat bar, wave and score, Groove, Rhythm beat elements, judgments, damage numbers), the Special overlay (trace path, QTE prompts, tier words), title, loadout, calibration, tutorial prompts, pause, settings and results.
 - Give every button default, hover, pressed and disabled states, and give the Special Bar charging, READY and active states.
 
+### After: the Arcade Fighter UI (chosen direction)
+
+The screenshots are in `ui-options/after/<screen>-<device>.png`: title, settings, loadout, gameplay, special-trace, special-qte, pause, results, boss, rhythm, song-picker, calibration, tutorial and breather. Each comes in three sizes: `desktop` (1280×720), `phoneL` (844×390) and `phoneP` (390×844). There is no phone-landscape breather shot. Compare them with `ui-options/current/`.
+
+| # | Problem | Fix |
+|---|---|---|
+| 1 | No HUD hierarchy | **HP bar top left:** a thick yellow fill, a delayed red "lag" bar that shows chip damage, and a pulsing low-HP state. **Weapon:** a magenta portrait icon, with chips under the bar showing `P1 hp/max` and the weapon name. **Heat:** a slim bar under that, shown only for weapons that use it. Every size comes from one `--u` scale (0.6–1.2 by viewport), so a phone's HP bar is about 15 px tall, not 6 |
+| 2 | READY reads as a footnote | **Special Bar:** a segmented bar at top centre. **Charging:** a magenta fill. **READY:** gold with a pulsing glow, the segments march and the label reads `SPECIAL READY · HOLD`. **Active:** a cyan flash. Each state change runs a slam animation |
+| 3 | Combo, rank and damage are loose | **Combo block:** one left-aligned block with a big italic hit count (it turns hot at 30+), `HITS`, `DAMAGE %` and an `↓ AIR FINISHER!` chip when one is possible. **Style rank:** a hex badge (D→SSS, each with its own color) with a progress bar under it. The badge slams in when the rank changes. When a combo ends, a summary card (hits, damage, max rank, style bonus) slides in |
+| 4 | Low-contrast score and wave | A navy corner-cut plate at the top right: the score counts up in large white italics, with cyan `WAVE n · KO n` under it |
+| 5 | Rhythm HUD looks like another game | **Rhythm HUD:** it now uses the same tokens. The beat lane is a navy capsule with a cyan lane, magenta beat diamonds and a white "now" diamond. **Judgments** use shapes as well as color (★ PERFECT, ◆ GREAT, ● GOOD, ✕ OFF). There is a BPM plate, and Groove shows as `×N` with a meter that fills toward the next tier |
+| 6 | The Special overlay has no framing | **Intro and frame:** a navy dim with rotating speed lines, and a banner with the weapon's Special name (for example MEGA JUMPSHOT). **Trace:** a glowing dotted cyan tube that fills magenta, with direction chevrons, a start orb, a gold fuse ring counting the seconds, and a keys plate. **QTE:** prompts are magenta hexes inside a shrinking ring that turns gold in the Perfect window, with progress pips. **Result:** the tier comes up as a full banner. The combo, card and pop-ups hide while it runs (`.hud.spmode`) |
+| 7 | Title is scattered | One centred column: the logo, a two-way mode switch (RHYTHM / CLASSIC), a big FIGHT button, then WEAPON and SETTINGS. The best score sits on a plate at the top right. Buttons have pixel minimums (42 px, 36 px for small ones, 40 px for icon buttons and settings rows), so the `--u` scale never shrinks them below a comfortable touch size |
+| 8 | Loadout is a list dump | **Detail panel (left):** a live preview, the name and description, and the move cheat sheet. **Weapon grid (right):** tiles with an icon and number key. The selected tile is a gold corner-cut tile with a glow,. On portrait phones it stacks into one column |
+| 9 | Settings is one long page | Grouped, labelled sections: Performance, Controls, Special, Sound, Feel, Look & Animation, Rhythm Mode, Cheats, Other. Sliders show their value and a colored fill, and toggles and selects share one style. Arrow keys / d-pad move between rows and ←/→ change the value |
+| 10 | Pause has no identity | A PAUSED banner, a column of RESUME / SETTINGS / RESTART / QUIT buttons, and a panel showing the touch, keyboard and gamepad controls. On portrait phones it stacks |
+| 11 | Results are cramped | A GAME OVER band, a large score, a rank hex, stat rows (one bold value per row), the Rhythm breakdown as rows, and RETRY / TITLE buttons |
+| 12 | No design system | **One CSS file** (`src/ui/style.css`) with tokens for color, type scale, spacing, the −14° skew, corner cuts, glows and easing. **Two bundled fonts:** Russo One for display, Oswald for body. **One icon set:** inline SVG paths in `src/ui/icons.ts`, replacing every emoji. **One motion language:** slamIn, bannerIn, popIn, comboPop, rankSlam, readyPulse. Inline styles are gone except for a few layout offsets |
+| 13 | Low contrast | Text always sits on navy plates or a dark scrim with white, gold or cyan type. The paper page behind the fight is unchanged, but no text is drawn straight onto it |
+| 14 | Swap strip pops in mid-screen | **Swap strip:** it slides in under the WAVE CLEAR banner (below the reward line) with numbered tiles, and the current weapon is highlighted in gold. **First-time weapon tooltip:** now a styled plate |
+
+**States.** Every button has default, hover, `.focus` (keyboard or gamepad: a cyan outline with a glow), pressed (it shrinks slightly and darkens) and disabled. Range sliders, toggles and segmented switches have the same set.
+
+**Keeping the pad clear.** No DOM element takes pointer events in the bottom-half touch area during play. The HUD layer is `pointer-events: none` except for the pause button and the tutorial's SKIP button, which are both in the top half. Safe-area insets are respected through `env(safe-area-inset-*)`, and the rhythm HUD reads the canvas layout's safe area.
+
 ---
 
 ## Revision pass 6

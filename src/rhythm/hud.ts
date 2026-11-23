@@ -1,13 +1,10 @@
 import { layout } from '../core/layout';
 import { settings } from '../core/settings';
-import { GOOD, GRADE_COLOR, GRADE_NAME, MISS, RHYTHM, type Grade } from '../data/rhythm';
+import { GOOD, MISS, RHYTHM, type Grade } from '../data/rhythm';
 import type { World } from '../sim/world';
 import type { RhythmDirector } from './director';
 import type { Judgement } from './judge';
-import { DRAW } from '../render/drawStyle';
-import { HAND, MARKER } from '../render/paper';
-import { penCircle, penLine, seedSketch } from '../render/sketch';
-import { PAPER } from '../data/paper';
+import { getUiScale } from '../ui/arcadeHud';
 
 /**
  * Beat track under the score: markers slide in from both sides and meet the
@@ -67,15 +64,13 @@ export class RhythmHud {
   }
 
   draw(ctx: CanvasRenderingContext2D, r: RhythmDirector, w: World, now: number): void {
-    if (DRAW.ink) { this.drawPaper(ctx, r, w, now); return; }
-    const u = layout.ui;
     const R = layout.world;
     const c = r.clock;
     // Pad edge pulse (the touch area breathes with the groove).
     if (r.live && this.pulse > 0.02) {
       const P = layout.pad;
       const I = c.section(now).intensity;
-      ctx.fillStyle = `rgba(190,235,255,${(0.25 + 0.35 * I) * this.pulse})`;
+      ctx.fillStyle = `rgba(46,230,255,${(0.3 + 0.4 * I) * this.pulse})`;
       ctx.fillRect(P.x, P.y - 1, P.w, 2 + (this.downbeat ? 1 : 0));
     }
     // Groove flash over the arena on beats (stronger on downbeats and in loud sections).
@@ -85,108 +80,93 @@ export class RhythmHud {
       ctx.fillRect(R.x, R.y, R.w, layout.pad.y - R.y);
     }
     if (!settings.beatHud) return;
-    const narrow = R.w < 640;
-    const cx = R.x + R.w / 2;
-    const top = layout.portrait ? 8 : R.y + 12 * u;
+    this.drawArcade(ctx, r, w, now);
+  }
+
+  /**
+   * Arcade Fighter beat lane (pass 8 UI), under the Special Bar: a navy capsule, a cyan lane,
+   * magenta beat diamonds sliding in from both sides onto a white diamond marker, the judgment
+   * in italic display lettering (with a shape, so it reads without color), timing ticks,
+   * BPM on the left and the streak + GROOVE meter (progress to the next streak bonus) on the right.
+   */
+  private drawArcade(ctx: CanvasRenderingContext2D, r: RhythmDirector, w: World, now: number): void {
+    const u = getUiScale();
+    const c = r.clock;
+    const W = innerWidth;
+    const portrait = innerHeight > innerWidth * 1.25;
+    const top = Math.max(12 * u, safeTop());
     let boss = false;
     for (const e of w.enemies) if (e.def?.hpBar && e.alive) { boss = true; break; }
-    const cy = top + (boss ? 92 : 64) * u;
-    const halfW = narrow ? R.w * 0.34 : Math.min(230 * u, R.w * 0.36);
+    const cy = top + (portrait ? 158 : 84) * u + (boss ? 50 * u : 0);
+    const cx = W / 2;
+    const halfW = Math.min(180 * u, W * 0.3);
     const look = RHYTHM.hudLookaheadMs / 1000;
+    const cyan = '#2ee6ff', magenta = '#ff2e88', gold = '#ffd23f';
     ctx.save();
-    ctx.textBaseline = 'middle';
-    ctx.globalAlpha = 0.55;
-    ctx.fillStyle = 'rgba(8,10,20,0.55)';
-    rr(ctx, cx - halfW - 10 * u, cy - 13 * u, halfW * 2 + 20 * u, 26 * u, 13 * u);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
+    // capsule
+    ctx.fillStyle = 'rgba(11,16,38,0.78)';
+    rr(ctx, cx - halfW - 12 * u, cy - 11 * u, halfW * 2 + 24 * u, 22 * u, 11 * u); ctx.fill();
+    const lg = ctx.createLinearGradient(cx - halfW, 0, cx + halfW, 0);
+    lg.addColorStop(0, 'rgba(46,230,255,0)'); lg.addColorStop(0.3, 'rgba(46,230,255,0.55)'); lg.addColorStop(0.7, 'rgba(46,230,255,0.55)'); lg.addColorStop(1, 'rgba(46,230,255,0)');
+    ctx.fillStyle = lg; ctx.fillRect(cx - halfW, cy - 1.5 * u, halfW * 2, 3 * u);
+    const dia = (x: number, y: number, s: number) => { ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s, y); ctx.closePath(); };
     if (r.live) {
-      // Beats from just behind "now" to the lookahead (tempo changes are respected: positions use real times).
       const b0 = Math.floor(c.beatAt(now - 0.12)) + 1;
+      ctx.fillStyle = magenta; ctx.shadowColor = magenta; ctx.shadowBlur = 6 * u;
       for (let b = b0, i = 0; i < 16; b++, i++) {
-        const tb = c.timeOfBeat(b);
-        const dtB = tb - now;
+        const tb = c.timeOfBeat(b), dtB = tb - now;
         if (dtB > look) break;
+        if (dtB < -0.12) continue;
         const k = Math.max(0, dtB / look);
         const accent = c.barInfo(tb + 1e-4).beatInBar === 0;
-        const a = dtB < 0 ? Math.max(0, 1 + dtB / 0.12) : Math.min(1, (1 - k) * 2.2);
-        const h = (accent ? 20 : 14) * u, bw = (accent ? 5 : 4) * u;
-        ctx.globalAlpha = a;
-        ctx.fillStyle = accent ? '#ffffff' : '#9fe8ff';
-        for (const sgn of [-1, 1]) { rr(ctx, cx + sgn * k * halfW - bw / 2, cy - h / 2, bw, h, bw / 2); ctx.fill(); }
-        const th = c.timeOfBeat(b - 0.5) - now;
-        if (th > 0 && th < look) {
-          ctx.globalAlpha = a * 0.45;
-          for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.arc(cx + sgn * (th / look) * halfW, cy, 2 * u, 0, Math.PI * 2); ctx.fill(); }
-        }
+        for (const sg of [-1, 1]) { dia(cx + sg * k * halfW, cy, (accent ? 7 : 5) * u); ctx.fill(); }
       }
-      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
     }
-    // Ring.
-    const rad = (11 + this.ring * 5) * u;
-    ctx.lineWidth = 3 * u;
-    ctx.strokeStyle = r.live ? `rgba(255,255,255,${0.6 + this.ring * 0.4})` : 'rgba(255,255,255,0.3)';
-    ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.stroke();
-    if (this.ring > 0 && r.live) { ctx.fillStyle = `rgba(255,255,255,${this.ring * 0.35})`; ctx.beginPath(); ctx.arc(cx, cy, rad - 2 * u, 0, Math.PI * 2); ctx.fill(); }
-
-    // Timing ticks.
+    // marker
+    const ring = this.ring;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3 * u; ctx.shadowColor = cyan; ctx.shadowBlur = (8 + ring * 14) * u;
+    dia(cx, cy, (10 + ring * 4) * u); ctx.stroke(); ctx.shadowBlur = 0;
+    // timing ticks (early left | late right)
     for (const t of this.ticks) {
       const age = (now - t.t) / 2.5;
       if (age > 1 || age < 0) continue;
-      ctx.globalAlpha = (1 - age) * 0.9;
-      ctx.fillStyle = GRADE_COLOR[t.g];
-      ctx.fillRect(cx + Math.max(-1.6, Math.min(1.6, t.d / RHYTHM.goodMs)) * 40 * u - u, cy + 15 * u, 2 * u, 7 * u);
+      ctx.fillStyle = t.g === 3 ? cyan : t.g === 2 ? gold : t.g === 1 ? '#e9eef8' : '#ff3b3b';
+      ctx.fillRect(cx + Math.max(-1.6, Math.min(1.6, t.d / RHYTHM.goodMs)) * 34 * u - 1, cy + 13 * u, 2.5 * u, 6 * u);
     }
-    ctx.globalAlpha = 0.4; ctx.fillStyle = '#fff'; ctx.fillRect(cx - 40 * u, cy + 18 * u, 80 * u, 1); ctx.globalAlpha = 1;
-
-    // Judgement pop.
+    // judgment
     const ja = (now - this.jT) / 0.52;
     if (this.jT > 0 && ja >= 0 && ja < 1) {
-      const s = 1 + (1 - Math.min(1, ja * 4)) * 0.35;
-      ctx.globalAlpha = 1 - ja * ja;
-      ctx.font = `900 italic ${Math.round(17 * u * s)}px system-ui, sans-serif`;
-      ctx.textAlign = 'center';
-      outline(ctx, GRADE_NAME[this.jGrade], cx, cy + 38 * u + ja * 8 * u, GRADE_COLOR[this.jGrade], 4 * u);
+      const g = this.jGrade;
+      const pop = ja < 0.12 ? 1.3 - ja * 2.5 : 1;
+      const col = g === 3 ? cyan : g === 2 ? gold : g === 1 ? '#e9eef8' : '#ff3b3b';
+      const label = (g === 3 ? '★ PERFECT' : g === 2 ? '◆ GREAT' : g === 1 ? '● GOOD' : '✕ OFF');
+      const y = cy + 34 * u;
+      ctx.globalAlpha = ja > 0.8 ? (1 - ja) * 5 : 1;
+      italic(ctx, label, cx, y, 22 * u * pop, col, g === 3);
+      ctx.globalAlpha = 1;
     }
     const la = (now - this.lostT) / 1.1;
-    if (this.lostT > 0 && la >= 0 && la < 1) {
-      ctx.globalAlpha = 1 - la;
-      ctx.font = `900 italic ${Math.round(12 * u)}px system-ui, sans-serif`;
-      ctx.textAlign = 'center';
-      outline(ctx, `STREAK LOST · ${this.lostN}`, cx, cy + 60 * u, '#ff6060', 3 * u);
-    }
-    // Section banner (fades in on change).
+    if (this.lostT > 0 && la >= 0 && la < 1) plateText(ctx, `STREAK LOST · ${this.lostN}`, cx, cy + 58 * u, 12 * u, '#ff3b3b');
     const sa = now - this.sectionT;
-    if (r.live && sa >= 0 && sa < 2.2 && this.sectionName) {
-      ctx.globalAlpha = Math.min(1, sa * 6) * Math.min(1, (2.2 - sa) * 2);
-      ctx.font = `900 italic ${Math.round(14 * u)}px system-ui, sans-serif`;
-      ctx.textAlign = 'center';
-      outline(ctx, '♪ ' + this.sectionName, cx, cy - 24 * u, '#ff9af0', 3 * u);
-    }
-    ctx.globalAlpha = 1;
-
-    // Tempo (left) and streak (right).
-    const lx = narrow ? cx - halfW + 34 * u : cx - halfW - 18 * u;
-    const ly = narrow ? cy + 26 * u : cy;
-    ctx.textAlign = 'right';
-    ctx.font = `900 italic ${Math.round(11 * u)}px system-ui, sans-serif`;
-    if (r.live) {
-      outline(ctx, `${Math.round(c.bpm(now))} BPM`, lx, ly - 5 * u, 'rgba(255,255,255,0.85)', 3 * u);
-      const bi = c.barInfo(now);
-      ctx.font = `800 ${Math.round(8 * u)}px system-ui, sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.fillText(`${bi.bpb}/4 · ${c.section(now).name}`, lx, ly + 8 * u);
-    } else outline(ctx, r.statusText(), lx, ly, '#ffe14a', 3 * u);
+    if (r.live && sa >= 0 && sa < 2.2 && this.sectionName) plateText(ctx, '♪ ' + this.sectionName.toUpperCase(), cx, cy - 24 * u, 12 * u, gold);
+    // BPM (left) and streak + GROOVE (right)
+    const lx = cx - halfW - 22 * u, rx = cx + halfW + 22 * u;
+    if (r.live) plateText(ctx, `${Math.round(c.bpm(now))} BPM`, lx - 34 * u, cy, 12 * u, cyan);
+    else plateText(ctx, r.statusText().toUpperCase(), lx - 50 * u, cy, 12 * u, '#ff3b3b');
     const tier = r.streakTier();
-    const sx = narrow ? cx + halfW - 44 * u : cx + halfW + 18 * u;
-    const sy = narrow ? cy + 30 * u : cy;
-    ctx.textAlign = 'left';
-    ctx.font = `900 italic ${Math.round((16 + this.streakPop * 4) * u)}px system-ui, sans-serif`;
-    outline(ctx, `×${r.stats.streak}`, sx, sy - 3 * u, ['#ffffff', '#6fe3ff', '#7dff8a', '#ffe14a'][tier], 3 * u);
-    ctx.font = `800 ${Math.round(8 * u)}px system-ui, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.fillText(tier > 0 ? `STREAK · BONUS ×${RHYTHM.streakMult[tier]}` : 'STREAK', sx, sy + 11 * u);
+    const tiers = RHYTHM.streakTiers;
+    const nextT = tiers[Math.min(tiers.length - 1, tier + 1)], curT = tiers[tier];
+    const gf = tier >= tiers.length - 1 ? 1 : Math.max(0, Math.min(1, (r.stats.streak - curT) / Math.max(1, nextT - curT)));
+    italic(ctx, `×${r.stats.streak}`, rx + 22 * u, cy - 6 * u, (18 + this.streakPop * 6) * u, tier >= 2 ? magenta : '#fff', false);
+    const gw = 64 * u;
+    ctx.save(); ctx.translate(rx - 10 * u, cy + 10 * u); ctx.transform(1, 0, -0.25, 1, 0, 0);
+    ctx.fillStyle = '#20263f'; ctx.fillRect(0, 0, gw, 6 * u);
+    const gg = ctx.createLinearGradient(0, 0, gw, 0); gg.addColorStop(0, cyan); gg.addColorStop(1, magenta);
+    ctx.fillStyle = gg; ctx.fillRect(0, 0, gw * gf, 6 * u);
+    ctx.restore();
+    ctx.font = `700 ${Math.round(9 * u)}px "Oswald", sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = cyan; ctx.fillText(tier > 0 ? `GROOVE ×${RHYTHM.streakMult[tier]}` : 'GROOVE', rx - 10 * u, cy + 18 * u);
     ctx.restore();
   }
 }
@@ -211,135 +191,13 @@ export function drawRhythmWorld(ctx: CanvasRenderingContext2D, r: RhythmDirector
       const px = x + (i - (n - 1) / 2) * 16;
       const rad = (last ? 6 : 4.5) * (1 + pulse * 0.35);
       ctx.globalAlpha = 0.9;
-      ctx.fillStyle = last ? '#ff4040' : '#ffd0d0';
+      ctx.fillStyle = last ? '#ff2e88' : '#2ee6ff';
       ctx.beginPath(); ctx.arc(px, y, rad, 0, Math.PI * 2); ctx.fill();
-      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.stroke();
+      ctx.lineWidth = 2; ctx.strokeStyle = '#0b1026'; ctx.stroke();
     }
     ctx.restore();
   }
 }
-
-// ------------------------------------------------------------ paper look
-const SHAPE = ['cross', 'dot', 'circle', 'star'] as const;
-export interface RhythmHud { drawPaper(ctx: CanvasRenderingContext2D, r: RhythmDirector, w: World, now: number): void }
-RhythmHud.prototype.drawPaper = function (this: RhythmHud & Record<string, unknown>, ctx: CanvasRenderingContext2D, r: RhythmDirector, w: World, now: number): void {
-  const self = this as unknown as { ticks: { d: number; g: Grade; t: number }[]; jT: number; jGrade: Grade; lostT: number; lostN: number; ring: number; sectionName: string; sectionT: number; streakPop: number; pulse: number };
-  const u = Math.max(0.8, layout.ui);
-  const R = layout.world;
-  const c = r.clock;
-  const ink = PAPER.ink, pencil = PAPER.pencil;
-  if (!settings.beatHud) return;
-  const narrow = R.w < 640;
-  const cx = R.x + R.w / 2;
-  const top = layout.portrait ? 8 : R.y + 10 * u;
-  let boss = false;
-  for (const e of w.enemies) if (e.def?.hpBar && e.alive) { boss = true; break; }
-  const cy = top + (boss ? 104 : 84) * u;
-  const halfW = narrow ? R.w * 0.3 : Math.min(200 * u, R.w * 0.3);
-  const look = RHYTHM.hudLookaheadMs / 1000;
-  ctx.save();
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  // pencil track
-  seedSketch(5);
-  ctx.strokeStyle = pencil; ctx.lineWidth = 1.5;
-  ctx.beginPath(); penLine(ctx, cx - halfW, cy, cx + halfW, cy, 0.8, 0); ctx.stroke();
-  if (r.live) {
-    const b0 = Math.floor(c.beatAt(now - 0.12)) + 1;
-    ctx.beginPath();
-    for (let b = b0, i = 0; i < 16; b++, i++) {
-      const tb = c.timeOfBeat(b), dtB = tb - now;
-      if (dtB > look) break;
-      if (dtB < -0.12) continue;
-      const k = Math.max(0, dtB / look);
-      const accent = c.barInfo(tb + 1e-4).beatInBar === 0;
-      const h = (accent ? 9 : 6) * u;
-      for (const sg of [-1, 1]) { const x = cx + sg * k * halfW; ctx.moveTo(x, cy - h); ctx.lineTo(x + 1, cy + h); }
-    }
-    ctx.strokeStyle = ink; ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-  // ring
-  seedSketch(9 + Math.floor(now * 7) % 3);
-  ctx.strokeStyle = r.live ? ink : pencil; ctx.lineWidth = 2 + self.ring * 1.5;
-  const rad = (10 + Math.round(self.ring * 2) * 2) * u;
-  ctx.beginPath(); penCircle(ctx, cx, cy, rad, rad, 1.2); ctx.stroke();
-  // timing ticks (early left | late right)
-  for (const t of self.ticks) {
-    const age = (now - t.t) / 2.5;
-    if (age > 1 || age < 0) continue;
-    ctx.fillStyle = t.g >= 2 ? PAPER.blue : t.g === 0 ? pencil : ink;
-    ctx.fillRect(cx + Math.max(-1.6, Math.min(1.6, t.d / RHYTHM.goodMs)) * 34 * u - 1, cy + 14 * u, 2, 6 * u);
-  }
-  // judgement: marker lettering + scribbled underline + shape icon (colour-blind safe)
-  const ja = (now - self.jT) / 0.52;
-  if (self.jT > 0 && ja >= 0 && ja < 1 && !(ja > 0.8 && Math.floor(now * 20) % 2)) {
-    const pop = ja < 0.12 ? 1.25 : 1;
-    const g = self.jGrade;
-    const col = g === 3 ? PAPER.red : g === 2 ? PAPER.blue : g === 1 ? ink : pencil;
-    const y = cy + 36 * u;
-    ctx.font = `${Math.round(19 * u * pop)}px ${MARKER}`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = col;
-    const label = g === 3 ? 'PERFECT!' : g === 2 ? 'GREAT' : g === 1 ? 'GOOD' : 'OFF';
-    ctx.fillText(label, cx, y);
-    const tw = ctx.measureText(label).width;
-    seedSketch(13);
-    ctx.strokeStyle = col; ctx.lineWidth = 2;
-    ctx.beginPath(); penLine(ctx, cx - tw / 2, y + 12 * u, cx + tw / 2, y + 11 * u, 1, 1);
-    // shape icon to the left
-    const ix = cx - tw / 2 - 14 * u, iy = y;
-    const shape = SHAPE[g];
-    if (shape === 'star') { for (let k = 0; k < 5; k++) { const a1 = -Math.PI / 2 + (k * 4 * Math.PI) / 5, a2 = -Math.PI / 2 + ((k + 1) * 4 * Math.PI) / 5; ctx.moveTo(ix + Math.cos(a1) * 7 * u, iy + Math.sin(a1) * 7 * u); ctx.lineTo(ix + Math.cos(a2) * 7 * u, iy + Math.sin(a2) * 7 * u); } }
-    else if (shape === 'circle') penCircle(ctx, ix, iy, 6 * u, 6 * u, 0.6);
-    else if (shape === 'cross') { ctx.moveTo(ix - 5 * u, iy - 5 * u); ctx.lineTo(ix + 5 * u, iy + 5 * u); ctx.moveTo(ix + 5 * u, iy - 5 * u); ctx.lineTo(ix - 5 * u, iy + 5 * u); }
-    ctx.stroke();
-    if (shape === 'dot') { ctx.beginPath(); ctx.arc(ix, iy, 3.5 * u, 0, Math.PI * 2); ctx.fill(); }
-    if (g === 3) { // doodle stars for PERFECT
-      ctx.beginPath();
-      for (const [dx, dy] of [[tw / 2 + 10, -10], [tw / 2 + 18, 6]]) { const x = cx + dx * u, yy = y + dy * u; ctx.moveTo(x - 4, yy); ctx.lineTo(x + 4, yy); ctx.moveTo(x, yy - 4); ctx.lineTo(x, yy + 4); }
-      ctx.stroke();
-    }
-  }
-  const la = (now - self.lostT) / 1.1;
-  if (self.lostT > 0 && la >= 0 && la < 1) {
-    ctx.font = `${Math.round(15 * u)}px ${HAND}`; ctx.fillStyle = PAPER.red; ctx.textAlign = 'center';
-    ctx.fillText(`streak lost · ${self.lostN}`, cx, cy + 58 * u);
-  }
-  const sa = now - self.sectionT;
-  if (r.live && sa >= 0 && sa < 2.2 && self.sectionName) {
-    ctx.font = `${Math.round(16 * u)}px ${MARKER}`; ctx.fillStyle = PAPER.red; ctx.textAlign = 'center';
-    ctx.fillText('♪ ' + self.sectionName.toLowerCase(), cx, cy - 20 * u);
-  }
-  // tempo + a doodled metronome pendulum (left), streak (right)
-  const lx = narrow ? cx - halfW + 10 * u : cx - halfW - 30 * u;
-  const ly = narrow ? cy + 22 * u : cy;
-  ctx.textBaseline = 'middle';
-  if (r.live) {
-    const ph = c.phase(now), swing = (Math.floor(c.beat(now)) % 2 ? 1 : -1) * (1 - 2 * ph);
-    const ang = Math.round(swing * 3) / 3 * 0.45;
-    seedSketch(17);
-    ctx.strokeStyle = ink; ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    const mx = lx + 2 * u, my = ly + 9 * u;
-    penLine(ctx, mx - 9 * u, my, mx + 9 * u, my, 0.4, 0); penLine(ctx, mx - 9 * u, my, mx - 4 * u, my - 22 * u, 0.4, 0); penLine(ctx, mx + 9 * u, my, mx + 4 * u, my - 22 * u, 0.4, 0);
-    ctx.moveTo(mx, my - 2 * u); ctx.lineTo(mx + Math.sin(ang) * 20 * u, my - 2 * u - Math.cos(ang) * 20 * u);
-    ctx.stroke();
-    ctx.font = `${Math.round(14 * u)}px ${HAND}`; ctx.fillStyle = ink; ctx.textAlign = narrow ? 'left' : 'right';
-    ctx.fillText(`${Math.round(c.bpm(now))} bpm`, narrow ? mx + 14 * u : mx - 14 * u, my - 8 * u);
-  } else {
-    ctx.font = `${Math.round(14 * u)}px ${HAND}`; ctx.fillStyle = PAPER.red; ctx.textAlign = 'right';
-    ctx.fillText(r.statusText().toLowerCase(), lx, ly);
-  }
-  const tier = r.streakTier();
-  const sx = narrow ? cx + halfW - 40 * u : cx + halfW + 16 * u, sy = narrow ? cy + 24 * u : cy;
-  ctx.textAlign = 'left';
-  ctx.font = `${Math.round((17 + self.streakPop * 4) * u)}px ${MARKER}`;
-  ctx.fillStyle = tier >= 2 ? PAPER.red : ink;
-  ctx.fillText(`×${r.stats.streak}`, sx, sy - 2 * u);
-  ctx.font = `${Math.round(12 * u)}px ${HAND}`; ctx.fillStyle = pencil;
-  ctx.fillText(tier > 0 ? `streak · bonus ×${RHYTHM.streakMult[tier]}` : 'streak', sx, sy + 13 * u);
-  ctx.restore();
-};
 
 function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   ctx.beginPath();
@@ -351,11 +209,22 @@ function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
   ctx.closePath();
 }
 
-function outline(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, fill: string, lw: number): void {
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = lw;
-  ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+function safeTop(): number { return layout.safe.top; }
+/** Italic display lettering with a navy outline (Arcade judgments, streak). */
+function italic(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, size: number, col: string, glow: boolean): void {
+  ctx.font = `italic ${Math.round(size)}px "Russo One", sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, size * 0.2); ctx.strokeStyle = '#0b1026';
   ctx.strokeText(s, x, y);
-  ctx.fillStyle = fill;
-  ctx.fillText(s, x, y);
+  if (glow) { ctx.shadowColor = col; ctx.shadowBlur = size * 0.6; }
+  ctx.fillStyle = col; ctx.fillText(s, x, y);
+  ctx.shadowBlur = 0;
+}
+/** Small caps label on a skewed navy plate. */
+function plateText(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, size: number, col: string): void {
+  ctx.font = `700 ${Math.round(size)}px "Oswald", sans-serif`;
+  const tw = ctx.measureText(s).width + size * 1.2;
+  ctx.save(); ctx.translate(x, y); ctx.transform(1, 0, -0.25, 1, 0, 0);
+  ctx.fillStyle = 'rgba(11,16,38,0.85)'; ctx.fillRect(-tw / 2, -size * 0.8, tw, size * 1.6); ctx.restore();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = col; ctx.fillText(s, x, y + 0.5);
 }

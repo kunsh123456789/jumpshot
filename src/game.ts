@@ -7,7 +7,6 @@ import { World } from './sim/world';
 import { Renderer } from './render/renderer';
 import { effects } from './render/effects';
 import { FxDirector } from './render/fx';
-import { Hud } from './render/hud';
 import { drawEntities } from './render/entityDraw';
 import { ARENA_ORDER } from './render/background';
 import { DrawPad, type SwipeEvent } from './ui/pad';
@@ -26,7 +25,7 @@ import { DRAW, syncDrawStyle } from './render/drawStyle';
 import { INKLOOK } from './data/inkLook';
 import { inkFx, drawEntitiesInk } from './render/inkFx';
 import { paper } from './render/paper';
-import { PaperHud } from './render/paperHud';
+import { ArcadeHud } from './ui/arcadeHud';
 import { PAGE_ORDER, type PageId } from './data/paper';
 import { RHYTHM } from './data/rhythm';
 import { SONGS } from './data/songs';
@@ -35,6 +34,7 @@ import { WEAPON_T } from './data/weapons/tuning';
 import { updateRefFx } from './render/weaponFx';
 import { CodeListener, enforceLocks } from './ui/cheats';
 import { SpecialInput } from './ui/specialInput';
+import { UiNav } from './ui/nav';
 import type { Family } from './data/cines';
 
 type GState = 'title' | 'tutorial' | 'countdown' | 'playing' | 'breather' | 'gameover';
@@ -48,7 +48,8 @@ export class Game {
   readonly keyboard: Keyboard;
   readonly renderer: Renderer;
   readonly menus = new Menus();
-  readonly hud = new Hud();
+  /** The Arcade Fighter HUD (DOM, pass 8 UI). */
+  readonly hud: ArcadeHud;
   readonly world = new World();
   readonly fx: FxDirector;
   readonly tutorial: Tutorial;
@@ -57,10 +58,11 @@ export class Game {
   // ---- Rhythm Mode (src/rhythm). Inert in Classic Mode: world.rhythm stays null. ----
   readonly rhythm = new RhythmDirector();
   readonly rhud = new RhythmHud();
-  readonly phud = new PaperHud();
   readonly rui = new RhythmUI();
   /** Special trace + QTE input phases (pass 8). */
   readonly specialInput: SpecialInput;
+  /** Keyboard / gamepad menu navigation and gamepad gameplay (pass 8 UI). */
+  readonly nav: UiNav;
   /** performance.now()-domain time the current sim step advances to (set by the main loop). */
   simNow = 0;
   state: GState = 'title';
@@ -83,6 +85,7 @@ export class Game {
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas);
+    this.hud = new ArcadeHud(document.getElementById('ui')!);
     this.renderer.drawExtras = (ctx, alpha, time) => {
       if (DRAW.ink) drawEntitiesInk(ctx, this.world, alpha, time, 1 / ((settings.look === 'pixel' ? settings.pixelRes : INKLOOK.refRes) * this.cam.effectiveZoom()));
       else drawEntities(ctx, this.world, alpha, time);
@@ -91,6 +94,8 @@ export class Game {
     this.pad.attach(canvas);
     this.keyboard = new Keyboard(this.pad);
     this.specialInput = new SpecialInput(this.pad, this.keyboard, this.cam, this.rhythm);
+    this.nav = new UiNav(this.pad, () => !this.paused && (this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'breather'));
+    this.nav.onPause = () => { if (this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'breather') this.togglePause(); };
     this.keyboard.onToggleDebug = () => { this.debug.visible = !this.debug.visible; settings.debug = this.debug.visible; };
     this.keyboard.onPause = () => this.togglePause();
     // Easter-egg cheat codes typed anywhere.
@@ -162,7 +167,7 @@ export class Game {
     this.hud.visible = false;
     this.menus.showTitle(save.highScore, () => this.openSettings(true),
       { rhythm: settings.rhythmMode, onToggle: (r) => { settings.rhythmMode = r; saveSettings(); } },
-      { name: weaponById(save.weapon).name, open: () => this.openLoadout() });
+      { name: weaponById(save.weapon).name, open: () => this.openLoadout() }, () => this.startFromTitle());
     this.cam.targetX = this.world.player.x;
     this.cam.snap();
     audio.stopMusic();
@@ -534,7 +539,7 @@ export class Game {
     }
     this.world.camLeft = this.cam.viewLeft();
     this.world.camRight = this.cam.viewRight();
-    const axis = acceptInput ? clamp(this.pad.moveX + this.keyboard.moveAxis, -1, 1) : 0;
+    const axis = acceptInput ? clamp(this.pad.moveX + this.keyboard.moveAxis + this.nav.moveX, -1, 1) : 0;
     this.world.jumpCharge = acceptInput ? Math.max(this.pad.jumpCharge, this.keyboard.jumpCharge(nowMs)) : 0;
     this.world.crouch = acceptInput && (this.pad.crouching || this.keyboard.crouching);
     this.world.step(this.inputs, axis);
@@ -571,11 +576,9 @@ export class Game {
     this.renderer.render(this.world, this.cam, alpha, this.renderTime, dt);
     const ctx = this.renderer.ctx;
     this.renderer.cssTransform();
-    if (DRAW.ink) {
-      // Paper-drawn HUD (ink looks); the previous HUD stays for the Smooth look.
-      this.phud.visible = this.hud.visible; this.phud.waveLabel = this.hud.waveLabel;
-      this.phud.draw(ctx, this.world, this.fx, realDt, this.renderTime);
-    } else this.hud.draw(ctx, this.world, this.fx, realDt, this.renderTime);
+    this.hud.update(this.world, this.fx, realDt);
+    this.nav.facing = this.world.player.facing;
+    this.nav.update(realDt);
     if (this.world.rhythm && this.hud.visible && this.state !== 'gameover') {
       const now = this.rhythm.heardAt(performance.now());
       // On each heard beat: a soft count tick while any enemy is winding up.

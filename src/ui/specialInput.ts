@@ -12,7 +12,8 @@ import type { DrawPad } from './pad';
 import type { Keyboard } from '../core/keyboard';
 import type { RhythmDirector } from '../rhythm/director';
 import { classifyDir } from './pad';
-import { penArrow, penCircle, penLine, seedSketch } from '../render/sketch';
+import { getUiScale } from './arcadeHud';
+import { specialScript } from '../data/cines';
 
 /**
  * The Special's input phases (revision pass 8, B3), run in REAL time on the UI
@@ -31,7 +32,7 @@ import { penArrow, penCircle, penLine, seedSketch } from '../render/sketch';
  *
  * Neither phase can fail outright: the result only picks the tier. Assist
  * (Settings) widens the band and lengthens the timers; Skip QTE counts as Clean.
- * UI: functional placeholder (TODO(ui-pass)).
+ * UI: drawn on the canvas in the Arcade style (draw()), sized by the shared --u scale.
  */
 type Phase = 'off' | 'trace' | 'qte' | 'result';
 interface Prompt { kind: 'swipe' | 'tap' | 'mash'; dir: number; due: number; start: number; done: boolean; ok: boolean; judge: string; taps: number }
@@ -374,96 +375,143 @@ export class SpecialInput {
 
   debugLines(): string[] { return this.debug.length ? ['SPECIAL ' + this.debug.join(' | ')] : []; }
 
-  // ------------------------------------------------------------------ drawing (CSS px). TODO(ui-pass): placeholder look.
+  // ------------------------------------------------------------------ drawing (CSS px): the Arcade Fighter overlay
+  /**
+   * Special mode look: the screen dims to navy with radial speed lines; the guide path is a
+   * glowing cyan tube with chevrons, the traced part fills magenta, the fuse is a gold timer
+   * ring under the Special's name banner; QTE prompts are a magenta hex button inside a
+   * shrinking cyan ring; tier words slam in as a banner.
+   */
   draw(ctx: CanvasRenderingContext2D, now: number): void {
     if (this.phase === 'off') return;
     const W = innerWidth, H = innerHeight;
-    // special-mode look: the page stays, a dark vignette closes in
-    const g = ctx.createRadialGradient(W / 2, H * 0.55, Math.min(W, H) * 0.25, W / 2, H * 0.55, Math.max(W, H) * 0.75);
-    g.addColorStop(0, 'rgba(20,16,30,0)'); g.addColorStop(1, 'rgba(20,16,30,0.62)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    const ink = '#1b1a17', red = '#d42a2a', blue = '#2f55c8';
+    const u = getUiScale();
+    const cyan = '#2ee6ff', magenta = '#ff2e88', gold = '#ffd23f';
     ctx.save();
+    // dim + speed lines
+    const g = ctx.createRadialGradient(W / 2, H * 0.58, Math.min(W, H) * 0.12, W / 2, H * 0.58, Math.max(W, H) * 0.8);
+    g.addColorStop(0, 'rgba(11,16,38,0.42)'); g.addColorStop(1, 'rgba(11,16,38,0.86)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(46,230,255,0.10)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    const rot = (now / 1000) * 0.15, R = Math.hypot(W, H);
+    for (let i = 0; i < 48; i++) { const a = rot + (i / 48) * Math.PI * 2; ctx.moveTo(W / 2 + Math.cos(a) * R * 0.18, H * 0.58 + Math.sin(a) * R * 0.18); ctx.lineTo(W / 2 + Math.cos(a) * R, H * 0.58 + Math.sin(a) * R); }
+    ctx.stroke();
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    const u = Math.max(0.8, Math.min(1.4, Math.min(W, H) / 520));
+    const name = this.w ? specialScript(this.w.weapon.id).name : 'SPECIAL';
+    this.banner(ctx, name, W / 2, Math.max(54 * u, H * 0.14), 30 * u, magenta);
     if (this.phase === 'trace') {
       const P = this.path, n = P.length / 2;
-      // guide: bold dotted line
-      ctx.setLineDash([1, 15 * u]); ctx.lineWidth = 8 * u; ctx.strokeStyle = 'rgba(27,26,23,0.9)';
-      ctx.beginPath(); for (let i = 0; i < n; i++) i ? ctx.lineTo(P[i * 2], P[i * 2 + 1]) : ctx.moveTo(P[0], P[1]); ctx.stroke();
-      ctx.setLineDash([]);
-      // white halo under the ink fill (reads on dark)
+      const line = (upto: number) => { ctx.beginPath(); for (let i = 0; i <= upto; i++) i ? ctx.lineTo(P[i * 2], P[i * 2 + 1]) : ctx.moveTo(P[0], P[1]); };
+      // tube + dotted guide
+      ctx.strokeStyle = 'rgba(46,230,255,0.22)'; ctx.lineWidth = 24 * u; line(n - 1); ctx.stroke();
+      ctx.shadowColor = cyan; ctx.shadowBlur = 10 * u;
+      ctx.setLineDash([2 * u, 13 * u]); ctx.strokeStyle = cyan; ctx.lineWidth = 5 * u; line(n - 1); ctx.stroke(); ctx.setLineDash([]);
+      // traced fill
       const end = this.idxAt(this.prog);
-      if (end > 0) {
-        ctx.strokeStyle = 'rgba(251,248,240,0.9)'; ctx.lineWidth = 15 * u;
-        ctx.beginPath(); for (let i = 0; i <= end; i++) i ? ctx.lineTo(P[i * 2], P[i * 2 + 1]) : ctx.moveTo(P[0], P[1]); ctx.stroke();
-        ctx.strokeStyle = red; ctx.lineWidth = 9 * u;
-        ctx.beginPath(); for (let i = 0; i <= end; i++) i ? ctx.lineTo(P[i * 2], P[i * 2 + 1]) : ctx.moveTo(P[0], P[1]); ctx.stroke();
+      if (end > 0) { ctx.shadowColor = magenta; ctx.shadowBlur = 14 * u; ctx.strokeStyle = magenta; ctx.lineWidth = 13 * u; line(end); ctx.stroke(); }
+      ctx.shadowBlur = 0;
+      // chevrons
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 4 * u;
+      const step = 130 * u;
+      for (let s0 = step * 0.6; s0 < this.total - 10; s0 += step) {
+        const i = this.idxAt(s0), j = Math.min(n - 1, i + 2);
+        const ang = Math.atan2(P[j * 2 + 1] - P[i * 2 + 1], P[j * 2] - P[i * 2]);
+        ctx.save(); ctx.translate(P[i * 2], P[i * 2 + 1]); ctx.rotate(ang);
+        ctx.beginPath(); ctx.moveTo(-9 * u, -9 * u); ctx.lineTo(0, 0); ctx.lineTo(-9 * u, 9 * u); ctx.stroke();
+        ctx.restore();
       }
-      // arrowheads along the path
-      ctx.strokeStyle = ink; ctx.lineWidth = 3 * u;
-      seedSketch(77);
-      ctx.beginPath();
-      const step = 120 * u;
-      for (let s = step * 0.6; s < this.total - 10; s += step) {
-        const i = this.idxAt(s), j = Math.min(n - 1, i + 2);
-        penArrow(ctx, P[i * 2], P[i * 2 + 1], P[j * 2], P[j * 2 + 1], 13 * u, 0.2);
-      }
-      ctx.stroke();
-      // start dot (pulsing) and end mark
-      const pulse = 1 + Math.sin(now / 120) * 0.15;
-      ctx.fillStyle = red; ctx.beginPath(); ctx.arc(P[0], P[1], 13 * u * pulse, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = ink; ctx.lineWidth = 2.5 * u; ctx.stroke();
-      ctx.beginPath(); penCircle(ctx, P[(n - 1) * 2], P[(n - 1) * 2 + 1], 11 * u, 11 * u, 0.4); ctx.stroke();
-      // hook dots
+      // start orb + end ring
+      const pulse = 1 + Math.sin(now / 110) * 0.14;
+      ctx.shadowColor = magenta; ctx.shadowBlur = 16 * u;
+      ctx.fillStyle = magenta; ctx.beginPath(); ctx.arc(P[0], P[1], 14 * u * pulse, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3 * u; ctx.stroke();
+      ctx.strokeStyle = cyan; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.arc(P[(n - 1) * 2], P[(n - 1) * 2 + 1], 12 * u, 0, Math.PI * 2); ctx.stroke();
+      // hook dots: hollow cyan targets that fill magenta when connected
       for (const d of this.dots) {
-        ctx.fillStyle = d.hit ? red : 'rgba(251,248,240,0.95)';
-        ctx.beginPath(); ctx.arc(d.x, d.y, 15 * u * (d.hit ? 1.2 : pulse), 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = d.hit ? ink : blue; ctx.lineWidth = 3 * u; ctx.stroke();
+        ctx.shadowColor = d.hit ? magenta : cyan; ctx.shadowBlur = 12 * u;
+        ctx.fillStyle = d.hit ? magenta : 'rgba(11,16,38,0.85)';
+        ctx.beginPath(); ctx.arc(d.x, d.y, 15 * u * (d.hit ? 1.15 : pulse), 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0; ctx.strokeStyle = d.hit ? '#fff' : cyan; ctx.lineWidth = 3 * u; ctx.stroke();
       }
-      // the finger's own stroke
+      // the finger's stroke
       if (this.trail.length > 3) {
-        ctx.strokeStyle = 'rgba(47,85,200,0.8)'; ctx.lineWidth = 3 * u;
+        ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 3 * u;
         ctx.beginPath(); ctx.moveTo(this.trail[0], this.trail[1]); for (let i = 2; i < this.trail.length; i += 2) ctx.lineTo(this.trail[i], this.trail[i + 1]); ctx.stroke();
       }
-      // fuse ring (top centre) + label + keyboard arrows
-      const fx = W / 2, fy = Math.max(70, layout.world.y + 70) , R = 26 * u;
+      // fuse: gold timer ring with the seconds left
+      const fx = W / 2, fy = Math.max(54 * u, H * 0.14) + 62 * u, FR = 28 * u;
       const left = Math.max(0, 1 - this.elapsed / this.limit);
-      ctx.strokeStyle = 'rgba(251,248,240,0.95)'; ctx.lineWidth = 9 * u;
-      ctx.beginPath(); ctx.arc(fx, fy, R, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
-      ctx.strokeStyle = left < 0.3 ? red : ink; ctx.lineWidth = 5 * u;
-      ctx.beginPath(); ctx.arc(fx, fy, R, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
-      this.label(ctx, this.fam === 'hook' ? 'CONNECT THE DOTS!' : this.fam === 'throw' ? 'TRACE THE CIRCLE, THEN FLICK!' : 'TRACE THE PATH!', fx, fy + R + 26 * u, 22 * u, ink);
+      ctx.lineWidth = 8 * u;
+      ctx.strokeStyle = '#3a4566'; ctx.beginPath(); ctx.arc(fx, fy, FR, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = 'rgba(11,16,38,0.85)'; ctx.fill();
+      ctx.strokeStyle = left < 0.3 ? '#ff3b3b' : gold; ctx.beginPath(); ctx.arc(fx, fy, FR, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
+      this.text(ctx, (this.limit - this.elapsed).toFixed(1), fx, fy + 1, 18 * u, '#fff', 'Russo One');
+      const hint = this.fam === 'hook' ? 'CONNECT THE DOTS!' : this.fam === 'throw' ? 'TRACE THE CIRCLE, THEN FLICK!' : 'TRACE THE PATH!';
+      this.text(ctx, hint, fx, fy + FR + 24 * u, 18 * u, '#fff', 'Oswald', true);
       const kb = this.keys.map((d, i) => (i < this.keyIdx ? '·' : DIR_GLYPH[d])).join(' ');
-      this.label(ctx, 'keys: ' + kb, fx, fy + R + 52 * u, 15 * u, ink);
+      this.text(ctx, 'KEYS  ' + kb, fx, fy + FR + 48 * u, 13 * u, cyan, 'Oswald', true);
     } else if (this.phase === 'qte') {
       const pr = this.prompts[this.pi];
       const pad = layout.pad;
-      const cx = W / 2, cy = pad.y + pad.h * 0.45;
+      const cx = W / 2, cy = pad.y + pad.h * 0.42;
       if (pr) {
         const total = pr.due - pr.start, k = Math.max(0, Math.min(1, (pr.due - now) / total));
-        const R0 = 46 * u, R = R0 + k * 120 * u;
-        ctx.strokeStyle = 'rgba(251,248,240,0.95)'; ctx.lineWidth = 12 * u; ctx.beginPath(); ctx.arc(cx, cy, R0, 0, Math.PI * 2); ctx.stroke();
-        ctx.strokeStyle = ink; ctx.lineWidth = 5 * u; ctx.beginPath(); ctx.arc(cx, cy, R0, 0, Math.PI * 2); ctx.stroke();
-        ctx.strokeStyle = k < SPECIAL.perfectFrac ? red : blue; ctx.lineWidth = 4 * u; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
-        const txt = pr.kind === 'tap' ? 'TAP!' : pr.kind === 'mash' ? `MASH! ${pr.taps}/${SPECIAL.mashTaps}` : DIR_GLYPH[pr.dir];
-        this.label(ctx, txt, cx, cy, (pr.kind === 'swipe' ? 64 : 30) * u, red);
-        this.label(ctx, `${this.pi + 1} / ${this.prompts.length}`, cx, cy + R0 + 30 * u, 15 * u, '#fbf8f0');
+        const R0 = 52 * u, Rr = R0 + k * 110 * u;
+        ctx.shadowColor = cyan; ctx.shadowBlur = 10 * u;
+        ctx.strokeStyle = k < SPECIAL.perfectFrac ? gold : cyan; ctx.lineWidth = 5 * u; ctx.beginPath(); ctx.arc(cx, cy, Rr, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowColor = magenta; ctx.shadowBlur = 18 * u;
+        ctx.fillStyle = magenta; ctx.beginPath();
+        for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i + Math.PI / 6; i ? ctx.lineTo(cx + Math.cos(a) * R0, cy + Math.sin(a) * R0) : ctx.moveTo(cx + Math.cos(a) * R0, cy + Math.sin(a) * R0); }
+        ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4 * u; ctx.stroke();
+        const txt = pr.kind === 'tap' ? 'TAP!' : pr.kind === 'mash' ? `${pr.taps}/${SPECIAL.mashTaps}` : DIR_GLYPH[pr.dir];
+        this.text(ctx, txt, cx, cy + 2 * u, (pr.kind === 'swipe' ? 58 : 28) * u, '#fff', 'Russo One');
+        const what = pr.kind === 'tap' ? 'TAP' : pr.kind === 'mash' ? 'MASH TAP!' : 'SWIPE ' + ['RIGHT', '', 'UP', '', 'LEFT', '', 'DOWN', ''][pr.dir];
+        this.text(ctx, `${what} · ${this.pi + 1} / ${this.prompts.length}`, cx, cy + R0 + 26 * u, 15 * u, '#fff', 'Oswald', true);
+        // progress pips
+        for (let i = 0; i < this.prompts.length; i++) {
+          const p2 = this.prompts[i], x = cx + (i - (this.prompts.length - 1) / 2) * 34 * u, y = cy - R0 - 34 * u;
+          ctx.fillStyle = !p2.done ? (i === this.pi ? '#fff' : '#3a4566') : p2.ok ? gold : '#ff3b3b';
+          ctx.save(); ctx.translate(x, y); ctx.transform(1, 0, -0.25, 1, 0, 0); ctx.fillRect(-12 * u, -4 * u, 24 * u, 8 * u); ctx.restore();
+        }
       }
       const last = this.judgments[this.judgments.length - 1];
-      if (last) this.label(ctx, last, cx, cy - 110 * u, 26 * u, last === 'MISS' ? ink : red);
+      if (last) this.text(ctx, last + (last === 'MISS' ? '' : '!'), cx, cy - 104 * u, 34 * u, last === 'MISS' ? '#ff3b3b' : last === 'PERFECT' ? cyan : gold, 'Russo One');
     } else if (this.phase === 'result') {
-      this.label(ctx, this.resultTier + '!', W / 2, H * 0.38, 64 * u * (1 + Math.max(0, this.resultT - 0.7) * 1.5), this.resultTier === 'PERFECT' ? red : this.resultTier === 'CLEAN' ? blue : ink);
+      const t = this.resultTier;
+      const k = 1 + Math.max(0, this.resultT - 0.7) * 2;
+      this.banner(ctx, t + '!', W / 2, H * 0.42, 44 * u * k, t === 'PERFECT' ? magenta : t === 'CLEAN' ? '#2a6bff' : '#3a4566');
     }
-    void penLine;
     ctx.restore();
   }
 
-  private label(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, size: number, col: string): void {
-    ctx.font = `${Math.round(size)}px "Permanent Marker", "Patrick Hand", cursive`;
+  /** A skewed magenta band with italic display lettering (the Arcade banner). */
+  private banner(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, size: number, col: string): void {
+    ctx.save();
+    ctx.font = `italic ${Math.round(size)}px "Russo One", sans-serif`;
+    const tw = ctx.measureText(s).width;
+    const bw = tw + size * 2.4, bh = size * 1.5;
+    ctx.translate(x, y); ctx.transform(1, 0, -0.25, 1, 0, 0);
+    const g = ctx.createLinearGradient(-bw / 2, 0, bw / 2, 0);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.15, col); g.addColorStop(0.85, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(-bw / 2, -bh / 2, bw, bh);
+    ctx.restore(); ctx.save();
+    ctx.font = `italic ${Math.round(size)}px "Russo One", sans-serif`;
+    ctx.translate(x, y);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.lineWidth = Math.max(3, size * 0.16); ctx.strokeStyle = 'rgba(251,248,240,0.95)';
-    ctx.strokeText(s, x, y);
+    ctx.fillStyle = '#0b1026'; ctx.fillText(s, size * 0.08, size * 0.08 + 1);
+    ctx.fillStyle = '#fff'; ctx.fillText(s, 0, 1);
+    ctx.restore();
+  }
+  private text(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, size: number, col: string, font: 'Russo One' | 'Oswald', plate = false): void {
+    ctx.font = font === 'Russo One' ? `italic ${Math.round(size)}px "Russo One", sans-serif` : `700 ${Math.round(size)}px "Oswald", sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (plate) {
+      const tw = ctx.measureText(s).width + size * 1.2;
+      ctx.save(); ctx.translate(x, y); ctx.transform(1, 0, -0.25, 1, 0, 0);
+      ctx.fillStyle = 'rgba(11,16,38,0.85)'; ctx.fillRect(-tw / 2, -size * 0.75, tw, size * 1.5); ctx.restore();
+    } else { ctx.lineWidth = Math.max(3, size * 0.14); ctx.strokeStyle = '#0b1026'; ctx.strokeText(s, x, y); }
     ctx.fillStyle = col; ctx.fillText(s, x, y);
   }
 }

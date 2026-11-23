@@ -2,6 +2,7 @@ import { audio } from '../core/audio';
 import { settings } from '../core/settings';
 import { SONGS, type SongDef } from '../data/songs';
 import { GRADE_COLOR } from '../data/rhythm';
+import { icon } from '../ui/icons';
 
 export interface PickStatus { set(text: string, err?: boolean): void; progress(f: number): void; busy(b: boolean): void }
 export interface CalibView {
@@ -30,10 +31,12 @@ export class RhythmUI {
   closeAll(): void { for (const id of [...this.layers.keys()]) this.close(id); }
   isOpen(id: string): boolean { return this.layers.has(id); }
 
-  private btn(parent: HTMLElement, label: string, onClick: () => void, cls = 'btn'): HTMLButtonElement {
+  private btn(parent: HTMLElement, label: string, onClick: () => void, cls = 'btn', ico = '', back = false): HTMLButtonElement {
     const b = document.createElement('button');
     b.className = cls;
-    b.textContent = label;
+    b.type = 'button';
+    b.innerHTML = `<span>${ico ? icon(ico) : ''}${label}</span>`;
+    if (back) b.dataset.back = '1';
     b.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.ui('click'); onClick(); });
     parent.appendChild(b);
     return b;
@@ -51,20 +54,21 @@ export class RhythmUI {
     const el = this.layer('picker', 'layer dim');
     const p = document.createElement('div');
     p.className = 'panel music-panel';
-    p.innerHTML = '<h2>PICK A SONG</h2><div class="hint" style="margin-top:-6px">Swipe whenever you like — every attack snaps onto the beat. Swipe <b>on</b> the beat for bigger hits and a streak.</div>';
+    p.innerHTML = `<h2>${icon('music')} PICK A SONG</h2><div class="hint" style="padding:var(--s2) var(--s4) 0">Swipe whenever you like: every attack snaps onto the beat. Swipe <b>on</b> the beat for bigger hits and a streak.</div>`;
     const sec = (t: string) => { const d = document.createElement('div'); d.className = 'sec'; d.textContent = t; p.appendChild(d); };
     const tile = (parent: HTMLElement, key: string, icon: string, name: string, desc: string, onClick: () => void, wide = false) => {
       const b = document.createElement('button');
       b.className = 'mtile' + (key === o.current ? ' sel' : '') + (wide ? ' wide' : '');
       b.dataset.key = key;
-      b.innerHTML = `<span class="ic">${icon}</span><div class="nm">${name}</div><div class="ds">${desc}</div>`;
+      b.type = 'button';
+      b.innerHTML = `<div><span class="ic">${icon}</span><div class="nm">${name}</div><div class="ds">${desc}</div></div>`;
       b.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.ui('click'); onClick(); });
       parent.appendChild(b);
     };
     sec('BUILT-IN SONGS');
     const g1 = document.createElement('div'); g1.className = 'music-grid'; p.appendChild(g1);
-    const icons: Record<string, string> = { dojo: '🥁', neon: '⚡', volcano: '🌋' };
-    for (const s of SONGS) tile(g1, 'song:' + s.id, icons[s.style] ?? '♪', s.name, s.desc, () => o.onSong(s));
+    const icons: Record<string, string> = { dojo: 'drum', neon: 'bolt', volcano: 'volcano' };
+    for (const s of SONGS) tile(g1, 'song:' + s.id, icon(icons[s.style] ?? 'music'), s.name.toUpperCase(), s.desc, () => o.onSong(s));
     const status = document.createElement('div'); status.className = 'mstatus';
     const barO = document.createElement('div'); barO.className = 'mbar'; barO.style.display = 'none';
     const barI = document.createElement('i'); barO.appendChild(barI);
@@ -82,19 +86,20 @@ export class RhythmUI {
         file.type = 'file'; file.accept = 'audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac,.opus'; file.style.display = 'none'; file.id = 'rhythm-file';
         file.addEventListener('change', () => { const f = file.files?.[0]; if (f) onFile(f, st); file.value = ''; });
         p.appendChild(file);
-        tile(g2, 'file', '🎵', 'YOUR SONG', 'An MP3 / M4A / WAV from your device. Tempo and beats are detected in the browser.', () => file.click());
+        tile(g2, 'file', icon('file'), 'YOUR SONG', 'An MP3 / M4A / WAV from your device. Tempo and beats are detected in the browser.', () => file.click());
       }
-      if (o.onMic) { const onMic = o.onMic; tile(g2, 'mic', '🎤', 'LISTEN MODE', 'Play music from any app out loud; the game hears it and locks onto the beat. Experimental.', () => onMic(st)); }
+      if (o.onMic) { const onMic = o.onMic; tile(g2, 'mic', icon('mic'), 'LISTEN MODE', 'Play music from any app out loud; the game hears it and locks onto the beat. Experimental.', () => onMic(st)); }
       p.appendChild(status); p.appendChild(barO);
     }
     const foot = document.createElement('div');
-    foot.style.marginTop = '12px';
+    foot.className = 'sticky-foot';
     const off = document.createElement('span');
-    off.style.fontWeight = '800'; off.style.opacity = '0.75'; off.style.marginRight = '6px';
+    off.className = 'keys';
+    off.style.alignSelf = 'center';
     off.textContent = `Latency offset ${settings.rhythmOffset >= 0 ? '+' : ''}${Math.round(settings.rhythmOffset)} ms`;
     foot.appendChild(off);
-    this.btn(foot, 'CALIBRATE', o.onCalibrate, 'btn small');
-    if (o.onBack) this.btn(foot, 'BACK', o.onBack, 'btn small');
+    this.btn(foot, 'CALIBRATE', o.onCalibrate, 'btn small', 'target');
+    if (o.onBack) this.btn(foot, 'BACK', o.onBack, 'btn small', 'back', true);
     p.appendChild(foot);
     if (o.onFile || o.onMic) {
       const note = document.createElement('div');
@@ -113,17 +118,18 @@ export class RhythmUI {
     const box = document.createElement('div');
     box.className = 'panel calib-top';
     box.style.pointerEvents = 'auto';
-    box.innerHTML = `<h2 style="margin-bottom:6px">LATENCY CALIBRATION</h2>
-      <div class="hint" style="margin-top:0">Flick or tap the pad (or press Space) exactly on each click.</div>
+    box.innerHTML = `<h2>${icon('target')} LATENCY CALIBRATION</h2>
+      <div class="hint" style="padding:var(--s2) var(--s4) 0">Flick or tap the pad (or press Space) exactly on each click.</div>
       <div class="calib-num" id="cal-num">—</div>
       <div id="cal-dots"></div><div class="mstatus" id="cal-msg">listen for the count-in…</div>`;
     const dots = box.querySelector('#cal-dots') as HTMLElement;
     for (let i = 0; i < 4; i++) { const d = document.createElement('span'); d.className = 'beat-dot'; dots.appendChild(d); }
     const row = document.createElement('div');
-    const save = this.btn(row, 'SAVE', () => {}, 'btn primary small');
+    row.className = 'sticky-foot';
+    const save = this.btn(row, 'SAVE', () => {}, 'btn primary small', 'check');
     save.style.display = 'none';
-    this.btn(row, 'RETRY', () => view.onRetry(), 'btn small');
-    this.btn(row, 'CANCEL', onCancel, 'btn small');
+    this.btn(row, 'RETRY', () => view.onRetry(), 'btn small', 'retry');
+    this.btn(row, 'CANCEL', onCancel, 'btn small', 'close', true);
     box.appendChild(row);
     el.appendChild(box);
     const num = box.querySelector('#cal-num') as HTMLElement;

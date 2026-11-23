@@ -3,7 +3,7 @@
 // usage: (dev server on :5173) node ui-options/tools/capture.cjs
 const { chromium } = require('playwright');
 const path = require('path');
-const OUT = path.join(__dirname, '..');
+const OUT = process.env.OUT || path.join(__dirname, '..');
 const BASE = process.env.BASE || 'http://127.0.0.1:5173/';
 const DEVICES = { desktop: { width: 1280, height: 720, mobile: false }, phone: { width: 844, height: 390, mobile: true } };
 

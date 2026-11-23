@@ -5,8 +5,16 @@ import { MOVES } from '../data/moves';
 import { MovePreview } from './preview';
 import { anyUnlocked, isUnlocked, enterCode } from './cheats';
 import { STYLE } from '../data/tuning';
+import { icon } from './icons';
 
-/** DOM overlays for menus (title, pause, settings, loadout, results, banners). */
+/**
+ * DOM menus in the Arcade Fighter design system (revision pass 8 UI; styles in
+ * style.css): title, loadout, pause, settings, results, banners, tutorial
+ * prompts, the between-wave swap strip and the weapon tooltip. Every
+ * interactive element is a real <button>/<input>, so ui/nav.ts can move focus
+ * with the keyboard or a gamepad; each modal layer marks its "back" action
+ * with data-back.
+ */
 export class Menus {
   private root: HTMLElement;
   private layers = new Map<string, HTMLElement>();
@@ -20,14 +28,14 @@ export class Menus {
     this.root = document.getElementById('ui')!;
     this.pauseBtn = document.createElement('button');
     this.pauseBtn.className = 'icon-btn';
-    this.pauseBtn.textContent = 'II';
+    this.pauseBtn.innerHTML = icon('pause');
     this.pauseBtn.setAttribute('aria-label', 'Pause');
     this.pauseBtn.style.display = 'none';
     this.pauseBtn.addEventListener('click', () => { audio.ui('click'); this.onPause(); });
     this.root.appendChild(this.pauseBtn);
     this.nukeBtn = document.createElement('button');
     this.nukeBtn.className = 'icon-btn nuke-btn';
-    this.nukeBtn.textContent = '☢';
+    this.nukeBtn.innerHTML = icon('nuke');
     this.nukeBtn.title = 'Nuke (N)';
     this.nukeBtn.setAttribute('aria-label', 'Nuke');
     this.nukeBtn.style.display = 'none';
@@ -45,14 +53,13 @@ export class Menus {
 
   placePause(): void {
     const st = this.pauseBtn.style;
-    // Always top-right: the HP bar owns the top-left corner in both handedness modes.
-    st.right = 'max(10px, env(safe-area-inset-right))';
+    st.right = 'max(calc(var(--u) * 14px), env(safe-area-inset-right))';
     st.left = '';
   }
 
   private layer(id: string, cls = 'layer'): HTMLElement {
     this.close(id);
-    if (cls.includes('dim')) audio.paper('rustle');
+    if (cls.includes('dim')) audio.ui('select');
     const el = document.createElement('div');
     el.className = cls;
     el.dataset.id = id;
@@ -66,108 +73,99 @@ export class Menus {
   }
   isOpen(id: string): boolean { return this.layers.has(id); }
 
-  private btn(parent: HTMLElement, label: string, onClick: () => void, cls = 'btn'): HTMLButtonElement {
+  /** An Arcade button: label (+ optional icon) in an un-skewed span; `back` marks the layer's Escape / B action. */
+  private btn(parent: HTMLElement, label: string, onClick: () => void, cls = 'btn', ico = '', back = false): HTMLButtonElement {
     const b = document.createElement('button');
     b.className = cls;
-    b.textContent = label;
+    b.type = 'button';
+    b.innerHTML = `<span>${ico ? icon(ico) : ''}${label}</span>`;
+    if (back) b.dataset.back = '1';
     b.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.ui('click'); onClick(); });
     parent.appendChild(b);
     return b;
   }
+  private head(parent: HTMLElement, text: string, cls: string, tone = ''): void {
+    const h = document.createElement('div');
+    h.className = cls;
+    h.innerHTML = `<span class="banner-band ${tone}"><span>${text}</span></span>`;
+    parent.appendChild(h);
+  }
 
   // ---------------- Title ----------------
-  showTitle(high: number, onSettings: () => void, mode: { rhythm: boolean; onToggle: (rhythm: boolean) => void } | null = null, loadout: { name: string; open: () => void } | null = null): void {
-    const el = this.layer('title', 'layer passthrough');
-    el.style.justifyContent = 'flex-start';
-    el.style.paddingTop = '7vh';
-    // Hand-lettered logo + a doodled stick figure doing a jumpshot flip.
-    el.innerHTML = `<h1 class="title-logo">JUMPSHOT</h1><div class="subtitle">swipe · launch · juggle · spike</div>
-      <svg class="title-doodle" viewBox="0 0 120 80" aria-hidden="true"><circle cx="70" cy="20" r="7"/><path d="M66 26 L52 46 M60 36 L44 30 M60 36 L74 44 M52 46 L36 58 M52 46 L62 64 M80 12 Q96 18 98 34 M98 34 L93 29 M98 34 L101 28 M20 70 L100 70"/></svg>`;
+  showTitle(high: number, onSettings: () => void, mode: { rhythm: boolean; onToggle: (rhythm: boolean) => void } | null = null,
+    loadout: { name: string; open: () => void } | null = null, onStart: (() => void) | null = null): void {
+    const el = this.layer('title', 'layer passthrough ttl');
+    el.innerHTML = `<div class="ttl-scrim"></div><h1 class="ttl-logo">JUMPSHOT</h1><div class="ttl-sub">SWIPE · LAUNCH · JUGGLE · SPIKE</div>`;
     // Easter egg: tap the logo 5 times for a cheat-code box (touch devices; keyboards can just type).
-    const logo = el.querySelector('.title-logo') as HTMLElement | null;
-    if (logo) {
-      let taps = 0, last = 0;
-      logo.style.pointerEvents = 'auto';
-      logo.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const now = performance.now();
-        taps = now - last < 600 ? taps + 1 : 1; last = now;
-        if (taps >= 5) { taps = 0; this.codePrompt(); }
-      });
-    }
-    const spacer = document.createElement('div');
-    spacer.style.flex = '1';
-    el.appendChild(spacer);
-    const pr = document.createElement('div');
-    pr.className = 'prompt';
-    pr.textContent = 'TAP OR FLICK THE LOWER HALF TO START';
-    pr.style.marginBottom = '2vh';
-    el.appendChild(pr);
-    const row = document.createElement('div');
-    row.style.position = 'absolute'; row.style.top = '12px'; row.style.left = '12px';
-    row.style.display = 'flex'; row.style.alignItems = 'center'; row.style.gap = '10px';
-    this.btn(row, '⚙ SETTINGS', onSettings, 'btn small');
-    // TODO(ui-pass): loadout entry point.
-    if (loadout) this.btn(row, `⚔ WEAPON: ${loadout.name}`, loadout.open, 'btn small');
+    const logo = el.querySelector('.ttl-logo') as HTMLElement;
+    let taps = 0, last = 0;
+    logo.style.pointerEvents = 'auto';
+    logo.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const now = performance.now();
+      taps = now - last < 600 ? taps + 1 : 1; last = now;
+      if (taps >= 5) { taps = 0; this.codePrompt(); }
+    });
     if (mode) {
-      // Rhythm / Classic switch.
       const tg = document.createElement('div');
-      tg.className = 'mode-toggle';
+      tg.className = 'seg2';
       tg.setAttribute('role', 'group');
       tg.setAttribute('aria-label', 'Game mode');
-      const mk = (label: string, rhythm: boolean) => {
-        const b = document.createElement('button');
-        b.innerHTML = label.replace(' MODE', '<span class="mt-full"> MODE</span>');
-        b.id = rhythm ? 'mode-rhythm' : 'mode-classic';
-        b.className = mode.rhythm === rhythm ? 'on' : '';
-        b.setAttribute('aria-pressed', String(mode.rhythm === rhythm));
-        b.addEventListener('click', (e) => {
-          e.stopPropagation(); audio.unlock(); audio.ui('click');
+      const mk = (label: string, rhythm: boolean, ico: string) => {
+        const b = this.btn(tg, label, () => {
           mode.rhythm = rhythm;
-          for (const x of tg.querySelectorAll('button')) { const on = x === b; x.className = on ? 'on' : ''; x.setAttribute('aria-pressed', String(on)); }
+          for (const x of tg.querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
           mode.onToggle(rhythm);
-        });
-        tg.appendChild(b);
+        }, 'btn', ico);
+        b.id = rhythm ? 'mode-rhythm' : 'mode-classic';
+        b.setAttribute('aria-pressed', String(mode.rhythm === rhythm));
       };
-      mk('Rhythm MODE', true);
-      mk('Classic MODE', false);
-      // Under the logo (not in the corner row, where it overlapped the logo on phones).
-      tg.classList.add('title-modes');
-      const doodle = el.querySelector('.title-doodle');
-      el.insertBefore(tg, doodle ? doodle.nextSibling : null);
+      mk('RHYTHM', true, 'music');
+      mk('CLASSIC', false, '');
+      el.appendChild(tg);
     }
+    const acts = document.createElement('div');
+    acts.className = 'ttl-actions';
+    if (onStart) this.btn(acts, 'FIGHT!', onStart, 'btn primary ttl-fight', 'play').id = 'title-fight';
+    const row = document.createElement('div');
+    row.className = 'row2';
+    if (loadout) this.btn(row, `WEAPON: ${loadout.name}`, loadout.open, 'btn', WEAPONS[settingsWeapon(loadout.name)]?.id ?? 'fists').id = 'title-weapon';
+    this.btn(row, 'SETTINGS', onSettings, 'btn', 'gear').id = 'title-settings';
+    acts.appendChild(row);
+    el.appendChild(acts);
     if (high > 0) {
       const hs = document.createElement('div');
-      hs.style.fontWeight = '900'; hs.style.fontStyle = 'italic'; hs.style.opacity = '0.8';
-      hs.textContent = `BEST ${high.toLocaleString()}`;
-      row.appendChild(hs);
+      hs.className = 'plate ttl-best';
+      hs.innerHTML = `<div class="in lbl">BEST <b>${high.toLocaleString()}</b></div>`;
+      el.appendChild(hs);
     }
-    el.appendChild(row);
-    // keep the prompt above the pad
-    const padTop = (window as unknown as { __padTop?: number }).__padTop;
-    if (padTop) { pr.style.position = 'absolute'; pr.style.top = (padTop + 18) + 'px'; pr.style.marginBottom = '0'; }
+    const pr = document.createElement('div');
+    pr.className = 'ttl-prompt';
+    pr.textContent = 'TAP OR FLICK THE LOWER HALF TO START';
+    const padTop = (window as unknown as { __padTop?: number }).__padTop ?? window.innerHeight * 0.5;
+    pr.style.top = Math.max(padTop + 16, window.innerHeight - 70) + 'px';
+    el.appendChild(pr);
   }
 
   // ---------------- Pause ----------------
   showPause(onResume: () => void, onSettings: () => void, onRestart: () => void, onQuit: () => void): void {
-    const el = this.layer('pause', 'layer dim');
-    const p = document.createElement('div');
-    p.className = 'panel';
-    p.innerHTML = '<h2>PAUSED</h2>';
-    this.btn(p, 'RESUME', onResume, 'btn primary');
-    p.appendChild(document.createElement('br'));
-    this.btn(p, 'SETTINGS', onSettings);
-    p.appendChild(document.createElement('br'));
-    this.btn(p, 'RESTART RUN', onRestart);
-    p.appendChild(document.createElement('br'));
-    this.btn(p, 'QUIT TO TITLE', onQuit);
+    const el = this.layer('pause', 'layer dim pz');
+    this.head(el, 'PAUSED', 'pz-head');
+    const col = document.createElement('div');
+    col.className = 'pz-btns';
+    this.btn(col, 'RESUME', onResume, 'btn primary', 'play', true);
+    this.btn(col, 'SETTINGS', onSettings, 'btn', 'gear');
+    this.btn(col, 'RESTART RUN', onRestart, 'btn', 'retry');
+    this.btn(col, 'QUIT TO TITLE', onQuit, 'btn', 'home');
+    el.appendChild(col);
+    const jump = settings.tapAction === 'jump';
     const h = document.createElement('div');
-    h.className = 'hint';
-    const tapTxt = settings.tapAction === 'jump' ? 'tap = jump (again in the air = double jump) · double-tap = dodge / parry' : 'tap = dodge / parry';
-    const keyTxt = settings.tapAction === 'jump' ? 'Space = jump · Shift+Space or F = dodge' : 'Space = dodge';
-    h.innerHTML = `Lower half of the screen: drag slowly = move · flick = attack in that direction · long fast flick = HEAVY<br>Flick ↑ = JUMPSHOT launcher · flick ↓ in air = SPIKE · ${tapTxt}<br>Keyboard: A/D or ←/→ move · I/J/K/L attack (+Shift heavy) · ${keyTxt} · \` = debug`;
-    p.appendChild(h);
-    el.appendChild(p);
+    h.className = 'pz-help';
+    h.innerHTML = `<h3>CONTROLS</h3>
+      <p><b>Touch (lower half):</b> drag slowly to move · flick to attack that way · a long fast flick is HEAVY · flick ↑ = launcher · flick ↓ in the air = spike · slow drag ↑ = jump · ${jump ? 'tap = jump, double-tap = dodge / parry' : 'tap = dodge / parry'} · hold still = SPECIAL</p>
+      <p><b>Keys:</b> A/D or ←/→ move · I/J/K/L attack (+Shift heavy) · W/↑ jump · ${jump ? 'Space jump · Shift+Space or F dodge' : 'Space dodge'} · X Special · Esc pause</p>
+      <p><b>Gamepad:</b> stick / d-pad move · X attack toward the stick (Y heavy) · A jump · B or LB dodge · RT Special · Start pause</p>`;
+    el.appendChild(h);
   }
 
   // ---------------- Settings ----------------
@@ -175,181 +173,152 @@ export class Menus {
     const el = this.layer('settings', 'layer dim');
     const p = document.createElement('div');
     p.className = 'panel';
-    p.innerHTML = '<h2>SETTINGS</h2>';
-    const slider = (label: string, key: 'masterVolume' | 'musicVolume' | 'shake' | 'hitstop' | 'sensitivity' | 'padRegion', min: number, max: number, step: number, after?: () => void) => {
+    p.innerHTML = `<h2>${icon('gear')} SETTINGS</h2>`;
+    const sec = (t: string) => { const d = document.createElement('div'); d.className = 'sec'; d.textContent = t; p.appendChild(d); };
+    const range = (label: string, id: string, min: number, max: number, step: number, get: () => number, set: (v: number) => void, fmt: (v: number) => string) => {
       const row = document.createElement('label');
       row.className = 'row';
       const span = document.createElement('span');
-      const fmt = () => `${label}: ${Math.round(settings[key] * 100)}%`;
-      span.textContent = fmt();
+      span.innerHTML = `${label} <span class="val"></span>`;
+      const val = span.querySelector('.val') as HTMLElement;
       const inp = document.createElement('input');
-      inp.type = 'range'; inp.min = String(min); inp.max = String(max); inp.step = String(step);
-      inp.value = String(settings[key]);
-      inp.id = 'set-' + key;
-      inp.addEventListener('input', () => { settings[key] = parseFloat(inp.value); span.textContent = fmt(); audio.applyVolume(); saveSettings(); after?.(); });
+      inp.type = 'range'; inp.min = String(min); inp.max = String(max); inp.step = String(step); inp.value = String(get()); inp.id = id;
+      const paint = () => { val.textContent = fmt(+inp.value); inp.style.setProperty('--fill', ((+inp.value - min) / (max - min) * 100) + '%'); };
+      inp.addEventListener('input', () => { set(parseFloat(inp.value)); paint(); saveSettings(); });
+      paint();
       row.appendChild(span); row.appendChild(inp);
       p.appendChild(row);
     };
+    const pctOf = (v: number) => `${Math.round(v * 100)}%`;
+    const slider = (label: string, key: 'masterVolume' | 'musicVolume' | 'shake' | 'hitstop' | 'sensitivity' | 'padRegion', min: number, max: number, step: number, after?: () => void) =>
+      range(label, 'set-' + key, min, max, step, () => settings[key], (v) => { settings[key] = v; audio.applyVolume(); after?.(); }, pctOf);
     const check = (label: string, key: 'leftHanded' | 'debug' | 'reduceFlashes' | 'rhythmMode' | 'beatHud' | 'boil' | 'highContrast' | 'cheatGod' | 'cheatRayGun' | 'cheatNuke' | 'mobilePerf' | 'specialAssist' | 'specialSkipQte', after?: () => void) => {
       const row = document.createElement('label');
       row.className = 'row';
       const span = document.createElement('span');
       span.textContent = label;
       const inp = document.createElement('input');
-      inp.type = 'checkbox';
+      inp.type = 'checkbox'; inp.id = 'set-' + key;
       inp.checked = settings[key];
-      inp.addEventListener('change', () => { settings[key] = inp.checked; saveSettings(); after?.(); });
+      inp.addEventListener('change', () => { settings[key] = inp.checked; audio.ui('click'); saveSettings(); after?.(); });
       row.appendChild(span); row.appendChild(inp);
       p.appendChild(row);
     };
-    // Mobile Performance first: it's the one switch phone players look for.
-    check('📱 Mobile performance (less lag on phones)', 'mobilePerf', () => { applyPerfClass(); window.dispatchEvent(new Event('resize')); });
-    {
-      const h = document.createElement('div');
-      h.className = 'hint'; h.style.cssText = 'text-align:left;margin:-6px 0 8px';
-      h.textContent = 'Lower pixel density, no floor reflections, no palette snap or menu blur. Gameplay is identical.';
-      p.appendChild(h);
-    }
-    // ---- Look & animation (revision pass 5) ----
     const select = (label: string, id: string, opts: [string, string][], get: () => string, set: (v: string) => void) => {
       const row = document.createElement('label');
       row.className = 'row';
       const span = document.createElement('span'); span.textContent = label;
       const sel = document.createElement('select'); sel.id = id;
-      sel.style.cssText = 'font:inherit;font-weight:800;background:#141a30;color:#fff;border:1px solid rgba(160,220,255,.4);border-radius:8px;padding:4px 6px';
       for (const [v, t] of opts) { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); }
       sel.value = get();
       sel.addEventListener('change', () => { set(sel.value); saveSettings(); window.dispatchEvent(new Event('jumpshot-look')); });
       row.appendChild(span); row.appendChild(sel);
       p.appendChild(row);
     };
-    select('Animation style', 'set-animStyle', [['drawn', 'Hand-Drawn (stepped)'], ['smooth', 'Smooth (interpolated)']], () => settings.animStyle, (v) => { settings.animStyle = v as 'drawn' | 'smooth'; });
-    {
-      const row = document.createElement('label');
-      row.className = 'row';
-      const span = document.createElement('span');
-      const fmt = () => `Hand-Drawn step rate: ${settings.stepRate} fps`;
-      span.textContent = fmt();
-      const inp = document.createElement('input');
-      inp.type = 'range'; inp.min = '8'; inp.max = '20'; inp.step = '1'; inp.value = String(settings.stepRate); inp.id = 'set-stepRate';
-      inp.addEventListener('input', () => { settings.stepRate = parseInt(inp.value, 10); span.textContent = fmt(); saveSettings(); });
-      row.appendChild(span); row.appendChild(inp);
-      p.appendChild(row);
-    }
-    select('Fists animation (Hand-Drawn)', 'set-fistAnims', [['v2', 'Reference v2 (new)'], ['legacy', 'Legacy']], () => settings.fistAnims, (v) => { settings.fistAnims = v as 'v2' | 'legacy'; });
-    select('Attack smoothness (Hand-Drawn)', 'set-attackSmooth', [['low', 'Low (key drawings only)'], ['normal', 'Normal (+1 in-between)'], ['high', 'High (+2, strikes on ones)']], () => settings.attackSmooth, (v) => { settings.attackSmooth = v as 'low' | 'normal' | 'high'; });
-    select('Paper page', 'set-page', [['auto', 'Auto (changes with waves)'], ['blank', 'Blank Page'], ['lined', 'Lined Notebook'], ['graph', 'Graph Paper'], ['sketch', 'Sketchbook'], ['kraft', 'Kraft Paper']], () => settings.page, (v) => { settings.page = v as typeof settings.page; });
-    select('Look', 'set-look', [['pixel', 'Pixel (ink page, 1-bit)'], ['crisp', 'Crisp (ink page, full res)'], ['smooth', 'Smooth (previous neon look)']], () => settings.look, (v) => { settings.look = v as 'pixel' | 'crisp' | 'smooth'; });
-    {
-      const row = document.createElement('label');
-      row.className = 'row';
-      const span = document.createElement('span');
-      const fmt = () => `Pixel Look resolution: ${Math.round(settings.pixelRes * 100)}%`;
-      span.textContent = fmt();
-      const inp = document.createElement('input');
-      inp.type = 'range'; inp.min = '0.3'; inp.max = '0.55'; inp.step = '0.025'; inp.value = String(settings.pixelRes); inp.id = 'set-pixelRes';
-      inp.addEventListener('input', () => { settings.pixelRes = parseFloat(inp.value); span.textContent = fmt(); saveSettings(); window.dispatchEvent(new Event('jumpshot-look')); });
-      row.appendChild(span); row.appendChild(inp);
-      p.appendChild(row);
-    }
+
+    sec('PERFORMANCE');
+    check('Mobile performance (less lag on phones)', 'mobilePerf', () => { applyPerfClass(); window.dispatchEvent(new Event('resize')); });
+    sec('CONTROLS');
+    select('Tap / Space', 'set-tapAction', [['jump', 'Jump (double-tap = dodge)'], ['dodge', 'Dodge & parry (original)']], () => settings.tapAction, (v) => { settings.tapAction = v as 'jump' | 'dodge'; });
+    slider('Flick sensitivity', 'sensitivity', 0.5, 1.6, 0.05);
+    slider('Touch area height', 'padRegion', 0.35, 0.6, 0.01, () => window.dispatchEvent(new Event('resize')));
+    check('Left-handed pad', 'leftHanded', () => { window.dispatchEvent(new Event('resize')); this.placePause(); });
+    sec('SPECIAL');
+    check('Special assist (wider path, longer timers)', 'specialAssist');
+    check('Skip the QTE prompts (auto-Clean)', 'specialSkipQte');
+    sec('SOUND');
     slider('Master volume', 'masterVolume', 0, 1, 0.05);
     slider('Music volume', 'musicVolume', 0, 1, 0.05);
-    select('Tap / Space', 'set-tapAction', [['jump', 'Jump (double-tap or Shift+Space / F = dodge & parry)'], ['dodge', 'Dodge & parry (original)']], () => settings.tapAction, (v) => { settings.tapAction = v as 'jump' | 'dodge'; });
-    select('Sound effects', 'set-sfxStyle', [['recorded', 'Recorded (Freesound, CC0)'], ['synth', 'Synthesized (original)']], () => settings.sfxStyle, (v) => { settings.sfxStyle = v as 'recorded' | 'synth'; });
+    select('Sound effects', 'set-sfxStyle', [['recorded', 'Recorded (CC0)'], ['synth', 'Synthesized']], () => settings.sfxStyle, (v) => { settings.sfxStyle = v as 'recorded' | 'synth'; });
+    sec('FEEL');
     slider('Screen shake', 'shake', 0, 1.5, 0.05);
     slider('Hit-stop strength', 'hitstop', 0, 1.5, 0.05);
-    slider('Flick sensitivity', 'sensitivity', 0.5, 1.6, 0.05);
-    slider('Touch area (screen height)', 'padRegion', 0.35, 0.6, 0.01, () => window.dispatchEvent(new Event('resize')));
-    check('Left-handed pad', 'leftHanded', () => { window.dispatchEvent(new Event('resize')); this.placePause(); });
-    check('Reduce flashes', 'reduceFlashes');
-    check('Special assist (wider trace path, longer timers)', 'specialAssist');
-    check('Special: skip the QTE prompts (auto-Clean)', 'specialSkipQte');
-    check('Line boil (doodles re-drawn ~7 fps)', 'boil');
-    check('High contrast (plain page, bolder lines)', 'highContrast', () => window.dispatchEvent(new Event('jumpshot-look')));
+    check('Reduce flashes', 'reduceFlashes', applyPerfClass);
+    sec('LOOK & ANIMATION');
+    select('Look', 'set-look', [['pixel', 'Pixel (ink page)'], ['crisp', 'Crisp (ink page)'], ['smooth', 'Smooth (neon)']], () => settings.look, (v) => { settings.look = v as 'pixel' | 'crisp' | 'smooth'; });
+    range('Pixel Look resolution', 'set-pixelRes', 0.3, 0.55, 0.025, () => settings.pixelRes, (v) => { settings.pixelRes = v; window.dispatchEvent(new Event('jumpshot-look')); }, pctOf);
+    select('Paper page', 'set-page', [['auto', 'Auto (by wave)'], ['blank', 'Blank'], ['lined', 'Lined'], ['graph', 'Graph'], ['sketch', 'Sketchbook'], ['kraft', 'Kraft']], () => settings.page, (v) => { settings.page = v as typeof settings.page; });
+    select('Animation style', 'set-animStyle', [['drawn', 'Hand-Drawn'], ['smooth', 'Smooth']], () => settings.animStyle, (v) => { settings.animStyle = v as 'drawn' | 'smooth'; });
+    range('Hand-Drawn step rate', 'set-stepRate', 8, 20, 1, () => settings.stepRate, (v) => { settings.stepRate = v; }, (v) => `${v} fps`);
+    select('Attack smoothness', 'set-attackSmooth', [['low', 'Low'], ['normal', 'Normal'], ['high', 'High']], () => settings.attackSmooth, (v) => { settings.attackSmooth = v as 'low' | 'normal' | 'high'; });
+    select('Fists animation', 'set-fistAnims', [['v2', 'Reference v2'], ['legacy', 'Legacy']], () => settings.fistAnims, (v) => { settings.fistAnims = v as 'v2' | 'legacy'; });
+    check('Line boil', 'boil');
+    check('High contrast page', 'highContrast', () => window.dispatchEvent(new Event('jumpshot-look')));
+    sec('RHYTHM MODE');
+    check('Rhythm Mode (next run)', 'rhythmMode', () => window.dispatchEvent(new Event('jumpshot-mode')));
+    check('Beat-track HUD', 'beatHud');
+    range('Latency offset', 'set-rhythmOffset', -250, 250, 5, () => settings.rhythmOffset, (v) => { settings.rhythmOffset = v; window.dispatchEvent(new Event('jumpshot-mode')); }, (v) => `${v >= 0 ? '+' : ''}${Math.round(v)} ms`);
+    if (onCalibrate) { const b = document.createElement('div'); b.className = 'pad'; this.btn(b, 'CALIBRATE LATENCY', () => { this.close('settings'); onCalibrate(); }, 'btn small', 'target'); p.appendChild(b); }
     // Easter-egg cheats: this section only appears once a code has unlocked something.
     if (anyUnlocked()) {
-      const cheats = document.createElement('div');
-      cheats.className = 'sec';
-      cheats.textContent = 'CHEATS (runs with cheats don\'t count for high scores)';
-      p.appendChild(cheats);
+      sec('CHEATS · RUNS WITH CHEATS DON\'T SET RECORDS');
       if (isUnlocked('cheatGod')) check('Never die', 'cheatGod');
       if (isUnlocked('cheatRayGun')) check('Ray gun in the loadout', 'cheatRayGun');
-      if (isUnlocked('cheatNuke')) check('Nuke button in play (also the N key)', 'cheatNuke');
+      if (isUnlocked('cheatNuke')) check('Nuke button (also the N key)', 'cheatNuke');
     }
-    check('Rhythm Mode (off = Classic; applies to the next run)', 'rhythmMode', () => window.dispatchEvent(new Event('jumpshot-mode')));
-    check('Beat-track HUD (Rhythm Mode)', 'beatHud');
-    {
-      const row = document.createElement('label');
-      row.className = 'row';
-      const span = document.createElement('span');
-      const fmt = () => `Rhythm latency offset: ${settings.rhythmOffset >= 0 ? '+' : ''}${Math.round(settings.rhythmOffset)} ms`;
-      span.textContent = fmt();
-      const inp = document.createElement('input');
-      inp.type = 'range'; inp.min = '-250'; inp.max = '250'; inp.step = '5'; inp.value = String(settings.rhythmOffset); inp.id = 'set-rhythmOffset';
-      inp.addEventListener('input', () => { settings.rhythmOffset = parseFloat(inp.value); span.textContent = fmt(); saveSettings(); window.dispatchEvent(new Event('jumpshot-mode')); });
-      row.appendChild(span); row.appendChild(inp);
-      p.appendChild(row);
-    }
-    if (onCalibrate) this.btn(p, 'CALIBRATE RHYTHM LATENCY', () => { this.close('settings'); onCalibrate(); });
-    check('Show debug overlay', 'debug', () => window.dispatchEvent(new Event('jumpshot-debug')));
-    if (onTutorial) this.btn(p, 'REPLAY TUTORIAL', () => { this.close('settings'); onTutorial(); });
+    sec('OTHER');
+    check('Debug overlay', 'debug', () => window.dispatchEvent(new Event('jumpshot-debug')));
+    if (onTutorial) { const b = document.createElement('div'); b.className = 'pad'; this.btn(b, 'REPLAY TUTORIAL', () => { this.close('settings'); onTutorial(); }, 'btn small', 'retry'); p.appendChild(b); }
     const foot = document.createElement('div');
     foot.className = 'sticky-foot';
-    this.btn(foot, 'DONE', () => { this.close('settings'); onClose(); }, 'btn primary');
+    this.btn(foot, 'DONE', () => { this.close('settings'); onClose(); }, 'btn primary', 'check', true);
     p.appendChild(foot);
     el.appendChild(p);
   }
 
-  // ---------------- Weapons (revision pass 7) ----------------
-  // TODO(ui-pass): the loadout screen, swap strip and weapon tooltip reuse the existing panel/card/button
-  // components with a plain functional layout; restyle them in the UI pass.
-
-  /** Pre-run loadout: pick one of the weapons (preview loops its moves on a dummy, plus its swipe cheat-sheet). */
+  // ---------------- Loadout ----------------
+  /** Pre-run loadout: a character-select style grid (preview loops the weapon's moves on a dummy, plus its swipe sheet). */
   showLoadout(current: WeaponId, onPick: (id: WeaponId) => void, onClose: () => void): void {
-    const el = this.layer('loadout', 'layer dim');
-    const p = document.createElement('div');
-    p.className = 'panel loadout';
-    p.innerHTML = '<h2>LOADOUT</h2>';
+    const el = this.layer('loadout', 'layer dim lo');
+    this.head(el, 'SELECT YOUR WEAPON', 'lo-head');
+    const det = document.createElement('div');
+    det.className = 'panel lo-detail';
+    det.innerHTML = `<div class="ph" data-k="name"></div>`;
     const cv = document.createElement('canvas');
     cv.className = 'lo-preview';
     const cap = document.createElement('div');
-    cap.className = 'subtitle lo-cap';
-    const preview = new MovePreview(cv, (l) => { cap.textContent = l; });
-    p.appendChild(cv); p.appendChild(cap);
-    const cards = document.createElement('div');
-    cards.className = 'cards lo-cards';
+    cap.className = 'lo-cap';
+    const desc = document.createElement('div');
+    desc.className = 'lo-desc';
     const sheet = document.createElement('div');
     sheet.className = 'lo-sheet';
+    det.append(cv, cap, desc, sheet);
+    const preview = new MovePreview(cv, (l) => { cap.textContent = l; });
+    const right = document.createElement('div');
+    right.className = 'lo-right';
+    const tiles = document.createElement('div');
+    tiles.className = 'lo-tiles';
+    tiles.setAttribute('role', 'listbox');
+    tiles.setAttribute('aria-label', 'Weapons');
     let sel = current;
     const pick = (id: WeaponId) => {
       sel = id;
-      for (const c of cards.querySelectorAll<HTMLElement>('.card')) c.classList.toggle('sel', c.dataset.id === id);
-      preview.setWeapon(WEAPONS[id]);
-      sheet.innerHTML = cheatSheet(WEAPONS[id]);
+      for (const c of tiles.querySelectorAll<HTMLElement>('.tile')) { const on = c.dataset.id === id; c.classList.toggle('sel', on); c.setAttribute('aria-selected', String(on)); }
+      const w = WEAPONS[id];
+      (det.querySelector('[data-k=name]') as HTMLElement).innerHTML = `${icon(id)} ${w.name.toUpperCase()}`;
+      desc.textContent = w.desc;
+      preview.setWeapon(w);
+      sheet.innerHTML = cheatSheet(w);
       onPick(id);
     };
     availableWeapons().forEach((id, i) => {
       const w = WEAPONS[id];
       const c = document.createElement('button');
-      c.className = 'card';
+      c.type = 'button';
+      c.className = 'tile';
       c.dataset.id = id;
-      const ic = document.createElement('canvas');
-      ic.width = 64; ic.height = 64; ic.className = 'lo-icon';
-      w.icon(ic.getContext('2d')!, 32, 32, 56, '#1b1a17');
-      c.appendChild(ic);
-      const t = document.createElement('div');
-      t.innerHTML = `<div class="nm">${i < 10 ? ((i + 1) % 10) + '. ' : ''}${w.name}</div><div class="ds">${w.desc}</div>`;
-      c.appendChild(t);
+      c.setAttribute('role', 'option');
+      c.innerHTML = `<span class="k">${i < 10 ? (i + 1) % 10 : ''}</span>${icon(id)}<small>${w.name.replace('Paper Plane Swarm', 'Paper Planes').replace('Boomerang ', '')}</small>`;
       c.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.ui('select'); pick(id); });
-      cards.appendChild(c);
+      tiles.appendChild(c);
     });
-    p.appendChild(cards);
-    p.appendChild(sheet);
     const foot = document.createElement('div');
-    foot.className = 'sticky-foot';
-    this.btn(foot, 'DONE', () => { preview.stop(); this.close('loadout'); onClose(); }, 'btn primary');
-    p.appendChild(foot);
-    el.appendChild(p);
+    foot.className = 'lo-foot sticky-foot';
+    foot.style.position = 'static';
+    foot.innerHTML = '<span class="keys">1–9 · 0 · Q / E</span>';
+    this.btn(foot, 'DONE', () => { preview.stop(); this.close('loadout'); onClose(); }, 'btn primary', 'check', true);
+    right.append(tiles, foot);
+    el.append(det, right);
     pick(sel);
     preview.start();
   }
@@ -358,42 +327,36 @@ export class Menus {
   loadoutKey(code: string): boolean {
     const el = this.layers.get('loadout');
     if (!el) return false;
-    if (code === 'Enter' || code === 'Escape') { el.querySelector<HTMLButtonElement>('.sticky-foot .btn')?.click(); return true; }
-    return pickByKey(code, [...el.querySelectorAll<HTMLButtonElement>('.card')], (b) => b.classList.contains('sel'), true);
+    if (code === 'Escape') { el.querySelector<HTMLButtonElement>('[data-back]')?.click(); return true; }
+    return pickByKey(code, [...el.querySelectorAll<HTMLButtonElement>('.tile')], (b) => b.classList.contains('sel'), false);
   }
 
-
-  /** Between waves: a small non-blocking strip of weapon icons; tap (or press 1-5) to swap instantly. */
+  /** Between waves: a small non-blocking strip of weapon tiles; tap (or press 1-0 / Q / E) to swap instantly. */
   showSwap(current: WeaponId, onSwap: (id: WeaponId) => void): void {
     const el = this.layer('swap', 'layer passthrough');
     el.style.pointerEvents = 'none';
+    const box = document.createElement('div');
+    box.className = 'swap';
+    box.innerHTML = '<span class="lbl">SWAP WEAPON</span>';
     const bar = document.createElement('div');
-    bar.className = 'swap-bar';
-    const lab = document.createElement('span');
-    lab.className = 'swap-label';
-    lab.textContent = 'Swap weapon';
-    bar.appendChild(lab);
+    bar.className = 'swap-tiles';
     availableWeapons().forEach((id, i) => {
       const w = WEAPONS[id];
       const b = document.createElement('button');
-      b.className = 'btn small swap-btn' + (id === current ? ' sel' : '');
+      b.type = 'button';
+      b.className = 'tile swap-btn' + (id === current ? ' sel' : '');
       b.title = i < 10 ? `${(i + 1) % 10}: ${w.name}` : `Q / E: ${w.name}`;
       b.dataset.id = id;
-      const ic = document.createElement('canvas');
-      ic.width = 40; ic.height = 40;
-      w.icon(ic.getContext('2d')!, 20, 20, 34, '#1b1a17');
-      b.appendChild(ic);
-      const k = document.createElement('small');
-      k.textContent = i < 10 ? String((i + 1) % 10) : '';
-      b.appendChild(k);
+      b.innerHTML = `<span class="k">${i < 10 ? (i + 1) % 10 : ''}</span>${icon(id)}`;
       b.addEventListener('click', (e) => {
-        e.stopPropagation(); audio.unlock();
+        e.stopPropagation(); audio.unlock(); audio.ui('select');
         for (const x of bar.querySelectorAll('.swap-btn')) x.classList.toggle('sel', x === b);
         onSwap(id);
       });
       bar.appendChild(b);
     });
-    el.appendChild(bar);
+    box.appendChild(bar);
+    el.appendChild(box);
   }
 
   /** Keyboard swap during the breather. */
@@ -403,36 +366,38 @@ export class Menus {
     return pickByKey(code, [...el.querySelectorAll<HTMLButtonElement>('.swap-btn')], (b) => b.classList.contains('sel'), false);
   }
 
-
   /** First-time tooltip for a weapon: its directional moves, non-blocking. */
   weaponTip(w: WeaponDef, ms: number): void {
     const el = this.layer('wtip', 'layer passthrough');
     el.style.pointerEvents = 'none';
     const t = document.createElement('div');
     t.className = 'tut wtip';
-    t.innerHTML = `${w.name}<small>${w.tips.join('<br>')}</small>`;
+    t.innerHTML = `<div class="in">${icon(w.id)} ${w.name.toUpperCase()}<small>${w.tips.join('<br>')}</small></div>`;
     el.appendChild(t);
     window.setTimeout(() => { if (this.layers.get('wtip') === el) this.close('wtip'); }, ms);
   }
 
-  /** Secret code box (from 5 taps on the title logo). TODO(ui-pass) */
+  /** Secret code box (from 5 taps on the title logo). */
   codePrompt(): void {
     const el = this.layer('code', 'layer dim');
     const p = document.createElement('div');
     p.className = 'panel';
-    p.innerHTML = '<h2>?</h2>';
+    p.style.maxWidth = 'min(94vw, calc(var(--u) * 460px))';
+    p.innerHTML = `<h2>${icon('lock')} ENTER CODE</h2>`;
     const inp = document.createElement('input');
-    inp.type = 'text'; inp.autocomplete = 'off'; inp.className = 'code-input';
+    inp.type = 'text'; inp.autocomplete = 'off'; inp.className = 'code-input'; inp.id = 'code-input';
     inp.setAttribute('aria-label', 'Code');
     p.appendChild(inp);
     const msg = document.createElement('div');
-    msg.className = 'subtitle';
+    msg.className = 'hint';
+    msg.style.padding = '0 var(--s4)';
     p.appendChild(msg);
-    const submit = () => { const r = enterCode(inp.value); msg.textContent = r ?? 'nothing happens…'; inp.value = ''; if (r) this.banner('🔓 ' + r, 'cheat', 1400); };
+    const submit = () => { const r = enterCode(inp.value); msg.textContent = r ?? 'Nothing happens…'; inp.value = ''; if (r) this.banner('UNLOCKED', r, 1400); };
     inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') submit(); if (e.key === 'Escape') this.close('code'); });
     const row = document.createElement('div');
-    this.btn(row, 'OK', submit, 'btn primary');
-    this.btn(row, 'CLOSE', () => this.close('code'));
+    row.className = 'sticky-foot';
+    this.btn(row, 'OK', submit, 'btn primary small', 'check');
+    this.btn(row, 'CLOSE', () => this.close('code'), 'btn small', 'close', true);
     p.appendChild(row);
     el.appendChild(p);
     setTimeout(() => inp.focus(), 50);
@@ -446,32 +411,27 @@ export class Menus {
     rhythm?: { label: string; counts: number[]; bestStreak: number; accuracy: number } | null;
   }, onRetry: () => void, onTitle: () => void): void {
     const el = this.layer('results', 'layer dim');
+    this.head(el, 'GAME OVER', 'res-head', 'red');
     const p = document.createElement('div');
-    p.className = 'panel report';
-    p.innerHTML = `<div class="stamp">${STYLE.ranks[r.maxRank]}<small>STYLE</small></div><h2>Report card</h2>
-      <div class="big">${r.score.toLocaleString()}</div>
-      <div class="subtitle" style="margin-bottom:8px">${r.newHigh ? '★ NEW HIGH SCORE ★' : 'BEST ' + r.high.toLocaleString()}</div>
-      <div class="stats">
-        <span>Wave reached</span><span class="v">${r.wave}</span>
-        <span>Best combo</span><span class="v"><span class="hl">${r.bestHits} hits · ${r.bestDamage} dmg · ${STYLE.ranks[r.bestRank]}</span></span>
-        <span>Highest style rank</span><span class="v">${STYLE.ranks[r.maxRank]}</span>
-        <span>K.O.s</span><span class="v">${r.kos}</span>
-        <span>Perfect parries</span><span class="v">${r.parries}</span>
-        <span>Finishers</span><span class="v">${r.finishers}</span>
-      </div>`;
+    p.className = 'panel';
+    p.style.maxWidth = 'min(94vw, calc(var(--u) * 760px))';
+    const rows: [string, string | number][] = [
+      ['Wave reached', r.wave], ['Best combo', `${r.bestHits} hits · ${r.bestDamage} dmg`], ['Best combo rank', STYLE.ranks[r.bestRank]], ['K.O.s', r.kos],
+      ['Perfect parries', r.parries], ['Finishers', r.finishers],
+    ];
     if (r.rhythm) {
       const c = r.rhythm.counts;
-      const d = document.createElement('div');
-      d.className = 'stats';
-      d.style.marginTop = '8px';
-      d.innerHTML = `<span>Song</span><span class="v">${r.rhythm.label}</span>
-        <span>Beat accuracy</span><span class="v">${Math.round(r.rhythm.accuracy * 100)}%</span>
-        <span>Best streak</span><span class="v">${r.rhythm.bestStreak}</span>
-        <span>Judgements</span><span class="v">${c[3]} perfect · ${c[2]} great · ${c[1]} good · ${c[0]} miss</span>`;
-      p.appendChild(d);
+      rows.push(['Song', r.rhythm.label], ['Beat accuracy', `${Math.round(r.rhythm.accuracy * 100)}%`], ['Best streak', r.rhythm.bestStreak], ['Judgments', `${c[3]} P · ${c[2]} G · ${c[1]} OK · ${c[0]} miss`]);
     }
-    this.btn(p, 'FIGHT AGAIN', onRetry, 'btn primary');
-    this.btn(p, 'TITLE', onTitle);
+    p.innerHTML = `<div class="res-top"><div><div class="lbl" style="font-size:var(--fs-xs);color:var(--cyan)">FINAL SCORE</div><div class="res-score">${r.score.toLocaleString()}</div>
+        <div class="res-best ${r.newHigh ? 'new' : ''}">${r.newHigh ? '★ NEW HIGH SCORE ★' : 'BEST ' + r.high.toLocaleString()}</div></div>
+        <div style="text-align:center"><div class="rank-hex">${STYLE.ranks[r.maxRank]}</div><div class="lbl" style="font-size:var(--fs-xs);color:var(--steel2);margin-top:var(--s1)">TOP RANK</div></div></div>
+      <div class="stats">${rows.map(([k, v], i) => `<div class="statrow${String(v).length > 22 ? ' wide' : ''}" style="animation-delay:${0.08 + i * 0.04}s"><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;
+    const foot = document.createElement('div');
+    foot.className = 'sticky-foot';
+    this.btn(foot, 'FIGHT AGAIN', onRetry, 'btn primary', 'retry').id = 'res-retry';
+    this.btn(foot, 'TITLE', onTitle, 'btn', 'home', true);
+    p.appendChild(foot);
     el.appendChild(p);
   }
 
@@ -481,7 +441,8 @@ export class Menus {
     el.style.pointerEvents = 'none';
     const b = document.createElement('div');
     b.className = 'banner';
-    b.innerHTML = `${text}${sub ? `<small>${sub}</small>` : ''}`;
+    const red = /BOSS/.test(sub);
+    b.innerHTML = `<span class="banner-band${red ? ' red' : ''}"><span>${text}</span></span>${sub ? `<small>${sub.toUpperCase()}</small>` : ''}`;
     el.appendChild(b);
     window.setTimeout(() => { if (this.layers.get('banner') === el) this.close('banner'); }, ms);
   }
@@ -492,13 +453,10 @@ export class Menus {
     const t = document.createElement('div');
     t.className = 'tut';
     t.style.top = topPx + 'px';
-    t.innerHTML = `${text}${sub ? `<small>${sub}</small>` : ''}`;
+    t.innerHTML = `<div class="in">${text}${sub ? `<small>${sub}</small>` : ''}</div>`;
     el.appendChild(t);
     if (onSkip) {
-      const b = this.btn(el, 'SKIP TUTORIAL ›', onSkip, 'btn small');
-      b.style.position = 'absolute';
-      b.style.top = '62px';
-      b.style.right = '10px';
+      const b = this.btn(el, 'SKIP TUTORIAL', onSkip, 'btn small skip', 'close');
       b.style.pointerEvents = 'auto';
     }
   }
@@ -506,17 +464,23 @@ export class Menus {
   closeAll(): void { for (const id of [...this.layers.keys()]) this.close(id); }
 }
 
+/** The weapon id for a loadout button label (the title passes the weapon's display name). */
+function settingsWeapon(name: string): WeaponId {
+  const e = Object.values(WEAPONS).find((w) => w.name === name);
+  return (e?.id ?? 'fists') as WeaponId;
+}
+
 /** Swipe cheat-sheet for a weapon: direction -> light / heavy move names (ground, then air). */
 function cheatSheet(w: WeaponDef): string {
   const nm = (id: string) => MOVES[id]?.name ?? id;
   const rows: [string, keyof WeaponDef['ground']][] = [['→ ←', 'side'], ['↗ ↖', 'upDiag'], ['↑', 'up'], ['↘ ↙', 'downDiag'], ['↓', 'down']];
   const tr = (set: WeaponDef['ground']) => rows.map(([d, k]) => `<tr><td>${d}</td><td>${nm(set[k].light)}</td><td>${nm(set[k].heavy)}</td></tr>`).join('');
-  return `<table><tr><th>swipe</th><th>light</th><th>heavy (long fast swipe / Shift)</th></tr>${tr(w.ground)}<tr><th colspan="3">in the air</th></tr>${tr(w.air)}<tr><td>tap</td><td colspan="2">${w.dodge.rope ? 'hook-zip dodge' : 'dodge'} / parry</td></tr></table>`;
+  return `<table><tr><th>SWIPE</th><th>LIGHT</th><th>HEAVY</th></tr>${tr(w.ground)}<tr><th colspan="3">IN THE AIR</th></tr>${tr(w.air)}<tr><td>TAP</td><td colspan="2">${w.dodge.rope ? 'Hook-zip dodge' : 'Dodge'} / parry</td></tr></table>`;
 }
 
 /**
- * Weapon picking by key: 1-9 and 0 pick the first ten, Q / E step to the previous / next weapon
- * (arrow keys too in the loadout screen, where they can't move the hero).
+ * Weapon picking by key: 1-9 and 0 pick the first ten, Q / E step to the previous / next weapon.
+ * (Arrow keys move the focus through the grid instead: ui/nav.ts.)
  */
 function pickByKey(code: string, btns: HTMLButtonElement[], isSel: (b: HTMLButtonElement) => boolean, arrows: boolean): boolean {
   if (!btns.length) return false;
@@ -533,7 +497,8 @@ function pickByKey(code: string, btns: HTMLButtonElement[], isSel: (b: HTMLButto
   return true;
 }
 
-/** Mobile Performance also drops costly CSS (menu blur, looping animations). */
+/** Mobile Performance also drops costly CSS (glows, looping animations). */
 export function applyPerfClass(): void {
   document.body.classList.toggle('perf', settings.mobilePerf);
+  document.body.classList.toggle('calm', settings.reduceFlashes);
 }
