@@ -25,8 +25,7 @@ export const RHYTHM = {
   scoreBonus: [0, 30, 70, 140] as number[],
   /** Style per connecting judged attack. */
   styleBonus: [0, 1, 2.5, 4.5] as number[],
-  /** Super meter per connecting judged attack. */
-  superBonus: [0, 0.5, 1.5, 3] as number[],
+
   /** Streak (consecutive non-MISS inputs) tiers and their bonus multipliers. */
   streakTiers: [0, 8, 16, 32] as number[],
   streakMult: [1, 1.5, 2, 3] as number[],

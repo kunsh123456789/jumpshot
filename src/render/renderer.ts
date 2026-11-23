@@ -1,6 +1,7 @@
 import { layout } from '../core/layout';
 import { drawWeaponFx, drawRefFx } from './weaponFx';
 import { drawExtraFx } from './weaponFx2';
+import { drawCineFx } from './cineFx';
 import type { Camera } from '../core/camera';
 import { ANIM, WORLD } from '../data/tuning';
 import { settings } from '../core/settings';
@@ -99,6 +100,7 @@ export class Renderer {
     for (const f of order) drawFighter(ctx, f, alpha, time, dt);
     drawWeaponFx(ctx, world, alpha, time, 1.6);
     drawExtraFx(ctx, world, alpha, time, 1.6);
+    drawCineFx(ctx, world, alpha, time, 1.6);
     drawRefFx(ctx, world, alpha, time, 1.6, effects.invert > 0 && !settings.reduceFlashes);
     const pl = world.player;
     this.lastPlayerX = pl.px + (pl.x - pl.px) * alpha;
@@ -201,6 +203,7 @@ export class Renderer {
     for (const f of order) drawInkFighter(g, f, alpha, time, wpp);
     drawWeaponFx(g, world, alpha, time, wpp);
     drawExtraFx(g, world, alpha, time, wpp);
+    drawCineFx(g, world, alpha, time, wpp);
     drawRefFx(g, world, alpha, time, wpp, effects.invert > 0 && !settings.reduceFlashes);
     const pl = world.player;
     this.lastPlayerX = pl.px + (pl.x - pl.px) * alpha;

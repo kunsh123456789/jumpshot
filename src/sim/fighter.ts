@@ -149,6 +149,8 @@ export class Fighter {
   /** Scripted cinematic drawing (state 'cine'): animation id and time. */
   cineAnim = '';
   cineT = 0;
+  /** Extra whole-body turn during a cinematic (pile-driver spin). */
+  cineSpin = 0;
   /** Spawn-in fade (enemies): frames left of the dithered fade from gray to solid. */
   spawnFade = -1;
   /** Death variant (0 flat collapse, 1 launched off-screen, 2 scribbled out) and its timer. */

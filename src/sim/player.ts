@@ -1,7 +1,8 @@
 import type { World } from './world';
 import type { Fighter } from './fighter';
 import { DIR_VX, DIR_VY, MOVES, dirClass, dirSignX, type MoveDef, type MoveTag } from '../data/moves';
-import { INPUT, MOVE, PHYS, PLAYER, SUPER, WORLD } from '../data/tuning';
+import { CINE, INPUT, MOVE, PHYS, PLAYER, WORLD } from '../data/tuning';
+import { airFinisher } from '../data/cines';
 import type { SwipeEvent } from '../ui/pad';
 import { clamp, ease } from '../core/math';
 import { overlaps, playerHit } from './combat';
@@ -39,6 +40,12 @@ export class PlayerController {
   /** Ingest this tick's swipes. */
   ingest(w: World, inputs: SwipeEvent[]): void {
     const p = w.player;
+    // Cinematics take no input (any input skips a KO finisher).
+    if (w.cine.active) {
+      if (inputs.length > 0 && w.cine.kind === 'ko') w.cine.skip();
+      return;
+    }
+    if (w.special.busy) return;
     for (const ev of inputs) {
       if (ev.kind === 'promote') {
         // Promote a buffered swipe, or the move it just started, to heavy.
@@ -178,6 +185,22 @@ export class PlayerController {
       if (w.rhythm) w.rhythm.onTap(w, b.ev);
       return true;
     }
+    // Air Finisher: a down swipe in the air after a 5+ hit air juggle (once per air combo).
+    const d = b.ev.dir;
+    if (!p.grounded && (d === 5 || d === 6 || d === 7) && w.combo.airJuggle >= CINE.airMinJuggle && !w.combo.airFinisherUsed && this.canAct(p, ['air', 'down'], false)) {
+      // the juggled enemy: the nearest airborne one in range (the swipe's own target if it is airborne)
+      let t = this.selectTarget(w, d);
+      if (!t || t.grounded || !t.alive) {
+        t = null; let bd: number = PLAYER.targetRange;
+        for (const e of w.enemies) { if (!e.alive || e.grounded || e.remove || e.state === 'ko') continue; const dd = Math.hypot(e.x - p.x, e.cy - p.cy); if (dd < bd) { bd = dd; t = e; } }
+      }
+      if (t && t.alive && !t.grounded && t.state !== 'ko') {
+        w.combo.airFinisherUsed = true;
+        w.combo.finishers++;
+        w.cine.start(w, airFinisher(w.weapon.id), 'air', t, []);
+        return true;
+      }
+    }
     const plan = this.resolve(w, b.ev.dir, b.heavy);
     if (!plan) return false;
     if (!this.canAct(p, plan.move.tags, false)) return false;
@@ -189,20 +212,10 @@ export class PlayerController {
 
   private resolve(w: World, dir: number, heavy: boolean): { move: MoveDef; target: Fighter | null; crossUp: boolean } | null {
     const p = w.player;
-    const combo = w.combo;
     const dc = dirClass(dir);
     const airborne = !p.grounded;
     const target = this.selectTarget(w, dir);
 
-    // Specials (cost super meter).
-    if (combo.superMeter >= SUPER.finisherCost) {
-      if (airborne && (dc === 'down' || dc === 'downDiag') && combo.launcherUsed && combo.airJuggle >= SUPER.jumpshotMinJuggle && target) {
-        return { move: MOVES.jumpshotFinisher, target, crossUp: false };
-      }
-      if (heavy && combo.hits >= SUPER.flurryMinCombo && target) {
-        return { move: MOVES.flurry, target, crossUp: false };
-      }
-    }
 
     let useAir = airborne;
     // Airborne but low, chasing a grounded target: drop into a ground move instead.
@@ -284,13 +297,6 @@ export class PlayerController {
     this.lastStartFrame = w.frame;
     this.latency = w.frame - this.lastCommitFrame;
     w.combo.noteMove(m.family);
-    if (m.tags.includes('special')) {
-      if (m.id === 'jumpshotFinisher' || m.id === 'flurry') {
-        w.combo.superMeter -= SUPER.finisherCost;
-        w.combo.finishers++;
-        w.events.emit('finisher', { kind: m.id === 'flurry' ? 'flurry' : 'jumpshot', x: p.x, y: p.cy });
-      }
-    }
 
     // Facing.
     if (target) {
@@ -330,7 +336,7 @@ export class PlayerController {
     p.effStartup = Math.max(m.startup, p.dashFrames + (m.grab ? m.grab.hold : 0));
     // Hang an airborne target briefly while we wind up (decays with juggle depth).
     if (target && !target.grounded && target.alive) {
-      const fin = m.id === 'jumpshotFinisher';
+      const fin = false;
       const pre = fin ? p.effStartup + 8 : Math.round(p.effStartup * Math.max(0, 1 - target.juggleHits * 0.1));
       if (pre > target.stall) {
         target.stall = pre;

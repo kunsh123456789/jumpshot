@@ -1,6 +1,7 @@
 import { Pool } from '../core/pool';
 import type { World } from './world';
-import { PICKUPS, PHYS, WORLD, SUPER } from '../data/tuning';
+import { PICKUPS, PHYS, WORLD } from '../data/tuning';
+import { SPECIAL } from '../data/special';
 import { BOSS, PROJECTILE, isBoss } from '../data/enemies';
 import { hurtPlayer, overlaps, parry, sideHit } from './combat';
 
@@ -126,7 +127,7 @@ export class Entities {
       if (u.y > WORLD.groundY - 12) { u.y = WORLD.groundY - 12; u.vy = -u.vy * 0.3; if (Math.abs(u.vy) < 40) { u.vy = 0; u.grounded = true; } }
       if (d < 46 && u.life > 15 && p.alive) {
         if (u.kind === 'health') p.hp = Math.min(p.maxHp, p.hp + PICKUPS.healthAmount);
-        else w.combo.superMeter = Math.min(SUPER.max, w.combo.superMeter + SUPER.orbGain);
+        else w.special.add(w, SPECIAL.orb);
         w.events.emit('pickup', { kind: u.kind, x: u.x, y: u.y });
         pk.releaseAt(i);
         continue;

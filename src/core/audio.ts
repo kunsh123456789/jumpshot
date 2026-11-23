@@ -176,6 +176,21 @@ class Audio {
     this.noiseBurst(t, 0.06, 0.6, 'bandpass', 2200, 1);
   }
 
+  /** Special (pass 8): a rising sweep under the trace phase, and a high ping for each QTE prompt. */
+  riser(sec: number): void {
+    if (!this.ok('riser', 0.3)) return;
+    const t = this.ctx!.currentTime;
+    this.tone(t, 'sawtooth', 110, 880, sec, 0.12, undefined, sec * 0.6);
+    this.tone(t, 'sine', 220, 1760, sec, 0.1, undefined, sec * 0.6);
+    this.noiseBurst(t, sec, 0.18, 'bandpass', 400, 2, 6000);
+  }
+  prompt(good: boolean): void {
+    if (!this.ok('prompt', 0.04)) return;
+    const t = this.ctx!.currentTime;
+    if (good) { this.tone(t, 'square', 880, 1320, 0.08, 0.12); this.tone(t + 0.05, 'square', 1320, 1760, 0.08, 0.1); }
+    else this.tone(t, 'sawtooth', 220, 110, 0.15, 0.12);
+  }
+
   boom(): void {
     if (!this.ok('boom', 0.08)) return;
     const t = this.ctx!.currentTime;

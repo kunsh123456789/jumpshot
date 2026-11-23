@@ -195,17 +195,23 @@ export class FxDirector {
       audio.spike(0.4);
     });
     ev.on('finisher', (e) => {
-      if (e.kind === 'jumpshot') {
-        this.time.slowmo(JUICE.slowmoFinisherScale, JUICE.slowmoFinisherSec);
-        this.cam.focus(0.3, 0.6);
-        this.popup('JUMPSHOT!', 'FINISHER', '#ff4dd2', true);
-      } else {
-        this.time.slowmo(0.4, 0.25);
-        this.cam.focus(0.15, 0.8);
-        this.popup('FLURRY!', 'FINISHER', '#ff4dd2', true);
-      }
+      // Cinematics (pass 8): the script drives slow-mo / focus through cineFx; this is the name card.
+      this.cam.focus(e.kind === 'ko' ? 0.25 : 0.3, 0.6);
+      this.popup(e.name + '!', e.kind === 'air' ? 'AIR FINISHER' : e.kind === 'ko' ? 'K.O.' : 'SPECIAL', '#ff4dd2', true);
       effects.embers(e.x, e.y, 26, '#ff4dd2');
       audio.launch();
+    });
+    ev.on('cineFx', (e) => {
+      const flash = !settings.reduceFlashes;
+      switch (e.kind) {
+        case 'slowmo': this.time.slowmo(e.a, 0.5); break;
+        case 'focus': this.cam.focus(e.a, 0.7); break;
+        case 'invert': if (flash) { effects.invert = Math.max(effects.invert, ANIM.invertSec * 2); crescentFlash(e.x, e.y, 1); } audio.boom(); break;
+        case 'shake': this.cam.shake(10 * e.a * settings.shake, 0, 1, 0.4 * e.a); this.cam.punchZoom(0.05 * e.a); break;
+        case 'whoosh': audio.launch(); break;
+        case 'bigCrack': this.cam.shake(16 * e.a * settings.shake, 0, 1, 0.5); audio.spike(Math.min(1, e.a / 2)); effects.dust(e.x, e.y, 0.8); break;
+        case 'stars': audio.ui('select'); break;
+      }
     });
     ev.on('rankUp', (e) => {
       this.rankSlam = 1;

@@ -6,6 +6,7 @@ import { WORLD } from '../data/tuning';
 import { PROJECTILE } from '../data/enemies';
 import { INKFX } from '../data/inkLook';
 import { DRAW } from './drawStyle';
+import { lightning } from './weaponFx';
 import { INK, inkColor, inkHooks, burst } from './ink';
 import { settings } from '../core/settings';
 import { weaponById } from '../data/weapons';
@@ -71,11 +72,25 @@ export class InkFx {
     ev.on('wallImpact', (e) => { if (DRAW.ink) for (let i = 0; i < 10; i++) spawn(0, e.x, e.y + (rnd() - 0.5) * 60, -e.dir * (80 + rnd() * 220), -rnd() * 260, 0.6, 2, 0); });
     ev.on('ko', (e) => { if (DRAW.ink) { this.splatter(e.x, e.y, colIdx(inkColor(e.victim)), 22); this.floorMark(e.x, 1.1, 8); } });
     ev.on('shockwave', (e) => { if (DRAW.ink) this.scribble(e.x, e.y - 30, Math.min(140, e.radius * 0.5), e.color === '#ff4040' || e.color === '#ff3030' ? 2 : 0); });
-    ev.on('finisher', (e) => { if (DRAW.ink) this.scribble(e.x, e.y, 150, 2); });
+    ev.on('finisher', (e) => { if (DRAW.ink && e.kind === 'air') this.scribble(e.x, e.y, 70, 2); });
     ev.on('meteor', (e) => { if (DRAW.ink) { this.scribble(e.x, WORLD.groundY - 40, 110, 2); this.floorMark(e.x, 1.8, 14); } });
     ev.on('parry', (e) => { if (DRAW.ink) for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; spawn(1, e.x, e.y, Math.cos(a) * 420, Math.sin(a) * 420, 0.25, 14, 0, a); } });
     ev.on('playerHurt', (e) => { if (DRAW.ink) this.splatter(e.x, e.y, 0, 10); });
     ev.on('waveStart', () => this.clearFloor());
+    // Cinematic cues (pass 8).
+    ev.on('cineFx', (e) => {
+      if (!DRAW.ink) return;
+      switch (e.kind) {
+        case 'crack': this.floorMark(e.x, 0.9 * e.a + 0.4, 10); break;
+        case 'bigCrack': for (let i = -2; i <= 2; i++) this.floorMark(e.x + i * 46 * e.a, 1.2 + e.a * (1 - Math.abs(i) * 0.25), 14); this.scribble(e.x, e.y - 30, 60 + e.a * 40, 2); break;
+        case 'scribble': this.scribble(e.x, e.y, e.a > 2 ? e.a : 110, 2); break;
+        case 'lightning': lightning(e.x, e.y, (rnd() * 1e6) | 0); break;
+        case 'whirl': for (let i = 0; i < 8; i++) { const a = rnd() * TAU, r = 60 * e.a; spawn(1, e.x + Math.cos(a) * r, e.y + Math.sin(a) * r * 0.5, -Math.sin(a) * 380, Math.cos(a) * 190, 0.18, 14, 0, a + Math.PI / 2); } break;
+        case 'stars': for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU; spawn(1, e.x, e.y, Math.cos(a) * 300 * e.a, Math.sin(a) * 300 * e.a, 0.3, 14 + 6 * e.a, 2, a); } break;
+        case 'dust': this.floorMark(e.x, 0.6, 12); break;
+        case 'sparks': this.impact(e.x, e.y, 1, -0.2, 0.6 * e.a + 0.3, 0, 2); break;
+      }
+    });
     // Launched KO leaving the page: a big twinkling star where it exited.
     ev.on('koStar', (e) => { if (DRAW.ink) { for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU; spawn(1, e.x, e.y, Math.cos(a) * 260, Math.sin(a) * 260, 0.35, 18, 2, a); } this.scribble(e.x, e.y, 46, 2); } });
   }

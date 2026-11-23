@@ -2,7 +2,7 @@ import { audio } from '../core/audio';
 import { settings } from '../core/settings';
 import { SONGS, METRONOME_SONG, type SongDef } from '../data/songs';
 import { GOOD, GREAT, RHYTHM, type Grade } from '../data/rhythm';
-import { SUPER } from '../data/tuning';
+import { SPECIAL } from '../data/special';
 import { Conductor, type LoadedSong } from './conductor';
 import { analyzeSong } from './analyze';
 import { LiveTracker } from './live';
@@ -245,7 +245,7 @@ export class RhythmDirector implements RhythmSim {
     const g = this.curGrade as Grade;
     const m = this.streakMult();
     w.combo.addStyle(RHYTHM.styleBonus[g]);
-    w.combo.superMeter = Math.min(SUPER.max, w.combo.superMeter + RHYTHM.superBonus[g]);
+    w.special.add(w, SPECIAL.rhythmBonus[g]);
     const pts = Math.round(RHYTHM.scoreBonus[g] * m);
     w.combo.score += pts;
     if (g >= GREAT) w.events.emit('text', { text: `+${pts}`, x: v.x, y: v.y - 175 * v.scale, color: g === 3 ? '#ffe14a' : '#7dff8a', size: 15 });

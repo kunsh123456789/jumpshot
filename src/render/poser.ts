@@ -48,8 +48,11 @@ export function poseFighter(f: Fighter, _time: number): void {
 
   // ---------------- Scripted cinematics (finishers, specials) ----------------
   if (f.state === 'cine') {
-    const def = ANIMS[f.cineAnim] ?? getAnim(kind, 'idle');
-    a.show(def, Math.min(def.len, f.cineT), 1);
+    const def = f.team === 'player' ? (ANIMS[f.cineAnim] ?? ANIMS.idle) : getAnim(kind, f.cineAnim || 'hurtHeavy');
+    const t = def.loop ? f.cineT % def.len : Math.min(def.len - 1, f.cineT);
+    a.show(def, t, 1);
+    a.spinAdd = f.team === 'player' ? f.cineSpin : f.spinAngle;
+    a.spinBase = 0;
     return;
   }
 

@@ -1,7 +1,8 @@
 import type { World } from './world';
 import type { Fighter } from './fighter';
 import type { MoveDef } from '../data/moves';
-import { ANIM, COMBO, DEATH, JUICE, PHYS, PLAYER, SCORE, SUPER } from '../data/tuning';
+import { ANIM, COMBO, DEATH, JUICE, PHYS, PLAYER, SCORE } from '../data/tuning';
+import { SPECIAL } from '../data/special';
 import { settings } from '../core/settings';
 import { simRng } from '../core/rng';
 import { isBoss, type EnemyAttack } from '../data/enemies';
@@ -332,6 +333,8 @@ export function ko(w: World, v: Fighter, dirX: number): void {
   for (const e of w.enemies) if (e.alive) { last = false; break; }
   if (last && w.waves.remainingToSpawn() > 0) last = false;
   w.events.emit('ko', { x: v.x, y: v.cy, victim: v, last });
+  w.special.add(w, isBoss(v) ? SPECIAL.killBoss : v.kind === 'elite' ? SPECIAL.killElite : SPECIAL.kill);
+  if (last && !w.noKOFinisher && v.kind !== 'dummy' && w.player.alive) w.pendingKO = v;
 }
 
 /** Enemy attack connects check against the player. Returns true if it hit/parried. */
@@ -375,7 +378,6 @@ export function parry(w: World, e: Fighter | null, projectile: boolean): void {
     if (e.poise > 0) e.poise = Math.max(0, e.poise - e.maxPoise * 0.6);
     p.facing = Math.sign(e.x - p.x) || p.facing;
   }
-  w.combo.superMeter = Math.min(SUPER.max, w.combo.superMeter);
   if (w.rhythm) w.rhythm.onParry(w);
   w.events.emit('parry', { x: e ? (e.x + p.x) / 2 : p.x + p.facing * 30, y: p.cy, projectile });
 }
@@ -404,6 +406,7 @@ export function hurtPlayer(w: World, dmg: number, dirX: number, kbX: number, kbY
   p.critTimer = 0;
   p.telegraph = 0;
   w.combo.onPlayerHurt();
+  w.special.add(w, dmg * SPECIAL.perDamageTaken);
   w.events.emit('playerHurt', { damage: dmg, x: p.x, y: p.cy, dirX });
   if (p.hp <= 0) {
     p.hp = 0;

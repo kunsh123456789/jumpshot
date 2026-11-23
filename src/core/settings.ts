@@ -48,6 +48,9 @@ export interface Settings {
    * snap (a GPU read-back), floor reflections and the menu blur. On by default on touch devices.
    */
   mobilePerf: boolean;
+  /** Special (pass 8): Assist = wider trace band + longer timers; Skip QTE = the prompts count as a Clean result. */
+  specialAssist: boolean;
+  specialSkipQte: boolean;
 }
 
 /** Touch-first device (phones / tablets): turns Mobile Performance on by default. */
@@ -86,6 +89,8 @@ export const settings: Settings = {
   boil: true,
   highContrast: false,
   mobilePerf: false,
+  specialAssist: false,
+  specialSkipQte: false,
 };
 
 const DEFAULTS_REV = 2;
@@ -117,6 +122,8 @@ export interface SaveData {
   weapon: string; weaponTips: string[];
   /** Easter-egg cheats unlocked by code (their Settings switches stay hidden until then). */
   cheatsUnlocked: string[];
+  /** The first-READY Special hint was shown. */
+  specialHintSeen?: boolean;
 }
 export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false, weapon: 'fists', weaponTips: [], cheatsUnlocked: [] };
 export function loadSave(): void {

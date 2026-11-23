@@ -17,7 +17,7 @@ import { Menus } from './ui/menus';
 import { Tutorial } from './ui/tutorial';
 import { PopDetector } from './ui/popDetector';
 import { AnimLab } from './ui/lab';
-import { CAMERA, WAVES_T, WORLD, SCORE } from './data/tuning';
+import { CAMERA, PAD, WAVES_T, WORLD, SCORE } from './data/tuning';
 import { clamp } from './core/math';
 import { RhythmDirector } from './rhythm/director';
 import { RhythmHud, drawRhythmWorld } from './rhythm/hud';
@@ -34,6 +34,8 @@ import { weaponById } from './data/weapons';
 import { WEAPON_T } from './data/weapons/tuning';
 import { updateRefFx } from './render/weaponFx';
 import { CodeListener, enforceLocks } from './ui/cheats';
+import { SpecialInput } from './ui/specialInput';
+import type { Family } from './data/cines';
 
 type GState = 'title' | 'tutorial' | 'countdown' | 'playing' | 'breather' | 'gameover';
 
@@ -57,6 +59,8 @@ export class Game {
   readonly rhud = new RhythmHud();
   readonly phud = new PaperHud();
   readonly rui = new RhythmUI();
+  /** Special trace + QTE input phases (pass 8). */
+  readonly specialInput: SpecialInput;
   /** performance.now()-domain time the current sim step advances to (set by the main loop). */
   simNow = 0;
   state: GState = 'title';
@@ -86,6 +90,7 @@ export class Game {
     };
     this.pad.attach(canvas);
     this.keyboard = new Keyboard(this.pad);
+    this.specialInput = new SpecialInput(this.pad, this.keyboard, this.cam, this.rhythm);
     this.keyboard.onToggleDebug = () => { this.debug.visible = !this.debug.visible; settings.debug = this.debug.visible; };
     this.keyboard.onPause = () => this.togglePause();
     // Easter-egg cheat codes typed anywhere.
@@ -115,6 +120,15 @@ export class Game {
     window.addEventListener('blur', () => { if ((this.state === 'playing' || this.state === 'tutorial') && !this.paused) this.togglePause(); });
     document.addEventListener('visibilitychange', () => { if (document.hidden && (this.state === 'playing' || this.state === 'tutorial') && !this.paused) this.togglePause(); });
     this.world.events.on('waveClear', () => this.onWaveClear());
+    // Special (pass 8): the input phases open after the activation beat; first READY shows a hint.
+    this.world.events.on('specialInput', (e) => this.specialInput.begin(this.world, e.family as Family));
+    this.world.events.on('specialReady', () => {
+      audio.ui('select');
+      if (!save.specialHintSeen && (this.state === 'playing' || this.state === 'tutorial')) {
+        save.specialHintSeen = true; writeSave();
+        this.menus.banner('SPECIAL READY!', 'hold still on the pad (or press X) to unleash it', 2200);
+      }
+    });
     inkFx.bind(this.world);
     // Pages bake handwriting into their doodles: re-bake once the bundled fonts are ready.
     document.fonts?.ready.then(() => paper.invalidate());
@@ -348,7 +362,6 @@ export class Game {
     this.setState('tutorial');
     this.menus.setPlayButtons(true);
     this.tutorial.start(this.world);
-    this.world.combo.superMeter = 100;
   }
 
   private endTutorial(): void {
@@ -579,7 +592,9 @@ export class Game {
       }
       this.rhud.draw(ctx, this.rhythm, this.world, now);
     }
-    if (this.state !== 'gameover') this.pad.draw(ctx, performance.now(), realDt);
+    if (this.state !== 'gameover' && !this.specialInput.active) this.pad.draw(ctx, performance.now(), realDt);
+    this.specialInput.update(realDt, this.paused);
+    this.specialInput.draw(ctx, performance.now());
     if (this.debug.visible) {
       const p = this.world.player;
       const c = this.world.ctrl;
@@ -588,7 +603,9 @@ export class Game {
         `buffer [${c.bufDesc}]  latency ${c.latency}f  ${this.debugFrozen ? 'FROZEN ( ] step, \\ resume)' : this.debugScale < 1 ? 'SLOW-MO 0.1x' : ''}`,
         `state ${p.state} f${p.stateFrame} move ${p.move?.id ?? '-'}:${p.moveFrame}/${p.effStartup}`,
         `pos ${p.x.toFixed(0)},${p.y.toFixed(0)} v ${p.vx.toFixed(0)},${p.vy.toFixed(0)} stall ${p.stall}`,
-        `combo ${cb.hits} air ${cb.airJuggle} style ${cb.style.toFixed(0)} super ${cb.superMeter.toFixed(0)}`,
+        `combo ${cb.hits} air ${cb.airJuggle} style ${cb.style.toFixed(0)} special ${this.world.special.charge.toFixed(0)} ${this.world.special.phase}${this.world.cine.active ? ' cine ' + this.world.cine.script!.id + ':' + this.world.cine.ctx!.f : ''}`,
+        `jump: slow drag up ${PAD.jumpDragPx}px (slope ${PAD.jumpMinSlope}, < ${Math.round(PAD.flickSpeed * PAD.jumpMaxSpeedFrac)}px/s) · flick up = launcher · hold ${PAD.holdMs}ms = SPECIAL · charge ${this.pad.jumpCharge.toFixed(2)}`,
+        ...this.specialInput.debugLines(),
         `enemies ${this.world.enemies.length} tokens ${this.world.ai.tokens} particles ${effects.parts.count}`,
         `timescale ${this.time.scale.toFixed(2)} zoom ${this.cam.effectiveZoom().toFixed(2)} ${layout.portrait ? 'portrait' : 'landscape'}`,
       ], 8, layout.portrait ? layout.world.y + 40 : layout.world.y + 100, this.lastAlpha);

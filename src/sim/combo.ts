@@ -1,4 +1,5 @@
-import { COMBO, SCORE, STYLE, SUPER } from '../data/tuning';
+import { COMBO, SCORE, STYLE } from '../data/tuning';
+import { SPECIAL } from '../data/special';
 import type { EventBus } from '../core/events';
 import type { SimEvents } from './events';
 
@@ -22,6 +23,8 @@ export class ComboTracker {
   idleFrames = 0;
   launcherUsed = false;
   finisherUsed = false;
+  /** The Air Finisher was used in this air combo (reset on landing). */
+  airFinisherUsed = false;
   airJuggle = 0;
   groundBouncesUsed = 0;
   wallBouncesUsed = 0;
@@ -29,7 +32,8 @@ export class ComboTracker {
 
   style = 0;
   rank = 0;
-  superMeter = 0;
+  /** Special Bar charge sink (set by the world; pass 8 replaced the super meter). */
+  onCharge: ((amount: number) => void) | null = null;
   score = 0;
 
   // run stats
@@ -90,7 +94,7 @@ export class ComboTracker {
     this.addStyle(st);
     this.lastFamily = family;
     this.lastHitFrame = this.frame;
-    this.superMeter = Math.min(SUPER.max, this.superMeter + SUPER.perHitBase * SUPER.rankMult[this.rank]);
+    this.onCharge?.(SPECIAL.perHit * Math.min(SPECIAL.comboCap, 1 + this.hits * SPECIAL.perComboHit) + (f.air ? SPECIAL.airBonus : 0) + (f.multi ? SPECIAL.multiBonus : 0));
     this.score += Math.round(damage * SCORE.perDamage * STYLE.scoreMult[this.rank]);
   }
 
@@ -118,7 +122,7 @@ export class ComboTracker {
   onParry(): void {
     this.parries++;
     this.addStyle(STYLE.parryBonus);
-    this.superMeter = Math.min(SUPER.max, this.superMeter + SUPER.parryGain);
+    this.onCharge?.(SPECIAL.parry);
     this.score += SCORE.parry;
     this.sinceHit = Math.min(this.sinceHit, 10);
   }
@@ -129,7 +133,7 @@ export class ComboTracker {
     this.updateRankDown();
   }
 
-  onPlayerLanded(): void { this.airJuggle = 0; }
+  onPlayerLanded(): void { this.airJuggle = 0; this.airFinisherUsed = false; }
 
   /** Per-frame update. anyHitState = whether any enemy is still being comboed. */
   update(anyHitState: boolean): void {

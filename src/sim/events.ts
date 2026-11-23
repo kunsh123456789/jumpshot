@@ -38,7 +38,16 @@ export interface SimEvents {
   burst: { x: number; y: number; enemy: Fighter };
   poiseBreak: { x: number; y: number; enemy: Fighter };
   guardBreak: { x: number; y: number; enemy: Fighter };
-  finisher: { kind: 'jumpshot' | 'flurry'; x: number; y: number };
+  /** A cinematic started: air finisher, last-hit KO finisher or Special. */
+  finisher: { kind: 'air' | 'ko' | 'special'; name: string; x: number; y: number };
+  /** Cinematic presentation cue (slow-mo, focus, impact frame, cracks, lightning, stars...). */
+  /** The Special Bar is full (READY), a Special started / its input phases opened / its tier / it ended. */
+  specialReady: { x: number; y: number };
+  specialStart: { weapon: string; family: string; name: string; x: number; y: number };
+  specialInput: { family: string };
+  specialTier: { tier: number; name: string; x: number; y: number };
+  specialEnd: { tier: number };
+  cineFx: { kind: import('./cine').CineFxKind; x: number; y: number; a: number };
   rankUp: { rank: number };
   comboEnd: { hits: number; damage: number; maxRank: number; bonus: number; finisher: boolean; dropped: boolean };
   pickup: { kind: 'health' | 'orb'; x: number; y: number };

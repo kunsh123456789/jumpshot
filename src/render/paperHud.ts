@@ -3,7 +3,8 @@ import { drawHeatBar } from './weaponFx';
 import { settings } from '../core/settings';
 import type { World } from '../sim/world';
 import type { FxDirector } from './fx';
-import { STYLE, SUPER } from '../data/tuning';
+import { CINE, STYLE } from '../data/tuning';
+import { SPECIAL } from '../data/special';
 import { PAPER } from '../data/paper';
 import { effects } from './effects';
 import { HAND, MARKER } from './paper';
@@ -77,30 +78,33 @@ export class PaperHud {
     ctx.fillStyle = ink;
     ctx.fillText(`${Math.ceil(p.hp)}`, bx + hpW + 6 * u, top + hpH / 2 + 1);
 
-    // ---- Super meter: two pencil boxes with tick marks, shaded with red pen when full ----
-    const sy = top + hpH + 7 * u, sh = 10 * u, segW = (hpW - 6 * u) / 2;
-    for (let i = 0; i < 2; i++) {
-      const lo = i * SUPER.finisherCost;
-      const f = Math.max(0, Math.min(1, (c.superMeter - lo) / SUPER.finisherCost));
-      const x = bx + i * (segW + 6 * u);
+    // ---- Special Bar (pass 8; TODO(ui-pass) placeholder look): pencil box(es), hatched as it charges,
+    // red and pulsing when READY, solid ink while a Special runs. Always under the HP bar (never over the pad).
+    const sp = w.special;
+    const sy = top + hpH + 7 * u, sh = 11 * u, nSeg = SPECIAL.segments, gap = 6 * u, segW = (hpW - gap * (nSeg - 1)) / nSeg;
+    const ready = sp.ready, activeSp = sp.busy;
+    const pulse = ready ? 1 + Math.sin(time * 9) * 0.06 : 1;
+    for (let i = 0; i < nSeg; i++) {
+      const f = activeSp ? 1 : Math.max(0, Math.min(1, (sp.charge - i * SPECIAL.full) / SPECIAL.full));
+      const x = bx + i * (segW + gap);
       if (f > 0) {
         ctx.save(); ctx.beginPath(); ctx.rect(x, sy, segW * f, sh); ctx.clip();
         seedSketch(41 + i + this.boil);
-        ctx.strokeStyle = f >= 1 ? red : PAPER.pencil; ctx.lineWidth = f >= 1 ? 2 : 1.4;
-        ctx.beginPath(); penHatch(ctx, x, sy, segW, sh, f >= 1 ? 3 : 4); ctx.stroke();
+        ctx.strokeStyle = activeSp ? ink : f >= 1 ? red : PAPER.pencil; ctx.lineWidth = activeSp ? 3 : f >= 1 ? 2.2 : 1.4;
+        ctx.beginPath(); penHatch(ctx, x, sy, segW, sh, activeSp ? 2 : f >= 1 ? 3 : 4); ctx.stroke();
         ctx.restore();
       }
       seedSketch(51 + i + this.boil);
-      ctx.strokeStyle = ink; ctx.lineWidth = 1.6;
+      ctx.strokeStyle = f >= 1 && ready ? red : ink; ctx.lineWidth = (f >= 1 && ready ? 2.4 : 1.6) * pulse;
       ctx.beginPath(); penRect(ctx, x, sy, segW, sh, 0.8);
       for (let t = 1; t < 5; t++) penLine(ctx, x + (segW * t) / 5, sy + sh, x + (segW * t) / 5, sy + sh - 4 * u, 0.3, 0);
       ctx.stroke();
     }
-    if (c.superMeter >= SUPER.finisherCost && Math.floor(time * 4) % 2 === 0) {
-      ctx.font = `${Math.round(14 * u)}px ${MARKER}`;
-      ctx.fillStyle = red; ctx.textBaseline = 'top';
-      ctx.fillText('SUPER READY!', bx, sy + sh + 5 * u);
-    }
+    ctx.font = `${Math.round(13 * u)}px ${MARKER}`;
+    ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+    if (activeSp) { ctx.fillStyle = ink; ctx.fillText('SPECIAL!', bx, sy + sh + 4 * u); }
+    else if (ready) { if (Math.floor(time * 4) % 2 === 0) { ctx.fillStyle = red; ctx.fillText('SPECIAL READY · HOLD!', bx, sy + sh + 4 * u); } }
+    else { ctx.fillStyle = PAPER.pencil; ctx.font = `${Math.round(12 * u)}px ${HAND}`; ctx.fillText('special', bx, sy + sh + 4 * u); }
     drawHeatBar(ctx, w, bx, sy + sh + 24 * u, hpW * 0.5, 7 * u, u, ink, HAND);
 
     // ---- Scoreboard (top centre): wave, score, tally marks for K.O.s ----
@@ -204,11 +208,9 @@ export class PaperHud {
     // finisher hints
     ctx.textAlign = 'right'; ctx.textBaseline = 'top';
     ctx.font = `${Math.round(15 * u)}px ${HAND}`;
-    if (c.superMeter >= SUPER.finisherCost && Math.floor(time * 4) % 2 === 0) {
-      let line = 0;
+    if (Math.floor(time * 4) % 2 === 0) {
       const hy0 = ry + 96 * u;
-      if (!p.grounded && c.launcherUsed && c.airJuggle >= SUPER.jumpshotMinJuggle) { ctx.fillStyle = red; ctx.fillText('↓ jumpshot finisher!', rx, hy0 + line * 17 * u); line++; }
-      if (c.hits >= SUPER.flurryMinCombo) { ctx.fillStyle = red; ctx.fillText('long swipe: FLURRY!', rx, hy0 + line * 17 * u); }
+      if (!p.grounded && c.airJuggle >= CINE.airMinJuggle && !c.airFinisherUsed) { ctx.fillStyle = red; ctx.fillText('↓ air finisher!', rx, hy0); }
     }
     if (p.critTimer > 0) {
       ctx.textAlign = 'center'; ctx.font = `${Math.round(22 * u)}px ${MARKER}`; ctx.fillStyle = red;

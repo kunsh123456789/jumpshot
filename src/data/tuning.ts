@@ -298,6 +298,22 @@ export const SUPER = {
   flurryMinCombo: 15,
 } as const;
 
+/** Cinematics (pass 8): finishers and Specials. */
+export const CINE = {
+  /** Air finisher: available after this many air-juggle hits, once per air combo, with a down swipe. */
+  airMinJuggle: 5,
+  /** KO finisher can be skipped by any input after this many frames. */
+  skipAfter: 6,
+  /** Invulnerability after a cinematic ends (frames). */
+  afterInvuln: 30,
+  /** Bosses: cinematic damage x bossMult, capped at bossCapFrac of max HP per cinematic. Elites x eliteMult. */
+  bossMult: 0.6,
+  bossCapFrac: 0.22,
+  eliteMult: 0.75,
+  /** Damage of the landing shockwave a slammed victim makes. */
+  shockDamage: 14,
+} as const;
+
 /** Enemy death variants (pass 8): the launched-off-the-page KO. */
 export const DEATH = {
   launchVy: -1650,

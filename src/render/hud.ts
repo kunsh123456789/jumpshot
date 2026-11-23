@@ -2,7 +2,8 @@ import { layout } from '../core/layout';
 import { drawHeatBar } from './weaponFx';
 import type { World } from '../sim/world';
 import { FxDirector } from './fx';
-import { STYLE, SUPER } from '../data/tuning';
+import { CINE, STYLE } from '../data/tuning';
+import { SPECIAL } from '../data/special';
 import { effects } from './effects';
 import { roundRect } from '../ui/pad';
 import { DRAW } from './drawStyle';
@@ -46,21 +47,20 @@ export class Hud {
     ctx.textBaseline = 'middle';
     ctx.fillText(`${Math.ceil(p.hp)} / ${p.maxHp}`, left + 8 * u, top + hpH / 2 + 0.5);
 
-    // ---- Super meter (two segments) ----
+    // ---- Special Bar (pass 8) ----
+    const sp = w.special;
     const sy = top + hpH + 6 * u;
     const sh = 10 * u;
-    const segW = (hpW - 6 * u) / 2;
-    for (let i = 0; i < 2; i++) {
-      const lo = i * SUPER.finisherCost;
-      const f = Math.max(0, Math.min(1, (c.superMeter - lo) / SUPER.finisherCost));
-      const full = f >= 1;
-      const col = full ? (Math.sin(time * 10) > 0 ? '#ff4dd2' : '#ff9af0') : '#b04aff';
+    const nSeg = SPECIAL.segments, segW = (hpW - 6 * u * (nSeg - 1)) / nSeg;
+    for (let i = 0; i < nSeg; i++) {
+      const f = sp.busy ? 1 : Math.max(0, Math.min(1, (sp.charge - i * SPECIAL.full) / SPECIAL.full));
+      const col = sp.busy ? '#ffffff' : f >= 1 ? (Math.sin(time * 10) > 0 ? '#ff4dd2' : '#ff9af0') : '#b04aff';
       bar(ctx, left + i * (segW + 6 * u), sy, segW, sh, f, f, col, col);
     }
-    if (c.superMeter >= SUPER.finisherCost) {
+    if (sp.ready || sp.busy) {
       ctx.font = `900 italic ${Math.round(11 * u)}px system-ui, sans-serif`;
       ctx.fillStyle = '#ff9af0';
-      ctx.fillText('SUPER READY', left, sy + sh + 10 * u);
+      ctx.fillText(sp.busy ? 'SPECIAL!' : 'SPECIAL READY · HOLD', left, sy + sh + 10 * u);
     }
     drawHeatBar(ctx, w, left, sy + sh + 18 * u, hpW * 0.5, 7 * u, u, '#e8eefc', 'system-ui, sans-serif');
 
@@ -138,14 +138,8 @@ export class Hud {
     ctx.textAlign = 'right';
     ctx.font = `900 italic ${Math.round(13 * u)}px system-ui, sans-serif`;
     const blink = Math.sin(time * 9) > -0.3;
-    if (c.superMeter >= SUPER.finisherCost && blink) {
-      let line = 0;
-      if (!p.grounded && c.launcherUsed && c.airJuggle >= SUPER.jumpshotMinJuggle) {
-        outlineText(ctx, '↓ JUMPSHOT FINISHER', rx, hintY + line * 18 * u, '#ff4dd2', 4, 'right'); line++;
-      }
-      if (c.hits >= SUPER.flurryMinCombo) {
-        outlineText(ctx, 'LONG SWIPE: FLURRY', rx, hintY + line * 18 * u, '#ff4dd2', 4, 'right');
-      }
+    if (blink && !p.grounded && c.airJuggle >= CINE.airMinJuggle && !c.airFinisherUsed) {
+      outlineText(ctx, '↓ AIR FINISHER', rx, hintY, '#ff4dd2', 4, 'right');
     }
     if (p.critTimer > 0) {
       ctx.textAlign = 'center';

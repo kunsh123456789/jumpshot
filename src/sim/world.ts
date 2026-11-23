@@ -17,6 +17,8 @@ import { WeaponSim } from './weapon';
 import { ko } from './combat';
 import { WEAPONS, weaponById, type WeaponDef } from '../data/weapons';
 import { SpecialSystem } from './special';
+import { CinePlayer } from './cine';
+import { koFinisher } from '../data/cines';
 
 /** Frames of the dithered-gray spawn-in fade. */
 const ENEMY_FADE = 24;
@@ -54,10 +56,19 @@ export class World {
   crouch = false;
   /** The Special Bar and special moves (revision pass 8). */
   readonly special = new SpecialSystem();
+  /** Cinematic player: air finishers, last-hit KO finishers, Specials (pass 8). */
+  readonly cine = new CinePlayer();
+  /** The last enemy of the wave just went down: its KO finisher starts at the end of this step. */
+  pendingKO: Fighter | null = null;
+  /** The world outside the hero is frozen (Special: trace / QTE phases and its cinematic). */
+  get frozen(): boolean { return this.cine.freezeOthers || this.special.freeze; }
+  /** Set while the nuke cheat KOs everything (no KO finisher). */
+  noKOFinisher = false;
 
   constructor() {
     this.player = this.makePlayer();
     this.combo = new ComboTracker(this.events);
+    this.combo.onCharge = (a) => this.special.add(this, a);
   }
 
   private makePlayer(): Fighter {
@@ -73,11 +84,14 @@ export class World {
     this.player = this.makePlayer();
     this.enemies.length = 0;
     Object.assign(this.combo, new ComboTracker(this.events));
+    this.combo.onCharge = (a) => this.special.add(this, a);
     this.ai.reset();
     this.ents.clear();
     this.ctrl.reset();
     this.wpn.reset();
     this.special.reset();
+    this.cine.reset();
+    this.pendingKO = null;
     this.player.weapon = this.weapon.id;
     this.gameOver = false;
     this.wave = 0;
@@ -91,7 +105,9 @@ export class World {
   nuke(): void {
     this.waves.clearQueue();
     const p = this.player;
+    this.noKOFinisher = true;
     for (const e of this.enemies) if (e.alive && e.kind !== 'dummy') ko(this, e, Math.sign(e.x - p.x) || 1);
+    this.noKOFinisher = false;
     this.events.emit('nuke', { x: p.x, y: p.cy });
   }
 
@@ -122,9 +138,12 @@ export class World {
     for (const e of this.enemies) { e.px = e.x; e.py = e.y; }
 
     this.ctrl.ingest(this, inputs);
-    if (p.alive) this.ctrl.update(this);
+    if (this.cine.active) this.cine.step(this);
+    else if (this.special.freeze) this.special.holdHero(this);
+    else if (p.alive) this.ctrl.update(this);
     else this.deadPlayerPhysics();
     this.wpn.update(this);
+    const frozen = this.frozen;
 
     // S-rank regen.
     if (p.alive && this.combo.rank >= 4 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + PLAYER.hpRegenSRank / 60);
@@ -141,6 +160,8 @@ export class World {
         e.hitstop--;
         continue; // frozen; the renderer adds a smooth vibration
       }
+      // Cinematic victims are posed by the script; a Special freezes everyone else.
+      if (e.state === 'cine' || frozen) continue;
       e.stateFrame++;
       // Held and reeled-in bodies are positioned by the weapon sim.
       if (e.state === 'held' || e.state === 'pulled') continue;
@@ -149,9 +170,11 @@ export class World {
         enemyPhysics(this, e);
       }
     }
-    bowling(this);
-    separate(this);
-    this.ents.update(this);
+    if (!frozen) {
+      bowling(this);
+      separate(this);
+      this.ents.update(this);
+    }
 
     // Remove finished enemies (in place, no allocation).
     let n = 0;
@@ -163,9 +186,17 @@ export class World {
 
     let anyHit = false;
     for (const e of this.enemies) if (e.alive && (e.inHitState || e.hitstop > 0)) { anyHit = true; break; }
-    this.combo.update(anyHit);
-    if (this.combo.hits === 0) for (const e of this.enemies) if (!e.inHitState) e.comboHits = 0;
-    this.waves.update(this);
+    // The combo never drops during a cinematic or a Special; waves wait for them to finish.
+    if (!this.cine.active && !this.special.busy) {
+      this.combo.update(anyHit);
+      if (this.combo.hits === 0) for (const e of this.enemies) if (!e.inHitState) e.comboHits = 0;
+      this.waves.update(this);
+    }
+    this.special.update(this);
+    // Last enemy down: its weapon-specific KO finisher (skippable by any input).
+    const v = this.pendingKO;
+    this.pendingKO = null;
+    if (v && !this.cine.active && !this.special.busy && p.alive && !this.gameOver) this.cine.start(this, koFinisher(this.weapon.id, v), 'ko', v, []);
     this.updateVisuals();
   }
 
