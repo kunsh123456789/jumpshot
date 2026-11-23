@@ -54,6 +54,17 @@ The player can also change these in-game settings: **Flick sensitivity** (divide
 | tapMaxDist, tapMaxMs | Maximum travel (px) and duration for a tap (dodge/parry) |
 | trailFadeMs | Lifetime of the finger trail |
 
+### Jump and long-press (pass 8)
+| Key | Purpose |
+|---|---|
+| jumpDragPx | A slow upward drag this far above the finger's lowest point jumps (divided by the sensitivity setting) |
+| jumpMinSlope | The drag must be mostly vertical: rise >= sideways x this |
+| jumpMaxSpeedFrac | ...and slower than flickSpeed x this. A fast stroke is the flick-up launcher (flick detection runs first, so the two never collide) |
+| jumpBoostPx | Dragging this much further raises the jump to full height (`PLAYER.jumpVelMax`) |
+| jumpRearmPx, jumpAfterFlickMs | Re-arms after the finger moves back down this far; never fires this soon after a flick |
+| holdMs, holdMaxDist | Long-press in place for the Special: held this long without moving more than this |
+| crouchPx | Low stance (presentation): finger slid this far down from its anchor |
+
 ## MOVE (drag-to-move)
 | Key | Purpose |
 |---|---|
@@ -83,6 +94,14 @@ The player can also change these in-game settings: **Flick sensitivity** (divide
 | popAngle, popSpin, popRoot, impactSnapFrames | Pop detector thresholds |
 | hitstopShakeAmp, hitstopShakeHz | Victim vibration during hit-stop |
 | trailLife, ghostInterval | Trail ribbon length and whole-body echo spacing |
+
+### ANIM additions (pass 8)
+| Key | Purpose |
+|---|---|
+| boredIdleFrames | No input for this long (5 s) and the hero slips into the bored idle |
+
+## Weapon grip layer (`data/weapons/grips.ts`, pass 8)
+Per weapon: arm poses (aU, aL, bU, bL) for idle / run / air / crouch / land, laid over the body drawing; `w` / `runW` blend weights (1 = the grip owns the arms). `WEAPON_VICTORY` picks each weapon's wave-clear pose.
 
 ## data/anims/ (authored animations)
 Each animation is `anim({ id, len, loop?, base?, strike?, reach?, keys })`. Each key is `{ f, p, e?, hold?, smear?, impact?, trail?, sfx? }`:
@@ -120,6 +139,11 @@ The proportions of each fighter kind are in `RIGS` in `render/rig.ts`. The easie
 | maxAirStalls | Air hits per airtime that keep the player hovering |
 | landingRecovery | Landing lag (it can be cancelled) |
 | scale | Player rig scale |
+| jumpVel, airJumps, airJumpVel | Tap / Space jump speed, mid-air jumps, the air jump's speed |
+| jumpVelMin, jumpVelMax, jumpBoostFrames | Drag jump (pass 8): take-off at jumpVelMin; while the finger keeps dragging up (or W / ↑ is held) for jumpBoostFrames it grows toward jumpVelMax (computed as if it had left the floor at the charged speed) |
+| jumpSquatFrames | The jump's anticipation crouch before take-off |
+| hardLandVy | Landing faster than this plays the hard landing (and a floor impact) |
+| apexVy | |vy| below this shows the apex-hang drawing |
 
 ## COMBO
 | Key | Purpose |
@@ -148,14 +172,47 @@ The proportions of each fighter kind are in `RIGS` in `render/rig.ts`. The easie
 | comboEndDecayPerFrame | Faster decay once the combo has ended |
 | hurtKeep | Fraction of style kept when the player is hit |
 
-## SUPER
+## Special Bar and Specials (`data/special.ts`, revision pass 8)
+The super meter is gone; the **Special Bar** replaces it.
+
 | Key | Purpose |
 |---|---|
-| max, finisherCost | Meter size and the cost of each finisher (2 can be stored) |
-| perHitBase, rankMult | Gain per hit, multiplied by the current rank |
-| parryGain, orbGain | Gain from a parry and from a super-orb pickup |
-| jumpshotMinJuggle | Air hits needed in the current airtime for the Jumpshot finisher |
-| flurryMinCombo | Combo length needed for the Flurry |
+| full, segments | One full charge (100); how many charges the bar can store (1 by default; 2-3 keep overflow for the next) |
+| perHit, perComboHit, comboCap, airBonus, multiBonus | Charge per landed hit: perHit x (1 + combo hits x perComboHit, capped at comboCap), plus bonuses for air hits and multi-enemy hits |
+| rhythmBonus | Rhythm Mode: extra charge per judged swipe (Miss, Good, Great, Perfect) |
+| parry, orb | Charge from a perfect parry and from an orb pickup (the "Jackpot" drop) |
+| kill, killElite, killBoss | Charge per KO |
+| perDamageTaken | Catch-up charge per point of damage taken |
+| introFrames, bubbleRadius | The activation beat (sim frames) and the freeze bubble size |
+| inputTimeoutFrames | Safety: no result within this many sim frames resolves SLOPPY (never soft-locks) |
+| traceSec, traceSecAssist | Trace time limit (s); Assist's longer limit. Rhythm Mode rounds it to whole beats |
+| tolerance, toleranceAssist | Trace band (fraction of the smaller screen side) and the Assist multiplier |
+| wCoverage, wAccuracy, wSpeed | Trace score weights |
+| qteWindowMs, qteWindowAssist, perfectFrac, lateGraceMs | QTE ring window, Assist window, the Perfect zone (last fraction of the window), late grace |
+| mashTaps, mashWindowMs | Rapid-tap burst prompt |
+| skipQteFrac | Skip QTE setting: counts as this fraction of prompts hit (a Clean result) |
+| wTrace, wQte, perfectBonus, tierClean, tierPerfect | Total = trace x wTrace + QTE hit fraction x wQte + Perfects x perfectBonus; SLOPPY < tierClean <= CLEAN < tierPerfect <= PERFECT |
+| tierDamage, tierNames | Damage multiplier per tier; the tier words |
+| rangeFists, rangeStaff, rangeThrow | Who gets caught by the Mega Jumpshot / Cyclone, and the Hammer Swing's grab range |
+| `QTE_PROMPTS` | Prompts per family: N / S / E / W swipe, F = toward the facing side, tap, mash |
+
+## CINE (cinematics: finishers and Specials, `data/tuning.ts`)
+| Key | Purpose |
+|---|---|
+| airMinJuggle | Air hits in the current air combo before a down swipe becomes the Air Finisher (once per air combo) |
+| skipAfter | Frames before a KO finisher can be skipped by any input |
+| afterInvuln | Invulnerability after a cinematic |
+| bossMult, bossCapFrac, eliteMult | Cinematic damage to bosses (x bossMult, capped at bossCapFrac of max HP per cinematic) and elites |
+| shockDamage | Damage of the landing shockwave a slammed victim makes |
+
+Scripts live in `data/cines.ts` (frame numbers are 60 Hz sim ticks); `WEAPON_FAMILY` maps each weapon to one of the five scripted families and `SPECIAL_NAME` names its Special.
+
+## DEATH (enemy death variants)
+| Key | Purpose |
+|---|---|
+| launchVy, launchVx, launchGravity | The launched-off-the-page KO |
+| exitHeight | Removed with a star twinkle once this high (or past the arena edge) |
+| scribbleFrames | How long the scribble-out death takes |
 
 ## SCORE
 | Key | Purpose |
@@ -225,7 +282,7 @@ Times are in ms on the heard audio timeline, after the player's latency offset. 
 | perfectMs, greatMs, goodMs | ± window to the nearest beat for PERFECT / GREAT / GOOD (45 / 90 / 140) |
 | eighthGoodMs | Inputs within ±60 ms of the off-beat 8th also count as GOOD, so fast strings keep the streak |
 | damageMult | Damage for the move an input started: [MISS, GOOD, GREAT, PERFECT] = [1, 1.1, 1.3, 1.6]. MISS is the baseline, never a penalty |
-| scoreBonus, styleBonus, superBonus | Paid once per move when it first connects (whiffs can't farm them) |
+| scoreBonus, styleBonus | Paid once per move when it first connects (whiffs can't farm them). Special charge per judged swipe is `SPECIAL.rhythmBonus` |
 | streakTiers, streakMult | Streak 0/8/16/32 multiplies bonus score by 1/1.5/2/3 |
 | streakBreakShowMin | "STREAK LOST" only shows for streaks at least this long |
 | beatParryStyle, beatParryScore | Bonus for a parry whose tap was GREAT or better |

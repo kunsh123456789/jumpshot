@@ -43,12 +43,17 @@ export const xslash = drawn({ id: 'cine_xslash', strike: 'arm', drawings: [
   { hold: 24, p: { ...CROUCH, rootY: -56, lean: 0.7, rootX: 44, aU: 0.2, aL: 0.1, bU: -0.6, bL: 0.3, footA: 56, footB: -52, head: 0.2 } },
   { hold: 10, p: { ...CROUCH, rootX: 30 } },
 ] });
-/** Spinning with arms out (Hammer Swing / bowling toss): four quarter-turn drawings, looped. */
+/**
+ * Spinning in place with the victim held at arm's length (Hammer Swing / bowling toss). In a
+ * side view a turn reads as the arms sweeping front -> foreshortened -> back -> front with the
+ * body leaning back against the pull (the orbiting victim sells the rest); four drawings, looped.
+ */
+const SPIN: PoseSpec = { rootY: -26, lean: -0.28, head: 0.15, footA: 32, footB: -26, flex: 6 };
 export const spinGrab = drawn({ id: 'cine_spin', loop: true, drawings: [
-  { hold: 3, p: { rootY: -24, lean: -0.25, head: 0.2, aU: 1.62, aL: 0.0, bU: 1.45, bL: 0.2, footA: 30, footB: -24, spin: 0 } },
-  { hold: 3, p: { rootY: -24, lean: -0.25, head: 0.2, aU: 1.62, aL: 0.0, bU: 1.45, bL: 0.2, footA: 30, footB: -24, spin: 1.57 } },
-  { hold: 3, p: { rootY: -24, lean: -0.25, head: 0.2, aU: 1.62, aL: 0.0, bU: 1.45, bL: 0.2, footA: 30, footB: -24, spin: 3.14 } },
-  { hold: 3, p: { rootY: -24, lean: -0.25, head: 0.2, aU: 1.62, aL: 0.0, bU: 1.45, bL: 0.2, footA: 30, footB: -24, spin: 4.71 } },
+  { hold: 3, p: { ...SPIN, aU: 1.62, aL: 0.0, bU: 1.45, bL: 0.15 } },
+  { hold: 3, p: { ...SPIN, aU: 1.0, aL: 0.6, bU: 0.8, bL: 0.7, lean: -0.18, head: 0.25 } },
+  { hold: 3, p: { ...SPIN, aU: -1.55, aL: 0.05, bU: -1.4, bL: 0.15, lean: 0.1, head: -0.05, footA: 26, footB: -32 } },
+  { hold: 3, p: { ...SPIN, aU: 0.6, aL: 0.3, bU: 0.4, bL: 0.4, lean: -0.2, head: 0.2 } },
 ] });
 /** Release of the hurl: thrown forward, follow-through, recover. */
 export const hurl = drawn({ id: 'cine_hurl', strike: 'arm', drawings: [

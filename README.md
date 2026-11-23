@@ -42,7 +42,9 @@ The **bottom half of the screen** is the touch area. It is transparent, so you c
 | **Flick** in a direction | **Attack** that way. Keep dragging after a flick to keep running |
 | **Long, fast flick** | The **heavy** version of the attack |
 | **Fast zig-zag** | Each sharp turn fires the next attack |
-| **Tap** | **Jump** (tap again in the air for a second jump; air attacks work straight away) |
+| **Slow drag up** | **Jump.** Keep dragging up for a higher jump; steer by dragging sideways in the air. A *fast* flick up is still the launcher attack |
+| **Tap** | Also a **jump** (tap again in the air for a second jump; air attacks work straight away) |
+| **Hold still** (~0.35 s) | **SPECIAL** when the Special Bar is READY |
 | **Double-tap** | Dodge. Dodge just before a red-flashing attack lands for a **PERFECT PARRY** (Settings → Tap / Space can switch tap back to dodge) |
 
 These are the **Fists** moves (the default weapon). Other weapons replace the moveset: see **Weapons** below.
@@ -57,10 +59,11 @@ These are the **Fists** moves (the default weapon). Other weapons replace the mo
 
 - Your attacks dash you onto the nearest enemy in the flick's direction, so positioning matters: walk into a group, keep away from a Brute, chase a Thrower, or line enemies up to bowl them into each other.
 - When you flick during an attack, the attack is buffered and fires as soon as the current one can be cancelled.
-- **Super Meter** finishers each cost half the meter:
-  - **JUMPSHOT FINISHER**: after a launcher and 5+ air hits, flick ↓ in the air.
-  - **FLURRY**: in a 15+ hit combo, do a long heavy flick in any direction.
-- The style rank (D → SSS) multiplies your score and fills the Super Meter. An elite arrives every 5th wave and a boss every 10th.
+- **Finishers** (per weapon, with slow-mo, camera push-ins and inverted impact frames):
+  - **Air Finisher**: after 5+ hits in an air juggle, flick ↓ in the air (once per air combo). Fists: the **JUMPSHOT FINISHER** meteor axe kick.
+  - **Last-Hit Finisher**: when the last enemy of a wave goes down, a short K.O. cinematic plays (any input skips it). Bosses get a longer multi-stage version.
+- **Special Bar** (under the HP bar): fills from hits (more for long combos, air hits and multi-hits), on-beat Perfects in Rhythm Mode, perfect parries, orbs, KOs, and a little from taking damage. When it reads **READY**, **hold still on the pad** (or press **X**) for your weapon's Special: the world freezes, you **trace** the path shown (the Hook connects dots over the real enemies), then hit 2-4 quick **prompts** (swipe / tap / rapid-tap). The result is SLOPPY, CLEAN or PERFECT; even a bad result still lands a weaker Special. Settings has **Special assist** (wider path, longer timers) and **Skip the QTE prompts** (counts as Clean).
+- The style rank (D → SSS) multiplies your score. An elite arrives every 5th wave and a boss every 10th.
 - **Between waves** there is a 3-second breather: the arena is clear, you heal 35%, the floor cracks reset and the next wave's title comes up. It continues on its own (in Rhythm Mode the next wave starts on a bar line). A small **Swap weapon** strip is available during the breather.
 - **📱 Mobile performance** (top of Settings, on by default on phones and tablets) cuts lag in big fights: it renders at 1x pixel density, skips the Pixel Look's per-frame palette snap (a GPU read-back that phones are slow at), the floor reflections and the menu blur. Gameplay is identical. With it, a 15-enemy fight on an emulated phone at 4x CPU throttle went from ~20 fps to ~45-50 fps.
 - Menus (Settings, Loadout, Pause) scroll with a finger swipe; on short or narrow screens the loadout becomes a single scrolling page with a smaller preview.
@@ -75,6 +78,9 @@ These are the **Fists** moves (the default weapon). Other weapons replace the mo
 | **Shift** + attack | Heavy |
 | **Space** | Jump (again in the air for a double jump) |
 | **Shift+Space** or **F** | Dodge / parry |
+| **W / ↑** | Jump (hold for a higher jump) |
+| **S / ↓** | Low stance |
+| **X / Enter** | Special (when READY). During it: arrows for the path and swipe prompts, Space for taps |
 | **1–9, 0 / Q, E** | Pick a weapon (loadout screen), or swap weapons during the between-wave breather |
 | **Enter / Esc** | Close the loadout screen |
 | **Esc / P** | Pause |

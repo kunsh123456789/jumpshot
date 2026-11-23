@@ -286,17 +286,6 @@ export const STYLE = {
   hurtKeep: 0.35,
 } as const;
 
-export const SUPER = {
-  max: 100,
-  finisherCost: 50,
-  perHitBase: 1.1,
-  /** Multiplier per style rank. */
-  rankMult: [0.6, 0.8, 1, 1.25, 1.5, 1.8, 2.2],
-  parryGain: 10,
-  orbGain: 12,
-  jumpshotMinJuggle: 5,
-  flurryMinCombo: 15,
-} as const;
 
 /** Cinematics (pass 8): finishers and Specials. */
 export const CINE = {

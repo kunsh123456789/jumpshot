@@ -224,7 +224,7 @@ export class FxDirector {
     });
     ev.on('pickup', (e) => {
       effects.embers(e.x, e.y, 6, e.kind === 'health' ? '#5dff8a' : '#5fc8ff');
-      effects.text(e.kind === 'health' ? '+HP' : '+SUPER', e.x, e.y - 30, e.kind === 'health' ? '#5dff8a' : '#5fc8ff', 18, 0.6);
+      effects.text(e.kind === 'health' ? '+HP' : '+SPECIAL', e.x, e.y - 30, e.kind === 'health' ? '#5dff8a' : '#5fc8ff', 18, 0.6);
       audio.pickup(e.kind);
     });
     ev.on('projectile', (e) => {
