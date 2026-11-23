@@ -1,0 +1,236 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Option 1 Arcade Fighter</title>
+<style>
+@font-face { font-family: 'Russo One'; src: url(../fonts/russo-one-latin-400-normal.woff2); }
+@font-face { font-family: 'Oswald'; font-weight: 500; src: url(../fonts/oswald-latin-500-normal.woff2); }
+@font-face { font-family: 'Oswald'; font-weight: 700; src: url(../fonts/oswald-latin-700-normal.woff2); }
+:root {
+  /* Design tokens: Arcade Fighter */
+  --navy: #0b1026; --navy2: #141c3d; --steel1: #e9eef8; --steel2: #8d99b8; --steel3: #3a4566;
+  --cyan: #2ee6ff; --magenta: #ff2e88; --gold: #ffd23f; --red: #ff3b3b; --white: #ffffff;
+  --display: 'Russo One', sans-serif; --body: 'Oswald', sans-serif;
+  --skew: -14deg; --glow: 0 0 calc(var(--u) * 14px) rgba(46, 230, 255, .55);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+#stage { position: relative; overflow: hidden; background-size: cover; background-position: center; font-family: var(--body); color: var(--white); }
+.ico { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+/* angled steel plate */
+.plate { position: absolute; transform: skewX(var(--skew)); background: linear-gradient(180deg, var(--navy2), var(--navy)); border: calc(var(--u) * 3px) solid transparent;
+  border-image: linear-gradient(180deg, var(--steel1), var(--steel2) 45%, var(--steel3)) 1; box-shadow: 0 calc(var(--u) * 6px) 0 rgba(0,0,0,.35); }
+.plate > .in { transform: skewX(calc(var(--skew) * -1)); }
+.lbl { font-family: var(--body); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.disp { font-family: var(--display); font-style: italic; letter-spacing: .02em; }
+/* health */
+.hp { left: calc(var(--u) * 28px); top: calc(var(--u) * 18px); width: calc(var(--u) * 360px); height: calc(var(--u) * 34px); padding: calc(var(--u) * 4px); }
+.hp .track { position: absolute; inset: calc(var(--u) * 4px); background: #2a0d14; }
+.hp .lag { position: absolute; top: calc(var(--u) * 4px); bottom: calc(var(--u) * 4px); left: calc(var(--u) * 4px); background: var(--red); }
+.hp .fill { position: absolute; top: calc(var(--u) * 4px); bottom: calc(var(--u) * 4px); left: calc(var(--u) * 4px); background: linear-gradient(180deg, #fff6b0, var(--gold) 40%, #e8a400); }
+.hp .shine { position: absolute; left: calc(var(--u) * 4px); right: calc(var(--u) * 4px); top: calc(var(--u) * 6px); height: calc(var(--u) * 6px); background: rgba(255,255,255,.45); }
+.portrait { position: absolute; left: calc(var(--u) * 14px); top: calc(var(--u) * 10px); width: calc(var(--u) * 58px); height: calc(var(--u) * 58px); transform: skewX(var(--skew)); background: linear-gradient(135deg, var(--magenta), #7a1650); border: calc(var(--u) * 3px) solid var(--steel1); z-index: 2; display: flex; align-items: center; justify-content: center; font-size: calc(var(--u) * 34px); color: #fff; box-shadow: var(--glow); }
+.hpname { position: absolute; left: calc(var(--u) * 84px); top: calc(var(--u) * 56px); font-size: calc(var(--u) * 15px); color: var(--steel1); background: rgba(11,16,38,.85); padding: 0 calc(var(--u) * 10px); transform: skewX(var(--skew)); }
+.hpname b { color: var(--gold); font-family: var(--display); font-style: italic; font-size: calc(var(--u) * 18px); margin-right: calc(var(--u) * 8px); }
+/* wave / score plate (top right) */
+.wave { right: calc(var(--u) * 92px); top: calc(var(--u) * 16px); padding: calc(var(--u) * 6px) calc(var(--u) * 22px); text-align: right; }
+.wave .s { font-size: calc(var(--u) * 30px); color: var(--white); line-height: 1; }
+.wave .w { font-size: calc(var(--u) * 13px); color: var(--cyan); }
+.pausebtn { position: absolute; right: calc(var(--u) * 22px); top: calc(var(--u) * 16px); width: calc(var(--u) * 54px); height: calc(var(--u) * 54px); display: flex; align-items: center; justify-content: center; font-size: calc(var(--u) * 26px); }
+/* special bar (top centre: the round-timer slot) */
+.sp { position: absolute; left: 50%; top: calc(var(--u) * 14px); transform: translateX(-50%); width: calc(var(--u) * 270px); text-align: center; }
+.sp .bar { position: relative; height: calc(var(--u) * 24px); transform: skewX(var(--skew)); background: #1a0b22; border: calc(var(--u) * 3px) solid var(--steel1); display: flex; gap: calc(var(--u) * 3px); padding: calc(var(--u) * 3px); }
+.sp .seg { flex: 1; background: #2c1235; position: relative; overflow: hidden; }
+.sp .seg i { position: absolute; inset: 0; background: linear-gradient(90deg, #ff7a00, var(--gold), #fff3a0); }
+.sp.ready .bar { box-shadow: 0 0 calc(var(--u) * 18px) #ff9a2e, 0 0 calc(var(--u) * 36px) rgba(255, 46, 136, .7); border-color: #fff; }
+.sp .flame { position: absolute; left: 0; right: 0; top: calc(var(--u) * -20px); height: calc(var(--u) * 26px); background: radial-gradient(ellipse at 50% 100%, rgba(255,180,40,.85), rgba(255,46,136,.0) 70%); filter: blur(calc(var(--u) * 2px)); }
+.sp .t { display: inline-block; margin-top: calc(var(--u) * 5px); font-size: calc(var(--u) * 13px); background: rgba(11,16,38,.85); padding: calc(var(--u) * 2px) calc(var(--u) * 12px); transform: skewX(var(--skew)); }
+.sp.ready .t { color: var(--gold); text-shadow: 0 0 calc(var(--u) * 8px) #ff7a00; }
+.sp.active .seg i { background: repeating-linear-gradient(90deg, #fff, #fff calc(var(--u) * 8px), var(--cyan) calc(var(--u) * 8px), var(--cyan) calc(var(--u) * 16px)); }
+/* groove + beat track (Rhythm Mode) */
+.beat { position: absolute; left: 50%; transform: translateX(-50%); top: calc(var(--u) * 82px); width: calc(var(--u) * 360px); height: calc(var(--u) * 18px); background: rgba(11,16,38,.75); border-radius: calc(var(--u) * 9px); }
+.beat .lane { position: absolute; inset: calc(var(--u) * 7px) 0; background: linear-gradient(90deg, transparent, rgba(46,230,255,.5) 30%, rgba(46,230,255,.5) 70%, transparent); }
+.beat .hit { position: absolute; left: 50%; top: 0; width: calc(var(--u) * 18px); height: calc(var(--u) * 18px); margin-left: calc(var(--u) * -9px); border: calc(var(--u) * 3px) solid #fff; transform: rotate(45deg); box-shadow: var(--glow); }
+.beat .n { position: absolute; top: calc(var(--u) * 4px); width: calc(var(--u) * 10px); height: calc(var(--u) * 10px); background: var(--magenta); transform: rotate(45deg); box-shadow: 0 0 calc(var(--u) * 8px) var(--magenta); }
+.groove { position: absolute; left: 50%; transform: translateX(-50%) skewX(var(--skew)); top: calc(var(--u) * 105px); width: calc(var(--u) * 200px); height: calc(var(--u) * 7px); background: #20263f; border: calc(var(--u) * 1.5px) solid var(--steel2); }
+.groove i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, var(--cyan), var(--magenta)); }
+.groovel { position: absolute; left: 50%; transform: translateX(-50%); top: calc(var(--u) * 113px); font-size: calc(var(--u) * 11px); color: var(--cyan); background: rgba(11,16,38,.8); padding: 0 calc(var(--u) * 8px); }
+/* combo */
+.combo { position: absolute; left: calc(var(--u) * 30px); top: calc(var(--u) * 110px); }
+.combo .n { font-size: calc(var(--u) * 92px); line-height: .9; color: #fff; -webkit-text-stroke: calc(var(--u) * 3px) var(--navy); text-shadow: calc(var(--u) * 5px) calc(var(--u) * 5px) 0 var(--magenta); transform: skewX(var(--skew)); display: inline-block; }
+.combo .h { font-size: calc(var(--u) * 26px); color: var(--gold); -webkit-text-stroke: calc(var(--u) * 1px) var(--navy); margin-left: calc(var(--u) * 6px); }
+.combo .d { display: inline-block; font-size: calc(var(--u) * 13px); color: var(--steel1); background: rgba(11,16,38,.85); padding: 0 calc(var(--u) * 10px); transform: skewX(var(--skew)); }
+.rank { position: absolute; left: calc(var(--u) * 360px); top: calc(var(--u) * 104px); width: calc(var(--u) * 76px); height: calc(var(--u) * 76px); display: flex; align-items: center; justify-content: center; font-size: calc(var(--u) * 52px); color: #fff; background: radial-gradient(circle, var(--magenta), #7a1650); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); text-shadow: 0 calc(var(--u) * 3px) 0 rgba(0,0,0,.4); }
+.rankbar { position: absolute; left: calc(var(--u) * 360px); top: calc(var(--u) * 186px); width: calc(var(--u) * 76px); height: calc(var(--u) * 5px); background: #20263f; }
+.rankbar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--magenta); }
+.weap { position: absolute; left: calc(var(--u) * 28px); top: calc(var(--u) * 214px); background: rgba(11,16,38,.85); padding: calc(var(--u) * 4px) calc(var(--u) * 14px); transform: skewX(var(--skew)); display: flex; align-items: center; gap: calc(var(--u) * 8px); font-size: calc(var(--u) * 14px); color: var(--steel1); }
+.weap .ico { font-size: calc(var(--u) * 22px); color: var(--cyan); }
+/* world pops */
+.dmg { position: absolute; font-family: var(--display); font-style: italic; color: var(--gold); -webkit-text-stroke: calc(var(--u) * 2px) var(--navy); font-size: calc(var(--u) * 28px); transform: translate(-50%, -50%); }
+.dmg.crit { color: #fff; font-size: calc(var(--u) * 38px); text-shadow: 0 0 calc(var(--u) * 10px) var(--magenta); }
+.judge { position: absolute; font-family: var(--display); font-style: italic; font-size: calc(var(--u) * 34px); color: var(--cyan); -webkit-text-stroke: calc(var(--u) * 2px) var(--navy); transform: translate(-50%, -50%) skewX(var(--skew)); text-shadow: 0 0 calc(var(--u) * 12px) var(--cyan); }
+.padline { position: absolute; left: 0; right: 0; top: 50%; border-top: calc(var(--u) * 1.5px) dashed rgba(46,230,255,.35); }
+.padtag { position: absolute; right: calc(var(--u) * 16px); top: calc(50% + 6px); font-size: calc(var(--u) * 11px); color: rgba(20,30,60,.55); letter-spacing: .2em; font-weight: 700; }
+/* overlay + menus */
+.dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 55%, rgba(11,16,38,.55), rgba(11,16,38,.9)); }
+.speed { position: absolute; inset: 0; background: repeating-conic-gradient(from 0deg at 50% 60%, rgba(46,230,255,.0) 0deg 6deg, rgba(46,230,255,.10) 6deg 7deg); }
+.banner { position: absolute; left: 50%; transform: translateX(-50%) skewX(var(--skew)); padding: calc(var(--u) * 8px) calc(var(--u) * 40px); background: linear-gradient(90deg, transparent, var(--magenta) 15%, var(--magenta) 85%, transparent); }
+.banner .in { transform: skewX(calc(var(--skew) * -1)); font-family: var(--display); font-style: italic; font-size: calc(var(--u) * 34px); white-space: nowrap; text-shadow: calc(var(--u) * 3px) calc(var(--u) * 3px) 0 var(--navy); }
+.btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: calc(var(--u) * 10px); min-width: calc(var(--u) * 260px); height: calc(var(--u) * 56px); padding: 0 calc(var(--u) * 26px); transform: skewX(var(--skew));
+  background: linear-gradient(180deg, #2a3768, var(--navy2)); border: calc(var(--u) * 3px) solid var(--steel2); color: #fff; font-family: var(--display); font-style: italic; font-size: calc(var(--u) * 22px); letter-spacing: .04em; }
+.btn > span { transform: skewX(calc(var(--skew) * -1)); display: inline-flex; align-items: center; gap: calc(var(--u) * 10px); }
+.btn.primary { background: linear-gradient(180deg, #ff5ca6, var(--magenta) 50%, #b8105c); border-color: #fff; box-shadow: 0 0 calc(var(--u) * 20px) rgba(255,46,136,.6); }
+.btn.hover { border-color: var(--cyan); box-shadow: var(--glow); transform: skewX(var(--skew)) translateY(calc(var(--u) * -3px)) scale(1.04); }
+.btn.pressed { transform: skewX(var(--skew)) translateY(calc(var(--u) * 3px)) scale(.97); background: linear-gradient(180deg, var(--navy), #2a3768); box-shadow: inset 0 calc(var(--u) * 4px) 0 rgba(0,0,0,.4); }
+.btn.disabled { opacity: .38; filter: grayscale(1); }
+.panel { position: absolute; background: linear-gradient(180deg, rgba(20,28,61,.96), rgba(11,16,38,.97)); border: calc(var(--u) * 3px) solid var(--steel2); box-shadow: 0 0 0 calc(var(--u) * 2px) var(--navy), 0 calc(var(--u) * 14px) calc(var(--u) * 30px) rgba(0,0,0,.5); clip-path: polygon(calc(var(--u) * 22px) 0, 100% 0, 100% calc(100% - calc(var(--u) * 22px)), calc(100% - calc(var(--u) * 22px)) 100%, 0 100%, 0 calc(var(--u) * 22px)); }
+.ph { font-family: var(--display); font-style: italic; font-size: calc(var(--u) * 28px); color: #fff; padding: calc(var(--u) * 14px) calc(var(--u) * 24px); border-bottom: calc(var(--u) * 2px) solid var(--steel3); text-shadow: calc(var(--u) * 3px) calc(var(--u) * 3px) 0 var(--magenta); }
+.row { display: flex; align-items: center; justify-content: space-between; padding: calc(var(--u) * 9px) calc(var(--u) * 24px); font-size: calc(var(--u) * 16px); border-bottom: 1px solid rgba(141,153,184,.15); letter-spacing: .04em; }
+.row .seg { display: flex; gap: calc(var(--u) * 3px); }
+.row .seg i { width: calc(var(--u) * 12px); height: calc(var(--u) * 16px); background: #2a3354; transform: skewX(var(--skew)); }
+.row .seg i.on { background: var(--cyan); box-shadow: 0 0 calc(var(--u) * 6px) var(--cyan); }
+.sw { width: calc(var(--u) * 54px); height: calc(var(--u) * 24px); transform: skewX(var(--skew)); background: #2a3354; position: relative; border: calc(var(--u) * 2px) solid var(--steel3); }
+.sw::after { content: ''; position: absolute; top: calc(var(--u) * 2px); bottom: calc(var(--u) * 2px); left: calc(var(--u) * 2px); width: 45%; background: var(--steel2); }
+.sw.on { background: var(--magenta); border-color: #fff; } .sw.on::after { left: auto; right: calc(var(--u) * 2px); background: #fff; }
+.sel { font-family: var(--display); font-style: italic; color: var(--gold); font-size: calc(var(--u) * 15px); }
+.tile { position: relative; width: calc(var(--u) * 84px); height: calc(var(--u) * 84px); transform: skewX(var(--skew)); background: linear-gradient(160deg, #22305e, #10162e); border: calc(var(--u) * 2px) solid var(--steel3); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.tile > * { transform: skewX(calc(var(--skew) * -1)); }
+.tile .ico { font-size: calc(var(--u) * 34px); color: var(--steel1); }
+.tile small { font-size: calc(var(--u) * 10px); letter-spacing: .08em; margin-top: calc(var(--u) * 4px); color: var(--steel2); text-transform: uppercase; font-weight: 700; }
+.tile.sel { border-color: var(--gold); box-shadow: 0 0 calc(var(--u) * 18px) rgba(255,210,63,.7); background: linear-gradient(160deg, #6a1546, #2a0d24); }
+.tile.sel .ico { color: var(--gold); }
+.tile .k { position: absolute; left: calc(var(--u) * 6px); top: calc(var(--u) * 3px); font-family: var(--display); font-size: calc(var(--u) * 11px); color: var(--cyan); }
+table.mv { width: 100%; border-collapse: collapse; font-size: calc(var(--u) * 14px); }
+table.mv td { padding: calc(var(--u) * 5px) calc(var(--u) * 8px); border-bottom: 1px solid rgba(141,153,184,.15); }
+table.mv td:first-child { color: var(--cyan); font-family: var(--display); width: 18%; }
+.statrow { display: flex; justify-content: space-between; padding: calc(var(--u) * 7px) calc(var(--u) * 22px); font-size: calc(var(--u) * 17px); letter-spacing: .05em; transform: skewX(var(--skew)); margin: calc(var(--u) * 4px) calc(var(--u) * 16px); background: linear-gradient(90deg, rgba(46,230,255,.12), transparent); border-left: calc(var(--u) * 4px) solid var(--cyan); }
+.statrow b { font-family: var(--display); font-style: italic; color: var(--gold); }
+.cap { position: absolute; left: calc(var(--u) * 14px); bottom: calc(var(--u) * 10px); font-size: calc(var(--u) * 12px); color: rgba(255,255,255,.7); letter-spacing: .1em; }
+</style></head>
+<body><div id="stage"></div>
+<script src="data.js"></script>
+<script>
+const G = GAME, W = DEV.w, H = DEV.h;
+const u = DEVICE === 'phone' ? 0.68 : 1;
+const st = document.getElementById('stage');
+st.style.cssText += `width:${W}px;height:${H}px;--u:${u};background-image:url(${bgFor(SCREEN)})`;
+const add = (html) => st.insertAdjacentHTML('beforeend', html);
+const pct = (v) => (v * 100).toFixed(1) + '%';
+
+function specialBar(state = G.special.state, f = 1, x = null, y = null) {
+  const pos = x !== null ? `style="position:absolute;left:${x}px;top:${y}px;transform:none"` : '';
+  const segs = `<div class="seg"><i style="width:${pct(f)}"></i></div>`;
+  return `<div class="sp ${state}" ${pos}>${state === 'ready' ? '<div class="flame"></div>' : ''}<div class="bar">${segs}</div>
+    <div class="t lbl">${state === 'ready' ? 'SPECIAL READY · HOLD!' : state === 'active' ? 'SPECIAL!' : 'SPECIAL ' + Math.round(f * 100) + '%'}</div></div>`;
+}
+function hud() {
+  add(`<div class="padline"></div><div class="padtag">TOUCH AREA · KEPT CLEAR</div>`);
+  add(`<div class="portrait disp">${icon('fists')}</div>
+    <div class="plate hp"><div class="track"></div><div class="lag" style="width:calc(${pct(0.97)} - ${8 * u}px)"></div><div class="fill" style="width:calc(${pct(G.hp / G.maxHp)} - ${8 * u}px)"></div><div class="shine"></div></div>
+    <div class="hpname lbl"><b>P1</b>${G.hp} / ${G.maxHp}</div>`);
+  add(`<div class="plate wave"><div class="in"><div class="s disp">${G.score.toLocaleString()}</div><div class="w lbl">WAVE ${G.wave} · KO ${G.kos}</div></div></div>
+    <div class="plate pausebtn"><div class="in">${icon('pause')}</div></div>`);
+  add(specialBar());
+  add(`<div class="beat"><div class="lane"></div>${G.beatsAhead.map((b) => `<div class="n" style="left:${50 + b * 45}%"></div><div class="n" style="left:${50 - b * 45}%"></div>`).join('')}<div class="hit"></div></div>
+    <div class="groove"><i style="width:${pct(G.groove)}"></i></div><div class="groovel lbl">GROOVE</div>`);
+  add(`<div class="combo"><span class="n disp">${G.combo}</span><span class="h disp">HITS</span><div class="d lbl">DAMAGE ${G.dmgScale}%</div></div>
+    <div class="rank disp">${G.rank}</div><div class="rankbar"><i style="width:${pct(G.rankFill)}"></i></div>
+    <div class="weap lbl">${icon('fists')} FISTS</div>`);
+  G.damage.forEach((d) => add(`<div class="dmg ${d.crit ? 'crit' : ''}" style="left:${d.x * W}px;top:${d.y * H}px">${d.v}${d.crit ? '!' : ''}</div>`));
+  add(`<div class="judge" style="left:${0.6 * W}px;top:${0.4 * H}px">PERFECT</div>`);
+}
+function traceOverlay(qte) {
+  add(`<div class="dim"></div><div class="speed"></div>`);
+  add(`<div class="portrait disp">${icon('fists')}</div><div class="plate hp"><div class="track"></div><div class="fill" style="width:calc(${pct(G.hp / G.maxHp)} - ${8 * u}px)"></div><div class="shine"></div></div>`);
+  add(specialBar('active'));
+  add(`<div class="banner" style="top:${H * 0.17}px"><div class="in">${G.trace.name}</div></div>`);
+  const pts = tracePath(W, H);
+  if (!qte) {
+    add(`<svg style="position:absolute;inset:0" width="${W}" height="${H}">
+      <defs><filter id="gl"><feGaussianBlur stdDeviation="${4 * u}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <path d="${pathD(pts)}" fill="none" stroke="rgba(46,230,255,.25)" stroke-width="${22 * u}" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${pathD(pts)}" fill="none" stroke="#2ee6ff" stroke-width="${4 * u}" stroke-dasharray="${2 * u} ${12 * u}" stroke-linecap="round" filter="url(#gl)"/>
+      <path d="${pathD(pts, G.trace.progress)}" fill="none" stroke="#ff2e88" stroke-width="${12 * u}" stroke-linecap="round" stroke-linejoin="round" filter="url(#gl)"/>
+      ${[0.2, 0.45, 0.7, 0.9].map((k) => { const i = Math.floor(pts.length * k), a = pts[i], b = pts[Math.min(pts.length - 1, i + 2)]; const ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; return `<path d="M${-9 * u} ${-9 * u} L0 0 L${-9 * u} ${9 * u}" transform="translate(${a[0]},${a[1]}) rotate(${ang})" fill="none" stroke="#fff" stroke-width="${4 * u}" stroke-linecap="round"/>`; }).join('')}
+      <circle cx="${pts[0][0]}" cy="${pts[0][1]}" r="${14 * u}" fill="#ff2e88" stroke="#fff" stroke-width="${3 * u}" filter="url(#gl)"/>
+      ${(() => { const p = pts[Math.round(pts.length * G.trace.progress) - 1]; return `<circle cx="${p[0]}" cy="${p[1]}" r="${20 * u}" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="${2 * u}"/>`; })()}
+    </svg>`);
+    const R = 34 * u;
+    add(`<svg style="position:absolute;left:${W / 2 - R - 6}px;top:${H * 0.27}px" width="${2 * R + 12}" height="${2 * R + 12}"><circle cx="${R + 6}" cy="${R + 6}" r="${R}" fill="rgba(11,16,38,.8)" stroke="#3a4566" stroke-width="${8 * u}"/>
+      <circle cx="${R + 6}" cy="${R + 6}" r="${R}" fill="none" stroke="#ffd23f" stroke-width="${8 * u}" stroke-dasharray="${2 * Math.PI * R * G.trace.fuse} 999" transform="rotate(-90 ${R + 6} ${R + 6})"/>
+      <text x="${R + 6}" y="${R + 14}" text-anchor="middle" font-family="Russo One" font-size="${22 * u}" fill="#fff">1.2</text></svg>`);
+    add(`<div class="lbl" style="position:absolute;left:0;right:0;top:${H * 0.27 + 2 * R + 18}px;text-align:center;font-size:${18 * u}px;color:#fff;text-shadow:0 0 8px #2ee6ff">TRACE THE PATH! <span style="color:#2ee6ff;margin-left:${10 * u}px">KEYS ${G.trace.keys}</span></div>`);
+  } else {
+    const cx = W / 2, cy = H * 0.7, R0 = 54 * u, R = R0 + G.qte.ring * 110 * u;
+    add(`<svg style="position:absolute;inset:0" width="${W}" height="${H}">
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#2ee6ff" stroke-width="${5 * u}" opacity=".85"/>
+      <polygon points="${[0, 1, 2, 3, 4, 5].map((i) => { const a = Math.PI / 3 * i + Math.PI / 6; return `${cx + Math.cos(a) * R0},${cy + Math.sin(a) * R0}`; }).join(' ')}" fill="#ff2e88" stroke="#fff" stroke-width="${4 * u}"/>
+      <text x="${cx}" y="${cy + 22 * u}" text-anchor="middle" font-family="Russo One" font-size="${64 * u}" fill="#fff">${G.qte.glyph}</text></svg>`);
+    add(`<div class="lbl" style="position:absolute;left:0;right:0;top:${cy + R0 + 18 * u}px;text-align:center;font-size:${16 * u}px;color:#fff">SWIPE UP · ${G.qte.index + 1} / ${G.qte.count}</div>`);
+    add(`<div class="judge" style="left:${W / 2}px;top:${H * 0.42}px;font-size:${44 * u}px">PERFECT!</div>`);
+    add(`<div style="position:absolute;left:50%;top:${H * 0.5}px;transform:translateX(-50%);display:flex;gap:${10 * u}px">${['PERFECT', 'PERFECT', '', ''].map((j, i) => `<div style="width:${26 * u}px;height:${8 * u}px;transform:skewX(-14deg);background:${i < 2 ? '#ffd23f' : i === 2 ? '#fff' : '#3a4566'}"></div>`).join('')}</div>`);
+  }
+}
+function title() {
+  add(`<div class="dim" style="background:linear-gradient(180deg,rgba(11,16,38,.25),rgba(11,16,38,.55) 60%,rgba(11,16,38,.85))"></div>`);
+  add(`<div style="position:absolute;left:0;right:0;top:${H * 0.1}px;text-align:center">
+    <div class="disp" style="display:inline-block;font-size:${118 * u}px;line-height:1;transform:skewX(-14deg);background:linear-gradient(180deg,#fff,#cfe7ff 45%,#6b7ba8 55%,#fff);-webkit-background-clip:text;color:transparent;-webkit-text-stroke:${3 * u}px #0b1026;filter:drop-shadow(${6 * u}px ${6 * u}px 0 #ff2e88) drop-shadow(0 0 ${20 * u}px rgba(46,230,255,.6))">JUMPSHOT</div>
+    <div class="lbl" style="font-size:${16 * u}px;color:#2ee6ff;letter-spacing:.5em;margin-top:${8 * u}px">SWIPE · LAUNCH · JUGGLE · SPIKE</div></div>`);
+  add(`<div style="position:absolute;left:0;right:0;top:${H * 0.47}px;display:flex;justify-content:center;gap:${4 * u}px">
+    <div class="btn primary" style="min-width:${150 * u}px;height:${40 * u}px;font-size:${17 * u}px"><span>${icon('music')} RHYTHM</span></div>
+    <div class="btn" style="min-width:${150 * u}px;height:${40 * u}px;font-size:${17 * u}px"><span>CLASSIC</span></div></div>`);
+  add(`<div style="position:absolute;left:0;right:0;top:${H * 0.6}px;display:flex;flex-direction:column;align-items:center;gap:${12 * u}px">
+    <div class="btn primary" style="min-width:${340 * u}px;height:${64 * u}px;font-size:${28 * u}px"><span>FIGHT!</span></div>
+    <div style="display:flex;gap:${14 * u}px"><div class="btn"><span>${icon('fists')} WEAPON: FISTS</span></div><div class="btn" style="min-width:${180 * u}px"><span>${icon('gear')} SETTINGS</span></div></div></div>`);
+  add(`<div class="plate" style="right:${30 * u}px;top:${24 * u}px;padding:${8 * u}px ${20 * u}px"><div class="in lbl" style="font-size:${14 * u}px;color:#2ee6ff">BEST <b class="disp" style="color:#ffd23f;font-size:${22 * u}px;margin-left:${8 * u}px">${G.best.toLocaleString()}</b> · WAVE ${G.bestWave}</div></div>`);
+  add(`<div class="lbl" style="position:absolute;left:0;right:0;bottom:${18 * u}px;text-align:center;font-size:${15 * u}px;color:#ffd23f;text-shadow:0 0 10px #ff7a00">TAP OR FLICK THE LOWER HALF TO START</div>`);
+}
+function loadout() {
+  add(`<div class="dim"></div>`);
+  add(`<div class="banner" style="top:${18 * u}px"><div class="in">SELECT YOUR WEAPON</div></div>`);
+  const sel = G.weapons[0];
+  const cols = DEVICE === 'phone' ? 6 : 6;
+  add(`<div class="panel" style="left:${30 * u}px;top:${90 * u}px;width:${W * 0.36}px;bottom:${84 * u}px">
+    <div class="ph">${icon('fists')} ${sel.name.toUpperCase()}</div>
+    <div style="height:${H * 0.2}px;margin:${10 * u}px ${20 * u}px;background:url(${bgFor('title')}) center 72%/220% no-repeat;border:2px solid #3a4566"></div>
+    <div style="padding:0 ${20 * u}px;font-size:${15 * u}px;color:#e9eef8;line-height:1.35">${sel.desc}</div>
+    <table class="mv" style="margin:${8 * u}px ${12 * u}px;width:calc(100% - ${24 * u}px)">${[['→', 'side'], ['↗', 'upDiag'], ['↑', 'up'], ['↘', 'downDiag'], ['↓', 'down']].map(([g, k]) => `<tr><td>${g}</td><td>${sel.moves[k][0]}</td><td style="color:#ff2e88">${sel.moves[k][1]}</td></tr>`).join('')}</table></div>`);
+  add(`<div style="position:absolute;left:${W * 0.36 + 60 * u}px;right:${30 * u}px;top:${96 * u}px;display:grid;grid-template-columns:repeat(${cols},1fr);gap:${12 * u}px ${10 * u}px">
+    ${G.weapons.map((w, i) => `<div class="tile ${i === 0 ? 'sel' : ''} ${i === 3 ? 'hov' : ''}" style="width:auto"><span class="k">${i < 10 ? (i + 1) % 10 : ''}</span>${icon(w.id)}<small>${w.name.replace('Paper Plane Swarm', 'Paper Planes').replace('Boomerang ', '')}</small></div>`).join('')}</div>`);
+  add(`<div style="position:absolute;right:${30 * u}px;bottom:${20 * u}px;display:flex;gap:${14 * u}px;align-items:center"><span class="lbl" style="font-size:${13 * u}px;color:#8d99b8">1-9 · 0 · Q / E</span><div class="btn primary"><span>DONE</span></div></div>`);
+}
+function pause() {
+  add(`<div class="dim"></div>`);
+  add(`<div class="banner" style="top:${24 * u}px"><div class="in">PAUSED</div></div>`);
+  add(`<div style="position:absolute;left:${W * 0.08}px;top:${H * 0.22}px;display:flex;flex-direction:column;gap:${14 * u}px">
+    <div class="btn primary"><span>RESUME</span></div><div class="btn hover"><span>${icon('gear')} SETTINGS</span></div><div class="btn"><span>RESTART RUN</span></div><div class="btn"><span>QUIT TO TITLE</span></div></div>`);
+  add(`<div class="panel" style="right:${W * 0.06}px;top:${H * 0.17}px;width:${W * 0.44}px;bottom:${H * 0.06}px"><div class="ph">${icon('gear')} SETTINGS</div>
+    ${G.settings.map((s) => `<div class="row lbl"><span>${s.k}</span>${s.t === 'check' ? `<span class="sw ${s.v ? 'on' : ''}"></span>` : s.t === 'range' ? `<span class="seg">${Array.from({ length: 10 }, (_, i) => `<i class="${i < Math.round(s.v * 10 / (s.k === 'Screen shake' ? 1.5 : 1)) ? 'on' : ''}"></i>`).join('')}</span>` : `<span class="sel">◀ ${s.v} ▶</span>`}</div>`).join('')}</div>`);
+}
+function results() {
+  const R = G.results;
+  add(`<div class="dim"></div>`);
+  add(`<div class="banner" style="top:${18 * u}px;background:linear-gradient(90deg,transparent,#ff3b3b 15%,#ff3b3b 85%,transparent)"><div class="in" style="font-size:${46 * u}px">GAME OVER</div></div>`);
+  add(`<div class="panel" style="left:50%;transform:translateX(-50%);top:${H * 0.17}px;width:${Math.min(W * 0.62, 760 * u)}px;bottom:${92 * u}px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:${14 * u}px ${26 * u}px">
+      <div><div class="lbl" style="font-size:${13 * u}px;color:#2ee6ff">SCORE</div><div class="disp" style="font-size:${52 * u}px;line-height:1;text-shadow:${4 * u}px ${4 * u}px 0 #ff2e88">${R.score.toLocaleString()}</div><div class="lbl" style="font-size:${13 * u}px;color:#8d99b8">BEST ${R.best.toLocaleString()}</div></div>
+      <div class="rank disp" style="position:static;width:${96 * u}px;height:${96 * u}px;font-size:${64 * u}px">${R.maxRank}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr">
+      ${[['Wave reached', R.wave], ['Best combo', R.bestCombo + ' hits'], ['K.O.s', R.kos], ['Perfect parries', R.parries], ['Finishers', R.finishers], ['Specials', R.specials], ['Rhythm accuracy', R.rhythm.accuracy + '% · ' + R.rhythm.label], ['Best streak', R.rhythm.bestStreak]].map(([k, v]) => `<div class="statrow lbl"><span>${k}</span><b>${v}</b></div>`).join('')}</div></div>`);
+  add(`<div style="position:absolute;left:0;right:0;bottom:${22 * u}px;display:flex;justify-content:center;gap:${18 * u}px"><div class="btn primary"><span>FIGHT AGAIN</span></div><div class="btn"><span>TITLE</span></div></div>`);
+}
+function states() {
+  add(`<div class="dim" style="background:rgba(11,16,38,.92)"></div>`);
+  const L = (t, x, y) => add(`<div class="lbl" style="position:absolute;left:${x}px;top:${y}px;font-size:${13 * u}px;color:#2ee6ff">${t}</div>`);
+  L('BUTTONS: DEFAULT · HOVER · PRESSED · DISABLED · PRIMARY', 40 * u, 26 * u);
+  add(`<div style="position:absolute;left:${40 * u}px;top:${52 * u}px;display:flex;gap:${18 * u}px;flex-wrap:wrap;width:${W - 80 * u}px">${['', 'hover', 'pressed', 'disabled', 'primary'].map((c) => `<div class="btn ${c}" style="min-width:${200 * u}px"><span>${c ? c.toUpperCase() : 'DEFAULT'}</span></div>`).join('')}</div>`);
+  L('SPECIAL BAR: CHARGING · READY · ACTIVE', 40 * u, 150 * u);
+  add(`<div style="position:absolute;left:${40 * u}px;top:${180 * u}px;width:${W - 80 * u}px;height:${70 * u}px">${specialBar('charging', 0.42, 0, 0)}${specialBar('ready', 1, W * 0.3, 0)}${specialBar('active', 1, W * 0.6, 0)}</div>`);
+  L('HEAT BAR (LASER) · JUDGMENTS · TIER WORDS', 40 * u, 280 * u);
+  add(`<div style="position:absolute;left:${40 * u}px;top:${312 * u}px;width:${220 * u}px"><div class="lbl" style="font-size:${12 * u}px;color:#e9eef8">${icon('laser')} LASER HEAT</div><div style="height:${12 * u}px;margin-top:${4 * u}px;transform:skewX(-14deg);background:#20263f;border:2px solid #8d99b8;position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:${pct(G.heat)};background:linear-gradient(90deg,#2ee6ff,#ffd23f,#ff3b3b)"></i></div></div>`);
+  ['PERFECT', 'GREAT', 'GOOD', 'MISS'].forEach((j, i) => add(`<div class="judge" style="left:${(330 + i * 140) * u}px;top:${330 * u}px;font-size:${28 * u}px;color:${['#2ee6ff', '#ffd23f', '#e9eef8', '#ff3b3b'][i]}">${j}</div>`));
+  G.tiers.forEach((t, i) => add(`<div class="banner" style="left:${(260 + i * 330) * u}px;top:${400 * u}px;transform:skewX(-14deg);background:linear-gradient(90deg,transparent,${['#3a4566', '#2a6bff', '#ff2e88'][i]} 15%,${['#3a4566', '#2a6bff', '#ff2e88'][i]} 85%,transparent)"><div class="in">${t}!</div></div>`));
+  L('ICON SET (WEAPONS + UI)', 40 * u, 500 * u);
+  add(`<div style="position:absolute;left:${40 * u}px;top:${530 * u}px;display:flex;gap:${14 * u}px;flex-wrap:wrap;width:${W - 80 * u}px;font-size:${30 * u}px;color:#e9eef8">${Object.keys(ICON).map((k) => icon(k)).join('')}</div>`);
+}
+({ gameplay: hud, trace: () => traceOverlay(false), qte: () => traceOverlay(true), title, loadout, pause, results, states })[SCREEN]?.();
+</script></body></html>

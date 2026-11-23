@@ -96,6 +96,10 @@ These are the **Fists** moves (the default weapon). Other weapons replace the mo
 - Look and animation style come from Settings (stored in `localStorage` as `jumpshot.settings.v1`: `look`, `animStyle`, `stepRate`, `pixelRes`).
 - `?manual` drives the loop from `window.__advance(ms)`, for deterministic refresh-rate tests.
 
+## UI redesign (in progress)
+
+The current paper UI is being replaced. Four complete directions (Arcade Fighter, Ink & Manga, Minimal Diegetic, Refined Sketchbook) are mocked up over the running game in **`ui-options/index.html`**: open the file in a browser. The problems with the current UI are listed in `UI_AUDIT.md`.
+
 ## Weapons
 
 You carry **one weapon** at a time. All 17 are unlocked from the start. Pick one on the **loadout** screen (the ⚔ WEAPON button on the title screen; keys 1–9 and 0 pick the first ten, Q / E or ←/→ step through all of them). It shows a looping preview of the moves and a swipe cheat-sheet, and remembers your choice. Between waves you can swap instantly from the small strip (tap an icon, press 1–9 / 0, or step with Q / E). The first time you equip a weapon, a tooltip lists its moves. Every weapon works with the pad and the keyboard, combos, juggles, parry/dodge, the Super Meter finishers (JUMPSHOT and FLURRY), the style rank and both game modes.

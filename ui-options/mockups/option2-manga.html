@@ -1,0 +1,186 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Option 2 Ink and Manga</title>
+<style>
+@font-face { font-family: 'Bangers'; src: url(../fonts/bangers-latin-400-normal.woff2); }
+@font-face { font-family: 'Comic Neue'; font-weight: 400; src: url(../fonts/comic-neue-latin-400-normal.woff2); }
+@font-face { font-family: 'Comic Neue'; font-weight: 700; src: url(../fonts/comic-neue-latin-700-normal.woff2); }
+:root {
+  /* Design tokens: Ink & Manga (black, white, one red) */
+  --ink: #111111; --paper: #ffffff; --red: #e8202a; --tone: rgba(17,17,17,.28);
+  --display: 'Bangers', 'Impact', sans-serif; --body: 'Comic Neue', 'Comic Sans MS', sans-serif;
+  --line: calc(var(--u) * 4px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+#stage { position: relative; overflow: hidden; background-size: cover; background-position: center; font-family: var(--body); color: var(--ink); }
+.ico { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
+.disp { font-family: var(--display); letter-spacing: .04em; }
+.tone { background-image: radial-gradient(var(--tone) 28%, transparent 30%); background-size: calc(var(--u) * 7px) calc(var(--u) * 7px); }
+.toneR { background-image: radial-gradient(rgba(232,32,42,.55) 30%, transparent 32%); background-size: calc(var(--u) * 6px) calc(var(--u) * 6px); }
+.panel { position: absolute; background: var(--paper); border: var(--line) solid var(--ink); box-shadow: calc(var(--u) * 6px) calc(var(--u) * 6px) 0 var(--ink); }
+.narr { position: absolute; background: var(--paper); border: calc(var(--u) * 3px) solid var(--ink); padding: calc(var(--u) * 4px) calc(var(--u) * 10px); font-weight: 700; font-size: calc(var(--u) * 14px); text-transform: uppercase; letter-spacing: .04em; }
+.burst { position: absolute; display: flex; align-items: center; justify-content: center; text-align: center;
+  clip-path: polygon(50% 0, 60% 18%, 79% 6%, 76% 27%, 100% 26%, 84% 44%, 100% 60%, 78% 64%, 86% 88%, 64% 76%, 54% 100%, 44% 78%, 22% 94%, 26% 70%, 0 70%, 16% 52%, 2% 32%, 24% 32%, 18% 8%, 40% 20%); }
+.burstb { position: absolute; clip-path: inherit; }
+.sfx { position: absolute; font-family: var(--display); color: var(--paper); -webkit-text-stroke: calc(var(--u) * 2.5px) var(--ink); paint-order: stroke fill; transform: rotate(-8deg); text-shadow: calc(var(--u) * 4px) calc(var(--u) * 4px) 0 var(--ink); }
+.sfx.red { color: var(--red); }
+.bubble { position: absolute; background: var(--paper); border: calc(var(--u) * 3px) solid var(--ink); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--display); }
+.bubble::after { content: ''; position: absolute; bottom: calc(var(--u) * -18px); left: 30%; border: calc(var(--u) * 10px) solid transparent; border-top: calc(var(--u) * 20px) solid var(--ink); }
+/* HUD */
+.hpp { left: calc(var(--u) * 18px); top: calc(var(--u) * 14px); width: calc(var(--u) * 340px); height: calc(var(--u) * 66px); transform: rotate(-1deg); padding: calc(var(--u) * 6px) calc(var(--u) * 10px); }
+.hpbar { position: relative; height: calc(var(--u) * 18px); border: calc(var(--u) * 3px) solid var(--ink); margin-top: calc(var(--u) * 3px); background: var(--paper); }
+.hpbar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); }
+.hpbar b { position: absolute; top: 0; bottom: 0; }
+.spbar { position: relative; height: calc(var(--u) * 14px); border: calc(var(--u) * 3px) solid var(--ink); margin-top: calc(var(--u) * 5px); background: var(--paper); overflow: hidden; }
+.spbar i { position: absolute; left: 0; top: 0; bottom: 0; }
+.ready .spbar { border-color: var(--red); box-shadow: 0 0 0 calc(var(--u) * 2px) var(--paper), 0 0 0 calc(var(--u) * 5px) var(--red); }
+.scorep { right: calc(var(--u) * 86px); top: calc(var(--u) * 12px); padding: calc(var(--u) * 2px) calc(var(--u) * 16px); transform: rotate(1.5deg); text-align: right; }
+.pausep { right: calc(var(--u) * 18px); top: calc(var(--u) * 12px); width: calc(var(--u) * 52px); height: calc(var(--u) * 52px); display: flex; align-items: center; justify-content: center; font-size: calc(var(--u) * 26px); }
+.comboB { right: calc(var(--u) * 28px); top: calc(var(--u) * 86px); width: calc(var(--u) * 200px); height: calc(var(--u) * 150px); background: var(--ink); }
+.comboB .in { position: absolute; inset: calc(var(--u) * 6px); background: var(--paper); clip-path: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.padline { position: absolute; left: 0; right: 0; top: 50%; border-top: calc(var(--u) * 2px) dashed rgba(17,17,17,.3); }
+.padtag { position: absolute; left: calc(var(--u) * 16px); top: calc(50% + 6px); font-size: calc(var(--u) * 12px); font-weight: 700; color: rgba(17,17,17,.45); }
+.speedl { position: absolute; inset: 0; background: repeating-conic-gradient(from 0deg at 50% 62%, rgba(17,17,17,.0) 0deg 4deg, rgba(17,17,17,.55) 4deg 4.6deg, rgba(17,17,17,.0) 4.6deg 9deg); -webkit-mask: radial-gradient(circle at 50% 62%, transparent 26%, #000 60%); mask: radial-gradient(circle at 50% 62%, transparent 26%, #000 60%); }
+.btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: calc(var(--u) * 10px); min-width: calc(var(--u) * 240px); height: calc(var(--u) * 58px); padding: 0 calc(var(--u) * 24px);
+  background: var(--paper); border: var(--line) solid var(--ink); box-shadow: calc(var(--u) * 5px) calc(var(--u) * 5px) 0 var(--ink); font-family: var(--display); font-size: calc(var(--u) * 26px); letter-spacing: .05em; color: var(--ink); }
+.btn.primary { background: var(--red); color: var(--paper); -webkit-text-stroke: calc(var(--u) * 1px) var(--ink); }
+.btn.hover { transform: translate(calc(var(--u) * -2px), calc(var(--u) * -2px)) rotate(-1.5deg); box-shadow: calc(var(--u) * 8px) calc(var(--u) * 8px) 0 var(--ink); }
+.btn.hover::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(var(--tone) 28%, transparent 30%); background-size: calc(var(--u) * 6px) calc(var(--u) * 6px); }
+.btn.pressed { transform: translate(calc(var(--u) * 4px), calc(var(--u) * 4px)); box-shadow: 0 0 0 var(--ink); background: #eee; }
+.btn.disabled { color: rgba(17,17,17,.35); border-style: dashed; box-shadow: none; }
+.row { display: flex; align-items: center; justify-content: space-between; padding: calc(var(--u) * 7px) calc(var(--u) * 18px); font-size: calc(var(--u) * 17px); font-weight: 700; border-bottom: calc(var(--u) * 2px) solid var(--ink); }
+.box { width: calc(var(--u) * 26px); height: calc(var(--u) * 26px); border: calc(var(--u) * 3px) solid var(--ink); position: relative; }
+.box.on::after { content: '✕'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--red); font-family: var(--display); font-size: calc(var(--u) * 22px); }
+.slider { width: calc(var(--u) * 150px); height: calc(var(--u) * 12px); border: calc(var(--u) * 3px) solid var(--ink); position: relative; }
+.slider i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); }
+.cell { position: relative; background: var(--paper); border: calc(var(--u) * 3px) solid var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: calc(var(--u) * 6px); }
+.cell .ico { font-size: calc(var(--u) * 32px); }
+.cell small { font-weight: 700; font-size: calc(var(--u) * 11px); text-transform: uppercase; margin-top: calc(var(--u) * 4px); text-align: center; line-height: 1.05; }
+.cell.sel { background: var(--ink); color: var(--paper); box-shadow: 0 0 0 calc(var(--u) * 3px) var(--red); }
+.cell .k { position: absolute; left: calc(var(--u) * 4px); top: calc(var(--u) * 2px); font-family: var(--display); font-size: calc(var(--u) * 13px); }
+</style></head>
+<body><div id="stage"></div>
+<script src="data.js"></script>
+<script>
+const G = GAME, W = DEV.w, H = DEV.h;
+const u = DEVICE === 'phone' ? 0.68 : 1;
+const st = document.getElementById('stage');
+st.style.cssText += `width:${W}px;height:${H}px;--u:${u};background-image:url(${bgFor(SCREEN)})`;
+const add = (h) => st.insertAdjacentHTML('beforeend', h);
+const pct = (v) => (v * 100).toFixed(1) + '%';
+const burst = (x, y, w, h, inner, bg = 'var(--paper)', line = 'var(--ink)', rot = -6) =>
+  `<div class="burst" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${line};transform:rotate(${rot}deg)"><div class="burst" style="position:absolute;inset:${6 * u}px;background:${bg}">${inner}</div></div>`;
+
+function spGauge(state, f) {
+  const fill = state === 'active' ? 'var(--ink)' : f >= 1 ? 'var(--red)' : 'var(--ink)';
+  return `<div class="${state}"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="disp" style="font-size:${15 * u}px">SPECIAL</span>
+    <span class="disp" style="font-size:${15 * u}px;color:${state === 'ready' ? 'var(--red)' : 'var(--ink)'}">${state === 'ready' ? 'READY! HOLD!' : state === 'active' ? 'UNLEASHED!' : Math.round(f * 100) + '%'}</span></div>
+    <div class="spbar"><i class="${f >= 1 ? 'toneR' : 'tone'}" style="width:${pct(f)};background-color:${state === 'ready' ? 'var(--red)' : 'transparent'}"></i>${state === 'active' ? `<i style="width:100%;background:repeating-linear-gradient(-60deg,var(--ink) 0 ${4 * u}px,var(--paper) ${4 * u}px ${9 * u}px)"></i>` : ''}</div></div>`;
+}
+function hud() {
+  add(`<div class="padline"></div><div class="padtag">TOUCH AREA (kept clear)</div>`);
+  add(`<div class="panel hpp"><div style="display:flex;align-items:center;justify-content:space-between"><span class="disp" style="font-size:${18 * u}px">${icon('fists')} FISTS</span><span style="font-weight:700;font-size:${14 * u}px">${G.hp}/${G.maxHp}</span></div>
+    <div class="hpbar"><i style="width:${pct(G.hp / G.maxHp)}"></i><b class="tone" style="left:${pct(G.hp / G.maxHp)};width:5%"></b></div></div>`);
+  add(`<div class="panel" style="left:${18 * u}px;top:${92 * u}px;width:${300 * u}px;padding:${4 * u}px ${10 * u}px ${8 * u}px;transform:rotate(0.6deg)">${spGauge('ready', 1)}</div>`);
+  add(`<div class="panel scorep"><div class="disp" style="font-size:${34 * u}px;line-height:1">${G.score.toLocaleString()}</div><div style="font-weight:700;font-size:${13 * u}px">WAVE ${G.wave} · ${G.kos} K.O.</div></div>
+    <div class="panel pausep">${icon('pause')}</div>`);
+  add(burst(W - 250 * u, 82 * u, 230 * u, 168 * u, `<div style="text-align:center"><div class="disp" style="font-size:${64 * u}px;line-height:.9">${G.combo}</div><div class="disp" style="font-size:${20 * u}px;color:var(--red)">HIT COMBO!</div><div style="font-weight:700;font-size:${12 * u}px">dmg ${G.dmgScale}%</div></div>`, 'var(--paper)', 'var(--ink)', 4));
+  add(`<div class="panel" style="right:${40 * u}px;top:${256 * u}px;width:${64 * u}px;height:${64 * u}px;display:flex;align-items:center;justify-content:center;transform:rotate(-4deg)"><span class="disp" style="font-size:${48 * u}px;color:var(--red)">${G.rank}</span></div>`);
+  // rhythm: groove + beat ticks as a filmstrip
+  add(`<div class="panel" style="left:50%;top:${14 * u}px;transform:translateX(-50%);width:${300 * u}px;height:${44 * u}px;padding:${4 * u}px ${10 * u}px">
+    <div style="position:relative;height:${16 * u}px;border-bottom:${3 * u}px solid var(--ink)">${G.beatsAhead.map((b) => `<span style="position:absolute;top:0;left:${50 + b * 46}%;width:${4 * u}px;height:${14 * u}px;background:var(--ink)"></span><span style="position:absolute;top:0;left:${50 - b * 46}%;width:${4 * u}px;height:${14 * u}px;background:var(--ink)"></span>`).join('')}<span style="position:absolute;left:50%;top:${-4 * u}px;width:${14 * u}px;height:${20 * u}px;margin-left:${-7 * u}px;background:var(--red)"></span></div>
+    <div style="display:flex;align-items:center;gap:${6 * u}px;margin-top:${4 * u}px"><span class="disp" style="font-size:${12 * u}px">GROOVE</span><div style="flex:1;height:${8 * u}px;border:${2 * u}px solid var(--ink);position:relative"><i class="tone" style="position:absolute;left:0;top:0;bottom:0;width:${pct(G.groove)};background-color:var(--ink)"></i></div></div></div>`);
+  G.damage.forEach((d) => add(`<div class="sfx ${d.crit ? 'red' : ''}" style="left:${d.x * W}px;top:${d.y * H}px;font-size:${(d.crit ? 40 : 26) * u}px">${d.v}${d.crit ? '!!' : ''}</div>`));
+  add(burst(0.55 * W, 0.3 * H, 190 * u, 92 * u, `<span class="disp" style="font-size:${30 * u}px;color:var(--red)">PERFECT!</span>`, 'var(--paper)', 'var(--ink)', -8));
+  add(`<div class="sfx" style="left:${0.36 * W}px;top:${0.28 * H}px;font-size:${46 * u}px">POW!</div>`);
+}
+function special(qte) {
+  add(`<div style="position:absolute;inset:0;background:rgba(255,255,255,.5)"></div><div class="speedl"></div>`);
+  add(`<div class="panel" style="left:${18 * u}px;top:${14 * u}px;width:${300 * u}px;padding:${4 * u}px ${10 * u}px ${8 * u}px">${spGauge('active', 1)}</div>`);
+  add(`<div class="narr" style="left:50%;top:${H * 0.08}px;transform:translateX(-50%) rotate(-1deg);font-size:${16 * u}px">SPECIAL —</div>`);
+  add(`<div class="sfx red" style="left:50%;top:${H * 0.14}px;transform:translateX(-50%) rotate(-4deg);font-size:${64 * u}px;white-space:nowrap">${G.trace.name}!!</div>`);
+  const pts = tracePath(W, H);
+  if (!qte) {
+    add(`<svg style="position:absolute;inset:0" width="${W}" height="${H}">
+      <path d="${pathD(pts)}" fill="none" stroke="#fff" stroke-width="${26 * u}" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${pathD(pts)}" fill="none" stroke="#111" stroke-width="${7 * u}" stroke-dasharray="${1 * u} ${14 * u}" stroke-linecap="round"/>
+      <path d="${pathD(pts, G.trace.progress)}" fill="none" stroke="#111" stroke-width="${18 * u}" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${pathD(pts, G.trace.progress)}" fill="none" stroke="#e8202a" stroke-width="${10 * u}" stroke-linecap="round" stroke-linejoin="round"/>
+      ${[0.25, 0.5, 0.72, 0.92].map((k) => { const i = Math.floor(pts.length * k), a = pts[i], b = pts[Math.min(pts.length - 1, i + 2)]; const ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; return `<path d="M${-12 * u} ${-11 * u} L${4 * u} 0 L${-12 * u} ${11 * u}z" transform="translate(${a[0]},${a[1]}) rotate(${ang})" fill="#111"/>`; }).join('')}
+      <circle cx="${pts[0][0]}" cy="${pts[0][1]}" r="${16 * u}" fill="#e8202a" stroke="#111" stroke-width="${4 * u}"/></svg>`);
+    // fuse: a lit fuse line burning toward a bomb
+    add(`<div style="position:absolute;left:50%;top:${H * 0.3}px;transform:translateX(-50%);display:flex;align-items:center;gap:${8 * u}px">
+      <div style="width:${220 * u}px;height:${6 * u}px;background:linear-gradient(90deg,#111 ${pct(G.trace.fuse)},transparent ${pct(G.trace.fuse)});border-bottom:${2 * u}px dashed #111;position:relative"><span class="sfx red" style="left:${pct(G.trace.fuse)};top:${-20 * u}px;font-size:${22 * u}px">✸</span></div>
+      <span class="disp" style="font-size:${22 * u}px">1.2s</span></div>`);
+    add(`<div class="narr" style="left:50%;top:${H * 0.38}px;transform:translateX(-50%) rotate(1deg)">TRACE IT! · keys ${G.trace.keys}</div>`);
+  } else {
+    add(burst(W / 2 - 120 * u, H * 0.52, 240 * u, 180 * u, `<span class="disp" style="font-size:${84 * u}px;line-height:1">${G.qte.glyph}</span>`, 'var(--paper)', 'var(--ink)', -4));
+    const R = 120 * u + G.qte.ring * 90 * u;
+    add(`<div style="position:absolute;left:${W / 2 - R}px;top:${H * 0.52 + 90 * u - R}px;width:${2 * R}px;height:${2 * R}px;border-radius:50%;border:${5 * u}px dashed #e8202a"></div>`);
+    add(`<div class="sfx" style="left:${W / 2 + 100 * u}px;top:${H * 0.5}px;font-size:${42 * u}px">SWIPE!</div>`);
+    add(`<div class="narr" style="left:50%;top:${H * 0.92}px;transform:translateX(-50%)">${G.qte.index + 1} / ${G.qte.count}</div>`);
+    add(burst(W * 0.18, H * 0.34, 200 * u, 100 * u, `<span class="disp" style="font-size:${30 * u}px;color:var(--red)">PERFECT!</span>`, 'var(--paper)', 'var(--ink)', 6));
+  }
+}
+function title() {
+  add(`<div class="tone" style="position:absolute;inset:0;opacity:.35"></div>`);
+  add(`<div class="panel" style="left:${W * 0.08}px;top:${H * 0.08}px;width:${W * 0.84}px;height:${H * 0.36}px;transform:rotate(-1deg);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden">
+    <div class="speedl" style="opacity:.6"></div>
+    <div class="disp" style="position:relative;font-size:${130 * u}px;line-height:.9;color:#fff;-webkit-text-stroke:${5 * u}px #111;paint-order:stroke fill;text-shadow:${8 * u}px ${8 * u}px 0 #e8202a;transform:rotate(-3deg)">JUMPSHOT!</div>
+    <div class="narr" style="position:relative;margin-top:${8 * u}px">swipe · launch · juggle · spike</div></div>`);
+  add(`<div class="bubble" style="left:${W * 0.3}px;top:${H * 0.5}px;width:${150 * u}px;height:${60 * u}px;font-size:${24 * u}px;background:#111;color:#fff">♪ RHYTHM</div>
+       <div class="bubble" style="left:${W * 0.55}px;top:${H * 0.5}px;width:${150 * u}px;height:${60 * u}px;font-size:${24 * u}px">CLASSIC</div>`);
+  add(`<div style="position:absolute;left:0;right:0;top:${H * 0.66}px;display:flex;justify-content:center;gap:${18 * u}px;flex-wrap:wrap">
+    <div class="btn primary" style="min-width:${220 * u}px">FIGHT!</div><div class="btn">${icon('fists')} FISTS</div><div class="btn" style="min-width:${180 * u}px">${icon('gear')} SETTINGS</div></div>`);
+  add(`<div class="narr" style="right:${24 * u}px;top:${18 * u}px">BEST ${G.best.toLocaleString()} · WAVE ${G.bestWave}</div>`);
+  add(`<div class="sfx red" style="left:50%;bottom:${18 * u}px;transform:translateX(-50%) rotate(-2deg);font-size:${28 * u}px;white-space:nowrap">TAP OR FLICK BELOW TO START!</div>`);
+}
+function loadout() {
+  add(`<div style="position:absolute;inset:0;background:rgba(255,255,255,.82)"></div>`);
+  const sel = G.weapons[0];
+  add(`<div class="sfx" style="left:${30 * u}px;top:${12 * u}px;font-size:${50 * u}px;transform:rotate(-3deg)">CHOOSE YOUR WEAPON!</div>`);
+  add(`<div class="panel" style="left:${24 * u}px;top:${86 * u}px;width:${W * 0.34}px;bottom:${86 * u}px;padding:${10 * u}px;transform:rotate(-0.6deg)">
+    <div class="disp" style="font-size:${32 * u}px">${icon('fists')} ${sel.name}</div>
+    <div class="tone" style="height:${H * 0.18}px;border:${3 * u}px solid #111;margin:${6 * u}px 0;background:url(${bgFor('title')}) center 72%/230% no-repeat"></div>
+    <div class="narr" style="position:relative;font-size:${13 * u}px;text-transform:none">${sel.desc}</div>
+    <div style="margin-top:${8 * u}px;font-size:${14 * u}px;font-weight:700">${[['→', 'side'], ['↗', 'upDiag'], ['↑', 'up'], ['↘', 'downDiag'], ['↓', 'down']].map(([g, k]) => `<div style="display:flex;gap:${8 * u}px;border-bottom:${2 * u}px solid #111;padding:${3 * u}px 0"><span class="disp" style="width:${24 * u}px;color:var(--red)">${g}</span><span style="flex:1">${sel.moves[k][0]}</span><span>${sel.moves[k][1]}</span></div>`).join('')}</div></div>`);
+  add(`<div style="position:absolute;left:${W * 0.34 + 56 * u}px;right:${24 * u}px;top:${90 * u}px;bottom:${92 * u}px;display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:1fr;gap:${8 * u}px">
+    ${G.weapons.map((w, i) => `<div class="cell ${i === 0 ? 'sel' : ''}" style="transform:rotate(${((i * 37) % 5 - 2) * 0.4}deg)"><span class="k">${i < 10 ? (i + 1) % 10 : ''}</span>${icon(w.id)}<small>${w.name}</small></div>`).join('')}</div>`);
+  add(`<div style="position:absolute;right:${24 * u}px;bottom:${18 * u}px"><div class="btn primary">DONE!</div></div>`);
+}
+function pause() {
+  add(`<div style="position:absolute;inset:0;background:rgba(255,255,255,.7)"></div><div class="tone" style="position:absolute;inset:0;opacity:.4"></div>`);
+  add(burst(W * 0.06, H * 0.05, 300 * u, 150 * u, `<span class="disp" style="font-size:${52 * u}px">PAUSE</span>`, 'var(--paper)', 'var(--ink)', -5));
+  add(`<div style="position:absolute;left:${W * 0.08}px;top:${H * 0.32}px;display:flex;flex-direction:column;gap:${14 * u}px">
+    <div class="btn primary">RESUME</div><div class="btn hover">${icon('gear')} SETTINGS</div><div class="btn">RESTART</div><div class="btn">QUIT TO TITLE</div></div>`);
+  add(`<div class="panel" style="right:${W * 0.05}px;top:${H * 0.08}px;width:${W * 0.46}px;bottom:${H * 0.08}px;transform:rotate(0.6deg)">
+    <div class="disp" style="font-size:${30 * u}px;padding:${6 * u}px ${18 * u}px;background:#111;color:#fff">SETTINGS</div>
+    ${G.settings.map((s) => `<div class="row"><span>${s.k}</span>${s.t === 'check' ? `<span class="box ${s.v ? 'on' : ''}"></span>` : s.t === 'range' ? `<span class="slider"><i style="width:${pct(Math.min(1, s.v / (s.k === 'Screen shake' ? 1.5 : 1)))}"></i></span>` : `<span class="narr" style="position:static;font-size:${13 * u}px">${s.v} ▾</span>`}</div>`).join('')}</div>`);
+}
+function results() {
+  const R = G.results;
+  add(`<div style="position:absolute;inset:0;background:rgba(255,255,255,.72)"></div>`);
+  add(burst(W * 0.05, H * 0.04, 320 * u, 180 * u, `<span class="disp" style="font-size:${80 * u}px;color:var(--red);-webkit-text-stroke:${2 * u}px #111">K.O.</span>`, 'var(--paper)', 'var(--ink)', -8));
+  add(`<div class="panel" style="left:${W * 0.34}px;top:${H * 0.07}px;right:${W * 0.05}px;bottom:${H * 0.2}px;transform:rotate(0.5deg);padding:${10 * u}px ${18 * u}px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><div><div class="narr" style="position:static;display:inline-block">FINAL SCORE</div><div class="disp" style="font-size:${60 * u}px;line-height:1">${R.score.toLocaleString()}</div><div style="font-weight:700;font-size:${13 * u}px">best ${R.best.toLocaleString()}</div></div>
+    <div class="panel" style="position:static;width:${86 * u}px;height:${86 * u}px;display:flex;align-items:center;justify-content:center"><span class="disp" style="font-size:${64 * u}px;color:var(--red)">${R.maxRank}</span></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 ${20 * u}px;margin-top:${8 * u}px">${[['Wave reached', R.wave], ['Best combo', R.bestCombo + ' hits'], ['K.O.s', R.kos], ['Perfect parries', R.parries], ['Finishers', R.finishers], ['Specials', R.specials], ['Rhythm', R.rhythm.accuracy + '% ' + R.rhythm.label], ['Best streak', R.rhythm.bestStreak]].map(([k, v]) => `<div class="row" style="padding:${6 * u}px 0"><span>${k}</span><span class="disp" style="font-size:${20 * u}px">${v}</span></div>`).join('')}</div></div>`);
+  add(`<div style="position:absolute;left:${W * 0.34}px;right:${W * 0.05}px;bottom:${H * 0.05}px;display:flex;gap:${18 * u}px;justify-content:flex-end"><div class="btn primary">FIGHT AGAIN!</div><div class="btn">TITLE</div></div>`);
+}
+function states() {
+  add(`<div style="position:absolute;inset:0;background:#fff"></div><div class="tone" style="position:absolute;inset:0;opacity:.12"></div>`);
+  const L = (t, x, y) => add(`<div class="narr" style="left:${x}px;top:${y}px">${t}</div>`);
+  L('Buttons: default · hover · pressed · disabled · primary', 30 * u, 18 * u);
+  add(`<div style="position:absolute;left:${30 * u}px;top:${60 * u}px;display:flex;gap:${18 * u}px">${['', 'hover', 'pressed', 'disabled', 'primary'].map((c) => `<div class="btn ${c}" style="min-width:${200 * u}px">${c ? c.toUpperCase() : 'DEFAULT'}</div>`).join('')}</div>`);
+  L('Special gauge: charging · ready · active', 30 * u, 150 * u);
+  [['charging', 0.42], ['ready', 1], ['active', 1]].forEach(([s, f], i) => add(`<div class="panel" style="left:${(30 + i * 400) * u}px;top:${190 * u}px;width:${340 * u}px;padding:${4 * u}px ${10 * u}px ${8 * u}px">${spGauge(s, f)}</div>`));
+  L('Laser heat · judgments (bursts) · tier words', 30 * u, 290 * u);
+  add(`<div class="panel" style="left:${30 * u}px;top:${330 * u}px;width:${220 * u}px;padding:${6 * u}px ${10 * u}px"><div class="disp" style="font-size:${15 * u}px">${icon('laser')} HEAT</div><div class="spbar"><i class="tone" style="width:${pct(G.heat)};background-color:#111"></i></div></div>`);
+  ['PERFECT!', 'GREAT!', 'GOOD', 'MISS…'].forEach((j, i) => add(burst((290 + i * 170) * u, 310 * u, 160 * u, 84 * u, `<span class="disp" style="font-size:${24 * u}px;color:${i === 0 ? 'var(--red)' : '#111'}">${j}</span>`, i === 3 ? '#ddd' : 'var(--paper)', 'var(--ink)', (i % 2 ? 5 : -5))));
+  G.tiers.forEach((t, i) => add(`<div class="sfx ${i === 2 ? 'red' : ''}" style="left:${(80 + i * 380) * u}px;top:${430 * u}px;font-size:${(40 + i * 10) * u}px">${t}${i === 2 ? '!!' : i === 1 ? '!' : '…'}</div>`));
+  L('Icon set', 30 * u, 530 * u);
+  add(`<div style="position:absolute;left:${30 * u}px;top:${574 * u}px;display:flex;gap:${14 * u}px;flex-wrap:wrap;width:${W - 60 * u}px;font-size:${30 * u}px">${Object.keys(ICON).map((k) => icon(k)).join('')}</div>`);
+}
+({ gameplay: hud, trace: () => special(false), qte: () => special(true), title, loadout, pause, results, states })[SCREEN]?.();
+</script></body></html>

@@ -353,3 +353,15 @@ It never touches the simulation (Classic fingerprint identical). It defaults on 
 **Attack audit.** Instead of hand-editing ~150 template moves, `author.ts` `refine()` adds the missing pieces to every template attack: a settle breakdown into the wind-up, a tightened extreme on longer startups, an overshoot follow-through right after contact, a default smear on the striking limb, and generated in-betweens on heavy, launcher and spike moves. Contact frames are unchanged.
 
 **Balance.** The bot played 6 waves with each of the five scripted weapons, firing Specials whenever READY (random-quality results). Every run cleared with no errors and no near-deaths, at 7-13 Specials per 6 waves, roughly 1-2 per wave. Per-hit charge dropped from 0.9 to 0.8 after a first measurement read 0.7-2.7 per wave. Bosses take at most 22% of their HP from one cinematic (×0.6 damage); elites take ×0.75.
+
+## Revision pass 8, Part C: UI directions (awaiting a choice)
+
+**Mockups over the real game.** `ui-options/tools/capture.cjs` drives the current build with Playwright (manual frame stepping, so the stills are deterministic) and saves clean frames: no HUD, pad, menus or Special overlay. It also saves the current UI for the audit, plus the hero's and enemies' screen positions (`shots/meta.js`) so the diegetic option can place its ring on the hero. Each direction is a self-contained HTML mockup (`ui-options/mockups/optionN-*.html`) laid over those frames. All four share one data file (`mockups/data.js`) holding the same real information, so they compare like for like. `tools/render.cjs` exports every screen at desktop (1280×720) and phone landscape (844×390), and the PNGs are quantized to 256 colors so the gallery stays light (about 6 MB for 60 images).
+
+**The Special shows as two screens** (trace, then QTE), because a single still can't show both phases.
+
+**Fonts are bundled** as woff2 files from the @fontsource packages (all SIL Open Font License) in `ui-options/fonts/`, so the gallery renders offline and the chosen pair can move straight into the game.
+
+**Keeping the pad clear.** Every option keeps the bottom half free of UI. The Arcade option moves its Special Bar from the genre's usual bottom position to the top centre. The Minimal option draws its ring around the hero, which is inside the touch area visually but never takes touches.
+
+**Implementation plan once a direction is chosen.** Menus and screen text go in a DOM/CSS overlay (crisp, accessible, easy to style, keyboard and gamepad focus). In-world pops, damage numbers and the Special trace stay on the canvas. Both read one set of design tokens. The game is not changed until the choice is made.

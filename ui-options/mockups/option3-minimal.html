@@ -1,0 +1,167 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Option 3 Minimal Diegetic</title>
+<style>
+@font-face { font-family: 'Inter'; font-weight: 300; src: url(../fonts/inter-latin-300-normal.woff2); }
+@font-face { font-family: 'Inter'; font-weight: 400; src: url(../fonts/inter-latin-400-normal.woff2); }
+@font-face { font-family: 'Inter'; font-weight: 600; src: url(../fonts/inter-latin-600-normal.woff2); }
+:root {
+  /* Design tokens: Minimal Diegetic */
+  --ink: #15171c; --muted: #7b8190; --line: rgba(21,23,28,.16); --glass: rgba(255,255,255,.78); --glass2: rgba(250,250,247,.92);
+  --teal: #00a99d; --coral: #ff5a5f; --amber: #f2a93b;
+  --font: 'Inter', system-ui, sans-serif; --r: calc(var(--u) * 14px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+#stage { position: relative; overflow: hidden; background-size: cover; background-position: center; font-family: var(--font); color: var(--ink); font-variant-numeric: tabular-nums; }
+.ico { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.cap { font-size: calc(var(--u) * 11px); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.card { position: absolute; background: var(--glass2); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 calc(var(--u) * 20px) calc(var(--u) * 50px) rgba(21,23,28,.12); backdrop-filter: blur(calc(var(--u) * 10px)); }
+.chip { display: inline-flex; align-items: center; gap: calc(var(--u) * 6px); padding: calc(var(--u) * 4px) calc(var(--u) * 10px); border-radius: 999px; background: var(--glass); border: 1px solid var(--line); font-size: calc(var(--u) * 12px); font-weight: 600; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: calc(var(--u) * 8px); min-width: calc(var(--u) * 200px); height: calc(var(--u) * 46px); padding: 0 calc(var(--u) * 22px); border-radius: 999px; border: 1px solid var(--line); background: #fff; font-size: calc(var(--u) * 15px); font-weight: 600; letter-spacing: .02em; color: var(--ink); }
+.btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+.btn.hover { box-shadow: 0 0 0 calc(var(--u) * 4px) rgba(0,169,157,.18); border-color: var(--teal); }
+.btn.pressed { transform: scale(.97); background: #eceee9; }
+.btn.disabled { color: #b8bcc5; background: #f4f4f1; }
+.row { display: flex; align-items: center; justify-content: space-between; padding: calc(var(--u) * 10px) 0; border-bottom: 1px solid var(--line); font-size: calc(var(--u) * 14px); }
+.tog { width: calc(var(--u) * 40px); height: calc(var(--u) * 22px); border-radius: 999px; background: #d9dcd5; position: relative; }
+.tog::after { content: ''; position: absolute; top: calc(var(--u) * 2px); left: calc(var(--u) * 2px); width: calc(var(--u) * 18px); height: calc(var(--u) * 18px); border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.tog.on { background: var(--teal); } .tog.on::after { left: auto; right: calc(var(--u) * 2px); }
+.sl { width: calc(var(--u) * 140px); height: calc(var(--u) * 3px); background: #d9dcd5; border-radius: 3px; position: relative; }
+.sl i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); border-radius: 3px; }
+.sl b { position: absolute; top: 50%; width: calc(var(--u) * 14px); height: calc(var(--u) * 14px); margin: calc(var(--u) * -7px) 0 0 calc(var(--u) * -7px); border-radius: 50%; background: #fff; border: 1px solid var(--line); box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.num { position: absolute; transform: translate(-50%, -50%); font-weight: 300; color: var(--ink); }
+.padline { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed rgba(21,23,28,.18); }
+.padtag { position: absolute; right: calc(var(--u) * 14px); top: calc(50% + 5px); font-size: calc(var(--u) * 10px); letter-spacing: .16em; color: rgba(21,23,28,.35); font-weight: 600; }
+.veil { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 60%, rgba(250,250,247,.35), rgba(250,250,247,.82)); }
+</style></head>
+<body><div id="stage"></div>
+<script src="data.js"></script>
+<script src="../shots/meta.js"></script>
+<script>
+const G = GAME, W = DEV.w, H = DEV.h;
+const u = DEVICE === 'phone' ? 0.72 : 1;
+const st = document.getElementById('stage');
+st.style.cssText += `width:${W}px;height:${H}px;--u:${u};background-image:url(${bgFor(SCREEN)})`;
+const add = (h) => st.insertAdjacentHTML('beforeend', h);
+const pct = (v) => (v * 100).toFixed(1) + '%';
+const M = META[({ gameplay: 'gameplay', trace: 'special', qte: 'special', states: 'gameplay' }[SCREEN] || 'gameplay') + '-' + DEVICE] || META['gameplay-desktop'];
+const hero = M.hero;
+const arc = (cx, cy, r, a0, a1) => { const p = (a) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; const [x0, y0] = p(a0), [x1, y1] = p(a1); return `M${x0} ${y0} A${r} ${r} 0 ${Math.abs(a1 - a0) > Math.PI ? 1 : 0} 1 ${x1} ${y1}`; };
+
+/** The diegetic ring around the hero: health on the left arc, Special on the right arc. */
+function heroRing(state = 'ready', f = 1, cx = hero.x, cy = (hero.head + hero.feet) / 2, scale = 1) {
+  const r = (hero.feet - hero.head) * 0.78 * scale, sw = 4 * u;
+  const hpA0 = Math.PI * 0.62, hpA1 = Math.PI * 1.38, spA0 = -Math.PI * 0.38, spA1 = Math.PI * 0.38;
+  const hp = G.hp / G.maxHp;
+  const col = state === 'active' ? 'var(--ink)' : f >= 1 ? 'var(--coral)' : 'var(--amber)';
+  return `<svg style="position:absolute;left:0;top:0;overflow:visible" width="1" height="1">
+    <path d="${arc(cx, cy, r, hpA0, hpA1)}" fill="none" stroke="rgba(21,23,28,.15)" stroke-width="${sw}" stroke-linecap="round"/>
+    <path d="${arc(cx, cy, r, hpA1 - (hpA1 - hpA0) * hp, hpA1)}" fill="none" stroke="var(--teal)" stroke-width="${sw}" stroke-linecap="round"/>
+    <path d="${arc(cx, cy, r, spA0, spA1)}" fill="none" stroke="rgba(21,23,28,.15)" stroke-width="${sw}" stroke-linecap="round"/>
+    <path d="${arc(cx, cy, r, spA1 - (spA1 - spA0) * f, spA1)}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" ${f >= 1 && state === 'ready' ? `style="filter:drop-shadow(0 0 ${6 * u}px #ff5a5f)"` : ''}/>
+    ${state === 'ready' ? `<circle cx="${cx + Math.cos(0) * r}" cy="${cy}" r="${5 * u}" fill="var(--coral)"/>` : ''}
+  </svg>
+  <div style="position:absolute;left:${cx - r - 46 * u}px;top:${cy - 8 * u}px;font-size:${11 * u}px;font-weight:600;color:var(--teal)">${G.hp}</div>
+  <div style="position:absolute;left:${cx + r + 10 * u}px;top:${cy - 8 * u}px;font-size:${11 * u}px;font-weight:600;color:${col};letter-spacing:.08em">${state === 'ready' ? 'HOLD' : state === 'active' ? 'GO' : Math.round(f * 100) + '%'}</div>`;
+}
+function hud() {
+  add(`<div class="padline"></div><div class="padtag">TOUCH AREA</div>`);
+  add(`<div style="position:absolute;left:${22 * u}px;top:${18 * u}px"><div class="cap">Wave ${G.wave}</div><div style="font-size:${26 * u}px;font-weight:300;letter-spacing:-.01em">${G.score.toLocaleString()}</div>
+    <div class="chip" style="margin-top:${6 * u}px">${icon('fists')} Fists</div></div>`);
+  add(`<div style="position:absolute;right:${20 * u}px;top:${18 * u}px;width:${36 * u}px;height:${36 * u}px;border-radius:50%;border:1px solid var(--line);background:var(--glass);display:flex;align-items:center;justify-content:center;font-size:${16 * u}px">${icon('pause')}</div>`);
+  // beat line (Rhythm) + groove hairline
+  add(`<div style="position:absolute;left:50%;top:${22 * u}px;transform:translateX(-50%);width:${260 * u}px;height:${14 * u}px">
+    <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line)"></div>
+    ${G.beatsAhead.map((b) => `<i style="position:absolute;top:50%;left:${50 + b * 48}%;width:${5 * u}px;height:${5 * u}px;margin:${-2.5 * u}px;border-radius:50%;background:var(--ink)"></i><i style="position:absolute;top:50%;left:${50 - b * 48}%;width:${5 * u}px;height:${5 * u}px;margin:${-2.5 * u}px;border-radius:50%;background:var(--ink)"></i>`).join('')}
+    <i style="position:absolute;left:50%;top:0;bottom:0;width:${2 * u}px;margin-left:-1px;background:var(--coral)"></i></div>
+    <div style="position:absolute;left:50%;top:${42 * u}px;transform:translateX(-50%);width:${120 * u}px;height:${2 * u}px;background:var(--line)"><i style="position:absolute;left:0;top:0;bottom:0;width:${pct(G.groove)};background:var(--teal)"></i></div>`);
+  add(heroRing());
+  // combo + rank floating by the hero's head
+  add(`<div style="position:absolute;left:${hero.x + 60 * u}px;top:${hero.head - 70 * u}px"><div style="font-size:${34 * u}px;font-weight:300;line-height:1">${G.combo}<span style="font-size:${13 * u}px;font-weight:600;margin-left:${6 * u}px;color:var(--coral)">${G.rank}</span></div>
+    <div style="width:${64 * u}px;height:${2 * u}px;background:var(--line);margin-top:${3 * u}px"><i style="display:block;height:100%;width:${pct(G.rankFill)};background:var(--coral)"></i></div><div class="cap" style="margin-top:${3 * u}px">hits · ${G.dmgScale}%</div></div>`);
+  const es = M.enemies.slice(0, 3);
+  es.forEach((e, i) => add(`<div class="num" style="left:${e.x}px;top:${e.y - 70 * u}px;font-size:${(i === 2 ? 22 : 15) * u}px;${i === 2 ? 'font-weight:600;color:var(--coral)' : ''}">${G.damage[i].v}</div>`));
+  add(`<div class="cap" style="position:absolute;left:${hero.x - 20 * u}px;top:${hero.head - 40 * u}px;color:var(--teal);font-size:${13 * u}px">Perfect</div>`);
+}
+function special(qte) {
+  add(`<div class="veil"></div>`);
+  add(`<div style="position:absolute;left:0;right:0;top:${H * 0.07}px;text-align:center"><div class="cap">Special</div><div style="font-size:${38 * u}px;font-weight:300;letter-spacing:.02em;margin-top:${4 * u}px">Mega Jumpshot</div></div>`);
+  add(heroRing('active', 1));
+  const pts = tracePath(W, H);
+  if (!qte) {
+    const s = pts[0], R = 18 * u;
+    add(`<svg style="position:absolute;inset:0" width="${W}" height="${H}">
+      <path d="${pathD(pts)}" fill="none" stroke="rgba(21,23,28,.55)" stroke-width="${2 * u}" stroke-dasharray="${2 * u} ${8 * u}" stroke-linecap="round"/>
+      <path d="${pathD(pts, G.trace.progress)}" fill="none" stroke="#ff5a5f" stroke-width="${6 * u}" stroke-linecap="round" stroke-linejoin="round"/>
+      ${[0.3, 0.55, 0.8].map((k) => { const i = Math.floor(pts.length * k), a = pts[i], b = pts[Math.min(pts.length - 1, i + 2)]; const ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; return `<path d="M${-6 * u} ${-6 * u} L0 0 L${-6 * u} ${6 * u}" transform="translate(${a[0]},${a[1]}) rotate(${ang})" fill="none" stroke="#15171c" stroke-width="${2 * u}" stroke-linecap="round"/>`; }).join('')}
+      <circle cx="${s[0]}" cy="${s[1]}" r="${6 * u}" fill="#15171c"/>
+      <circle cx="${s[0]}" cy="${s[1]}" r="${R}" fill="none" stroke="rgba(21,23,28,.15)" stroke-width="${3 * u}"/>
+      <circle cx="${s[0]}" cy="${s[1]}" r="${R}" fill="none" stroke="#15171c" stroke-width="${3 * u}" stroke-dasharray="${2 * Math.PI * R * G.trace.fuse} 999" transform="rotate(-90 ${s[0]} ${s[1]})"/></svg>`);
+    add(`<div class="cap" style="position:absolute;left:0;right:0;top:${H * 0.07 + 62 * u}px;text-align:center;color:var(--ink)">Trace the path · 1.2 s · keys ${G.trace.keys}</div>`);
+  } else {
+    const cx = W / 2, cy = H * 0.72, R0 = 40 * u, R = R0 + G.qte.ring * 80 * u;
+    add(`<svg style="position:absolute;inset:0" width="${W}" height="${H}"><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#15171c" stroke-width="${1.5 * u}"/>
+      <circle cx="${cx}" cy="${cy}" r="${R0}" fill="#fff" stroke="#ff5a5f" stroke-width="${3 * u}"/>
+      <text x="${cx}" y="${cy + 14 * u}" text-anchor="middle" font-family="Inter" font-weight="300" font-size="${40 * u}" fill="#15171c">${G.qte.glyph}</text></svg>`);
+    add(`<div class="cap" style="position:absolute;left:0;right:0;top:${cy + R0 + 16 * u}px;text-align:center">Swipe up · ${G.qte.index + 1} of ${G.qte.count}</div>`);
+    add(`<div style="position:absolute;left:0;right:0;top:${H * 0.42}px;text-align:center;font-size:${20 * u}px;font-weight:600;color:var(--teal);letter-spacing:.2em">PERFECT</div>`);
+    add(`<div style="position:absolute;left:50%;top:${H * 0.48}px;transform:translateX(-50%);display:flex;gap:${8 * u}px">${[1, 1, 0, 0].map((d, i) => `<i style="width:${8 * u}px;height:${8 * u}px;border-radius:50%;background:${i < 2 ? 'var(--teal)' : i === 2 ? 'var(--ink)' : 'var(--line)'}"></i>`).join('')}</div>`);
+  }
+}
+function title() {
+  add(`<div class="veil" style="background:linear-gradient(180deg,rgba(250,250,247,.7),rgba(250,250,247,.25) 55%,rgba(250,250,247,.65))"></div>`);
+  add(`<div style="position:absolute;left:0;right:0;top:${H * 0.14}px;text-align:center"><div style="font-size:${84 * u}px;font-weight:300;letter-spacing:.32em;margin-right:-.32em">JUMPSHOT</div><div class="cap" style="margin-top:${10 * u}px;letter-spacing:.42em">swipe · launch · juggle · spike</div></div>`);
+  add(`<div style="position:absolute;left:50%;top:${H * 0.44}px;transform:translateX(-50%);display:flex;padding:${4 * u}px;border-radius:999px;background:var(--glass);border:1px solid var(--line)">
+    <span style="padding:${8 * u}px ${20 * u}px;border-radius:999px;background:var(--ink);color:#fff;font-size:${13 * u}px;font-weight:600">${icon('music')} Rhythm</span><span style="padding:${8 * u}px ${20 * u}px;font-size:${13 * u}px;font-weight:600">Classic</span></div>`);
+  add(`<div style="position:absolute;left:0;right:0;top:${H * 0.58}px;display:flex;justify-content:center;gap:${12 * u}px"><div class="btn primary">Play</div><div class="btn">${icon('fists')} Fists</div><div class="btn" style="min-width:${140 * u}px">${icon('gear')} Settings</div></div>`);
+  add(`<div style="position:absolute;right:${24 * u}px;top:${22 * u}px;text-align:right"><div class="cap">Best</div><div style="font-size:${20 * u}px;font-weight:300">${G.best.toLocaleString()}</div><div class="cap">wave ${G.bestWave}</div></div>`);
+  add(`<div class="cap" style="position:absolute;left:0;right:0;bottom:${20 * u}px;text-align:center;color:var(--ink)">Tap or flick the lower half to start</div>`);
+}
+function loadout() {
+  add(`<div class="veil" style="background:rgba(250,250,247,.86)"></div>`);
+  const sel = G.weapons[0];
+  add(`<div style="position:absolute;left:${30 * u}px;top:${24 * u}px"><div class="cap">Loadout</div><div style="font-size:${30 * u}px;font-weight:300">Choose a weapon</div></div>`);
+  const rows = DEVICE === 'phone' ? 9 : 9;
+  add(`<div style="position:absolute;left:${30 * u}px;top:${96 * u}px;bottom:${24 * u}px;width:${W * 0.5}px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(${rows},1fr);column-gap:${18 * u}px">
+    ${G.weapons.map((w, i) => `<div style="display:flex;align-items:center;gap:${10 * u}px;border-bottom:1px solid var(--line);padding:0 ${8 * u}px;${i === 0 ? 'background:#fff;border-radius:' + 10 * u + 'px;box-shadow:0 0 0 1px var(--ink)' : ''}"><span style="font-size:${20 * u}px">${icon(w.id)}</span><span style="font-size:${14 * u}px;font-weight:${i === 0 ? 600 : 400}">${w.name}</span><span class="cap" style="margin-left:auto">${i < 10 ? (i + 1) % 10 : ''}</span></div>`).join('')}</div>`);
+  add(`<div class="card" style="left:${W * 0.5 + 60 * u}px;right:${30 * u}px;top:${96 * u}px;bottom:${90 * u}px;padding:${18 * u}px">
+    <div style="display:flex;align-items:center;gap:${10 * u}px;font-size:${22 * u}px;font-weight:600">${icon('fists')} ${sel.name}</div>
+    <div style="font-size:${13 * u}px;color:var(--muted);margin:${6 * u}px 0 ${10 * u}px;line-height:1.45">${sel.desc}</div>
+    <div style="height:${H * 0.17}px;border-radius:${10 * u}px;background:url(${bgFor('title')}) center 72%/230% no-repeat;border:1px solid var(--line)"></div>
+    <div style="margin-top:${8 * u}px">${[['→', 'side'], ['↗', 'upDiag'], ['↑', 'up'], ['↘', 'downDiag'], ['↓', 'down']].map(([g, k]) => `<div class="row" style="padding:${5 * u}px 0;font-size:${13 * u}px"><span style="width:${24 * u}px;color:var(--muted)">${g}</span><span style="flex:1">${sel.moves[k][0]}</span><span style="color:var(--muted)">${sel.moves[k][1]}</span></div>`).join('')}</div></div>`);
+  add(`<div style="position:absolute;right:${30 * u}px;bottom:${24 * u}px"><div class="btn primary">Done</div></div>`);
+}
+function pause() {
+  add(`<div class="veil" style="background:rgba(250,250,247,.8)"></div>`);
+  add(`<div class="card" style="left:${W * 0.08}px;top:${H * 0.16}px;width:${W * 0.3}px;padding:${22 * u}px;display:flex;flex-direction:column;gap:${10 * u}px">
+    <div class="cap">Paused</div><div style="font-size:${28 * u}px;font-weight:300;margin-bottom:${6 * u}px">Take a breath</div>
+    <div class="btn primary" style="min-width:0">Resume</div><div class="btn hover" style="min-width:0">${icon('gear')} Settings</div><div class="btn" style="min-width:0">Restart run</div><div class="btn" style="min-width:0">Quit to title</div></div>`);
+  add(`<div class="card" style="right:${W * 0.08}px;top:${H * 0.1}px;width:${W * 0.44}px;bottom:${H * 0.1}px;padding:${18 * u}px ${24 * u}px"><div class="cap">Settings</div>
+    ${G.settings.map((s) => `<div class="row"><span>${s.k}</span>${s.t === 'check' ? `<span class="tog ${s.v ? 'on' : ''}"></span>` : s.t === 'range' ? `<span class="sl"><i style="width:${pct(Math.min(1, s.v / (s.k === 'Screen shake' ? 1.5 : 1)))}"></i><b style="left:${pct(Math.min(1, s.v / (s.k === 'Screen shake' ? 1.5 : 1)))}"></b></span>` : `<span style="color:var(--muted)">${s.v} ›</span>`}</div>`).join('')}</div>`);
+}
+function results() {
+  const R = G.results;
+  add(`<div class="veil" style="background:rgba(250,250,247,.84)"></div>`);
+  add(`<div class="card" style="left:50%;transform:translateX(-50%);top:${H * 0.08}px;width:${Math.min(W * 0.66, 760 * u)}px;bottom:${H * 0.08}px;padding:${24 * u}px ${32 * u}px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="cap">Run over · wave ${R.wave}</div><div style="font-size:${56 * u}px;font-weight:300;line-height:1.1">${R.score.toLocaleString()}</div><div class="cap">Best ${R.best.toLocaleString()}</div></div>
+    <div style="width:${74 * u}px;height:${74 * u}px;border-radius:50%;border:${2 * u}px solid var(--coral);display:flex;align-items:center;justify-content:center;font-size:${34 * u}px;font-weight:300;color:var(--coral)">${R.maxRank}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;column-gap:${32 * u}px;margin-top:${14 * u}px">${[['Best combo', R.bestCombo + ' hits'], ['K.O.s', R.kos], ['Perfect parries', R.parries], ['Finishers', R.finishers], ['Specials', R.specials], ['Rhythm accuracy', R.rhythm.accuracy + '%'], ['Rhythm grade', R.rhythm.label], ['Best streak', R.rhythm.bestStreak]].map(([k, v]) => `<div class="row"><span style="color:var(--muted)">${k}</span><span style="font-weight:600">${v}</span></div>`).join('')}</div>
+    <div style="display:flex;gap:${12 * u}px;margin-top:${18 * u}px;justify-content:flex-end"><div class="btn" style="min-width:${140 * u}px">Title</div><div class="btn primary" style="min-width:${180 * u}px">Play again</div></div></div>`);
+}
+function states() {
+  add(`<div style="position:absolute;inset:0;background:#fafaf7"></div>`);
+  const L = (t, y) => add(`<div class="cap" style="position:absolute;left:${40 * u}px;top:${y}px">${t}</div>`);
+  L('Buttons — default · hover · pressed · disabled · primary', 30 * u);
+  add(`<div style="position:absolute;left:${40 * u}px;top:${56 * u}px;display:flex;gap:${14 * u}px">${['', 'hover', 'pressed', 'disabled', 'primary'].map((c) => `<div class="btn ${c}">${c ? c[0].toUpperCase() + c.slice(1) : 'Default'}</div>`).join('')}</div>`);
+  L('Special ring — charging · ready · active (around the hero)', 140 * u);
+  [['charging', 0.42], ['ready', 1], ['active', 1]].forEach(([s, f], i) => add(heroRing(s, f, (200 + i * 380) * u, 250 * u, 1)));
+  L('Laser heat (small arc under the ring) · judgments · tier words', 350 * u);
+  add(`<div style="position:absolute;left:${40 * u}px;top:${386 * u}px;width:${180 * u}px"><div class="cap" style="color:var(--ink)">${icon('laser')} Heat</div><div style="height:${3 * u}px;background:var(--line);margin-top:${6 * u}px"><i style="display:block;height:100%;width:${pct(G.heat)};background:var(--amber)"></i></div></div>`);
+  ['PERFECT', 'GREAT', 'GOOD', 'MISS'].forEach((j, i) => add(`<div style="position:absolute;left:${(300 + i * 150) * u}px;top:${380 * u}px;font-size:${16 * u}px;font-weight:600;letter-spacing:.2em;color:${['var(--teal)', 'var(--ink)', 'var(--muted)', 'var(--coral)'][i]}">${j}</div>`));
+  G.tiers.forEach((t, i) => add(`<div style="position:absolute;left:${(60 + i * 380) * u}px;top:${440 * u}px;font-size:${42 * u}px;font-weight:300;letter-spacing:.06em;color:${['var(--muted)', 'var(--ink)', 'var(--coral)'][i]}">${t[0] + t.slice(1).toLowerCase()}</div>`));
+  L('Icon set', 530 * u);
+  add(`<div style="position:absolute;left:${40 * u}px;top:${560 * u}px;display:flex;gap:${16 * u}px;flex-wrap:wrap;width:${W - 80 * u}px;font-size:${26 * u}px">${Object.keys(ICON).map((k) => icon(k)).join('')}</div>`);
+}
+({ gameplay: hud, trace: () => special(false), qte: () => special(true), title, loadout, pause, results, states })[SCREEN]?.();
+</script></body></html>

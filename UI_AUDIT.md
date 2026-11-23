@@ -1,4 +1,36 @@
-# UI audit (revision pass 6)
+# UI audit
+
+## Revision pass 8: the current UI, before the redesign
+
+Captured with `ui-options/tools/capture.cjs` at desktop (1280×720) and phone landscape (844×390): `ui-options/current/<screen>-<device>.png` (gameplay, special trace, title, loadout, settings, pause, results). The paper-theme UI from pass 6 is being replaced from scratch; four directions are in [`ui-options/index.html`](ui-options/index.html).
+
+| # | Where | Problem | Severity |
+|---|---|---|---|
+| 1 | HUD (all) | No hierarchy: HP, the Special Bar, the weapon and the heat bar are thin pencil boxes of the same weight squeezed into the top-left corner. On a phone the HP bar is about 6 px tall and its number is tiny handwriting | high |
+| 2 | HUD: Special Bar | The READY state is only a blinking line of small red text. It is the most important prompt in the game and reads as a footnote; charging and active look almost the same | high |
+| 3 | HUD: combo + rank | The combo number, the rank stamp and "dmg 41%" sit in loose handwriting at the top right, unaligned with each other and with the score | medium |
+| 4 | HUD: score + wave | Pencil-gray wave label and a mid-size marker score at the top centre: low contrast on cream paper | medium |
+| 5 | Rhythm HUD | The beat track, Groove and judgments use a different visual language (pass 4) from the paper HUD, so the two modes look like two games | medium |
+| 6 | Special overlay | Functional placeholder: generic labels ("TRACE THE PATH!"), a tiny keyboard hint, a thin QTE ring, and a tier word that is just big text. The moment has no framing or build-up | high |
+| 7 | Title | The logo floats in the middle while small pen-box buttons sit in the top-left corner and the mode toggle sits under the logo. Three unrelated places to look; Weapon and Settings are under 32 px tall on phones | high |
+| 8 | Loadout | Pass 7 placeholder (`TODO(ui-pass)`): sticky-note cards in a scrolling box, a small preview, selection shown only by an outline. With 17 weapons it reads as a list dump | high |
+| 9 | Settings | One long notebook page, 25+ rows, with restyled native selects next to hand-drawn checkboxes and sliders. Grouping exists only in the code order; dense on phones | medium |
+| 10 | Pause | A stack of pen buttons on a blurred page. No identity and no hierarchy beyond the red RESUME | low |
+| 11 | Results | The report card's stats are 12-13 px handwriting with wide gaps; the stamp crowds the title; the Rhythm breakdown is a text line | medium |
+| 12 | Whole UI | No design system: three fonts (Patrick Hand, Permanent Marker, system) with ad-hoc sizes, no spacing scale, emoji used as icons (⚙ ⚔ 📱), wobbly SVG borders that change on every redraw, and many one-off inline styles | high |
+| 13 | Whole UI | Paper texture and pencil gray reduce text contrast; several labels fall below 4.5:1 on cream | medium |
+| 14 | Between waves | The weapon swap strip and the first-time weapon tooltip are placeholders that pop in the middle of the screen | low |
+
+### What the new UI must do
+- Look like a professionally designed game, with a clear hierarchy: HP and the Special Bar first, then the combo and rank, then the score, wave and weapon.
+- One design system: color tokens, a type scale, spacing steps, one corner and stroke style, one icon set and one animation language.
+- Keep the transparent bottom-half pad clear, respect phone safe areas in portrait and landscape, and never cover the fight.
+- Cover the HUD (health, combo, style rank, Special Bar states, weapon indicator, heat bar, wave and score, Groove, Rhythm beat elements, judgments, damage numbers), the Special overlay (trace path, QTE prompts, tier words), title, loadout, calibration, tutorial prompts, pause, settings and results.
+- Give every button default, hover, pressed and disabled states, and give the Special Bar charging, READY and active states.
+
+---
+
+## Revision pass 6
 
 Screenshots of every screen at three sizes, taken with headless Chromium (`t_audit.cjs` in the session scratchpad):
 

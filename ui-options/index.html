@@ -1,0 +1,146 @@
+<title>JUMPSHOT UI Directions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap">
+<style>
+/* Layout: a review board. Header with the ask, a side-by-side comparer, then one section per direction
+   (identity card on the left, its real-game mockups on the right). Neutral board so the options carry the color. */
+:root {
+  --bg: #eef0f3; --surface: #ffffff; --fg: #14171d; --muted: #5d6573; --line: #d6dae1; --accent: #2448d8; --chip: #e4e8ee;
+  --display: 'Space Grotesk', 'Inter', system-ui, sans-serif; --body: 'Inter', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #101318; --surface: #181c23; --fg: #e9ecf1; --muted: #9aa3b2; --line: #2b313b; --accent: #7d97ff; --chip: #232934; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #101318; --surface: #181c23; --fg: #e9ecf1; --muted: #9aa3b2; --line: #2b313b; --accent: #7d97ff; --chip: #232934; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+.wrap { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 36px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h1 { font-size: clamp(28px, 4vw, 44px); }
+h2 { font-size: clamp(22px, 2.6vw, 30px); }
+h3 { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+p { margin: 0; max-width: 68ch; }
+.lead { color: var(--muted); font-size: 16px; }
+.ask { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; }
+.ask code { background: var(--chip); padding: 1px 6px; border-radius: 5px; font-size: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 600 13px var(--body); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.chip:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cmp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.cmp figure, .shots figure { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cmp img, .shots img { width: 100%; height: auto; display: block; border-radius: 8px; border: 1px solid var(--line); background: var(--chip); }
+figcaption { font-size: 13px; color: var(--muted); }
+figcaption b { color: var(--fg); }
+.opt { display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr); gap: 24px; align-items: start; border-top: 1px solid var(--line); padding-top: 28px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+.tag { font: 700 12px var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.sw { display: flex; flex-wrap: wrap; gap: 8px; }
+.sw span { display: flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.sw i { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line); display: inline-block; }
+ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.pros li::marker { content: '+  '; color: #1f9d55; font-weight: 700; }
+.cons li::marker { content: '–  '; color: #d64545; font-weight: 700; }
+.shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.shots .wide { grid-column: 1 / -1; }
+.links { font-size: 13px; color: var(--muted); }
+.links a { color: var(--accent); }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 18px; }
+@media (max-width: 860px) { .opt { grid-template-columns: minmax(0, 1fr); } .card { position: static; } }
+@media (max-width: 560px) { .cmp, .shots { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: no-preference) { .chip { transition: background .12s, color .12s; } }
+</style>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:12px">
+    <div class="tag">JUMPSHOT · revision pass 8 · Part C</div>
+    <h1>Four UI directions</h1>
+    <p class="lead">Each direction is a real mockup layered over the running game: the fight behind every screen is a capture from the current build. Every option shows the same real information (health 92/100, a 22-hit combo at S rank, the Special Bar READY, wave 6, score 48,210, Fists equipped) across gameplay, the Special trace and QTE, title, loadout, pause with settings, results, and a states sheet. Gameplay is shown at desktop size (1280×720) and phone landscape (844×390).</p>
+    <div class="ask">
+      <b>Your choice</b>
+      <p>Reply with <code>1</code>, <code>2</code>, <code>3</code> or <code>4</code>, or a mix, for example <code>1 for the HUD and 3 for menus</code>. Nothing is built into the game until you choose.</p>
+    </div>
+  </header>
+
+  <section style="display:flex;flex-direction:column;gap:14px" aria-labelledby="cmp-h">
+    <h2 id="cmp-h">Side by side</h2>
+    <div class="chips" id="screens" role="group" aria-label="Screen to compare"></div>
+    <div class="chips" id="devices" role="group" aria-label="Device size"></div>
+    <div class="cmp" id="cmp"></div>
+  </section>
+
+  <div id="options"></div>
+
+  <footer>
+    Files: <code>ui-options/png/</code> (exported PNGs, named <code>option--screen--device.png</code>), <code>ui-options/mockups/</code> (the live HTML mockups; open any with <code>?screen=gameplay&amp;device=phone</code>), <code>ui-options/shots/</code> (the clean game captures behind them) and <code>ui-options/current/</code> (today's UI, for comparison). Regenerate with <code>node ui-options/tools/capture.cjs</code> then <code>node ui-options/tools/render.cjs</code> while the dev server runs.
+  </footer>
+</div>
+
+<script>
+const SCREENS = [
+  ['gameplay', 'Gameplay'], ['trace', 'Special: trace'], ['qte', 'Special: QTE'], ['title', 'Title'], ['loadout', 'Loadout'], ['pause', 'Pause + settings'], ['results', 'Results'], ['states', 'States sheet'],
+];
+const OPTS = [
+  { id: 'option1-arcade', n: 1, name: 'Arcade Fighter',
+    desc: 'A loud fighting-game HUD: angled steel plates, a chunky italic combo counter and a segmented Special Bar that catches fire when READY. Menus are big angled buttons on deep navy with neon cyan and magenta. Built for energy and instant reads in a crowded fight.',
+    palette: [['Navy', '#0b1026'], ['Steel', '#8d99b8'], ['Cyan', '#2ee6ff'], ['Magenta', '#ff2e88'], ['Gold', '#ffd23f'], ['Red', '#ff3b3b']],
+    fonts: 'Russo One (display, italic skew) · Oswald (labels and body)',
+    pros: ['The strongest at-a-glance read in a busy brawl', 'Feels like a big action game straight away', 'The READY Special Bar is impossible to miss', 'Very clear button states'],
+    cons: ['Neon chrome contrasts hardest with the hand-drawn ink world', 'The largest HUD footprint of the four', 'The genre puts the Special Bar at the bottom; here it moves to the top to keep the pad clear', 'Needs dark plates behind text on the light paper'] },
+  { id: 'option2-manga', n: 2, name: 'Ink & Manga',
+    desc: 'The UI becomes part of the comic: inked panel borders, halftone screentone, burst-shaped judgments and onomatopoeia such as POW! and PERFECT!. Black, white and one red, lettered in Bangers. Specials open speed-line panels.',
+    palette: [['Ink', '#111111'], ['Paper', '#ffffff'], ['Red', '#e8202a'], ['Screentone', '#a9a9a9']],
+    fonts: 'Bangers (display lettering) · Comic Neue (body)',
+    pros: ['The closest match to the hand-drawn art', 'The most expressive judgments and Special moments', 'A three-color palette keeps everything cohesive', 'Survives the 1-bit Pixel look unchanged'],
+    cons: ['Gets busy if bursts, sound words and panels pile up', 'Comic lettering is harder to read in dense menus like Settings', 'With one accent color, states rely on shape and pattern'] },
+  { id: 'option3-minimal', n: 3, name: 'Minimal Diegetic',
+    desc: 'Get out of the way: a health arc and a Special ring live around the hero, numbers float lightly in the world, and only a small score and wave sit in a corner. Light Inter weights, thin lines, frosted cards and calm menus. The fight gets the whole screen.',
+    palette: [['Ink', '#15171c'], ['Muted', '#7b8190'], ['Glass', '#f7f7f5'], ['Teal', '#00a99d'], ['Coral', '#ff5a5f'], ['Amber', '#f2a93b']],
+    fonts: 'Inter 300 / 400 / 600',
+    pros: ['The most screen space for the fight', 'Elegant and modern, and scales cleanly to phones', 'Vital numbers sit where your eyes already are (on the hero)'],
+    cons: ['The ring follows the hero, so it is drawn inside the touch area (it never blocks touches)', 'The least juice and personality', 'Small type can get lost in big brawls', 'The READY moment is subtler'] },
+  { id: 'option4-sketchbook', n: 4, name: 'Refined Sketchbook',
+    desc: 'The notebook idea done properly: one consistent hand-drawn border, Caveat Brush lettering paired with legible Nunito, highlighter and red-pen accents, taped cards and an 8 px spacing grid. The paper stays clean so text keeps its contrast.',
+    palette: [['Paper', '#fbf8f0'], ['Ink', '#1f1d1a'], ['Pencil', '#8a857c'], ['Pen blue', '#2f55c8'], ['Red pen', '#d9342b'], ['Highlighter', '#ffe55c']],
+    fonts: 'Caveat Brush (display) · Nunito (body)',
+    pros: ['Fits the paper world and keeps its charm', 'A far clearer hierarchy than today', 'A properly legible body font', 'The smallest step from the current code'],
+    cons: ['The least big-game feel', 'Closest to today, so the upgrade is the least dramatic', 'The handwritten display face can read informal at small sizes'] },
+];
+const img = (o, s, d) => `png/${o}--${s}--${d}.png`;
+const label = (s) => SCREENS.find((x) => x[0] === s)[1];
+
+// ---- side by side ----
+let curS = 'gameplay', curD = 'desktop';
+const sEl = document.getElementById('screens'), dEl = document.getElementById('devices'), cEl = document.getElementById('cmp');
+function chips(el, items, cur, on) {
+  el.innerHTML = items.map(([v, t]) => `<button class="chip" type="button" id="chip-${el.id}-${v}" aria-pressed="${v === cur}" data-v="${v}">${t}</button>`).join('');
+  el.onclick = (e) => { const b = e.target.closest('button'); if (b) on(b.dataset.v); };
+}
+function drawCmp() {
+  const d = curS === 'states' ? 'desktop' : curD;
+  chips(sEl, SCREENS, curS, (v) => { curS = v; drawCmp(); });
+  chips(dEl, [['desktop', 'Desktop 1280×720'], ['phone', 'Phone landscape 844×390']], d, (v) => { curD = v; drawCmp(); });
+  cEl.innerHTML = OPTS.map((o) => `<figure><a href="${img(o.id, curS, d)}" target="_blank" rel="noopener"><img src="${img(o.id, curS, d)}" alt="${o.name}: ${label(curS)} (${d})" loading="lazy"></a><figcaption><b>${o.n}. ${o.name}</b> · ${label(curS)}</figcaption></figure>`).join('');
+}
+drawCmp();
+
+// ---- per option ----
+document.getElementById('options').innerHTML = OPTS.map((o) => `
+  <section class="opt" id="option-${o.n}" aria-labelledby="h-${o.n}">
+    <div class="card">
+      <div class="tag">Option ${o.n}</div>
+      <h2 id="h-${o.n}">${o.name}</h2>
+      <p>${o.desc}</p>
+      <div><h3>Palette</h3><div class="sw" style="margin-top:6px">${o.palette.map(([n, c]) => `<span><i style="background:${c}"></i>${n} ${c}</span>`).join('')}</div></div>
+      <div><h3>Type</h3><p style="margin-top:4px">${o.fonts}</p></div>
+      <div><h3>Pros</h3><ul class="pros" style="margin-top:6px">${o.pros.map((x) => `<li>${x}</li>`).join('')}</ul></div>
+      <div><h3>Cons</h3><ul class="cons" style="margin-top:6px">${o.cons.map((x) => `<li>${x}</li>`).join('')}</ul></div>
+      <p class="links">Live mockups: ${SCREENS.map(([s, t]) => `<a href="mockups/${o.id}.html?screen=${s}&device=desktop" target="_blank" rel="noopener">${t.toLowerCase()}</a>`).join(' · ')}</p>
+    </div>
+    <div class="shots">
+      <figure class="wide"><a href="${img(o.id, 'gameplay', 'desktop')}" target="_blank" rel="noopener"><img src="${img(o.id, 'gameplay', 'desktop')}" alt="${o.name} gameplay, desktop" loading="lazy"></a><figcaption><b>Gameplay</b> · desktop · crowd, live combo, Special READY, Rhythm beat track and Groove</figcaption></figure>
+      <figure class="wide"><a href="${img(o.id, 'gameplay', 'phone')}" target="_blank" rel="noopener"><img src="${img(o.id, 'gameplay', 'phone')}" alt="${o.name} gameplay, phone landscape" loading="lazy"></a><figcaption><b>Gameplay</b> · phone landscape · the bottom-half touch area stays clear</figcaption></figure>
+      ${['trace', 'qte', 'title', 'loadout', 'pause', 'results'].map((s) => `<figure><a href="${img(o.id, s, 'desktop')}" target="_blank" rel="noopener"><img src="${img(o.id, s, 'desktop')}" alt="${o.name}: ${label(s)}" loading="lazy"></a><figcaption><b>${label(s)}</b> · desktop · <a href="${img(o.id, s, 'phone')}" target="_blank" rel="noopener">phone</a></figcaption></figure>`).join('')}
+      <figure class="wide"><a href="${img(o.id, 'states', 'desktop')}" target="_blank" rel="noopener"><img src="${img(o.id, 'states', 'desktop')}" alt="${o.name}: states sheet" loading="lazy"></a><figcaption><b>States</b> · buttons (default, hover, pressed, disabled, primary) · Special Bar (charging, READY, active) · heat bar · judgments · tier words · icon set</figcaption></figure>
+    </div>
+  </section>`).join('');
+</script>
