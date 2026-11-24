@@ -37,7 +37,7 @@ export class RhythmUI {
     b.type = 'button';
     b.innerHTML = `<span>${ico ? icon(ico) : ''}${label}</span>`;
     if (back) b.dataset.back = '1';
-    b.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.ui('click'); onClick(); });
+    b.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.ui(back ? 'back' : 'click'); onClick(); });
     parent.appendChild(b);
     return b;
   }

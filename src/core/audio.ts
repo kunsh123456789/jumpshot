@@ -2,14 +2,20 @@ import { settings } from './settings';
 import { fxRng } from './rng';
 
 /** Recorded sound effects (CC0, from Freesound; see SOUND_CREDITS.md), bundled with the build. */
+/** Mix calibration (measured with the bus-level test against the previous build; see DECISIONS.md). */
+const MIX = { inst: 0.3, hit: 0.4 };
+
 const SFX_URLS = import.meta.glob('../assets/sfx/*.mp3', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
 /**
- * WebAudio sound. Effects play recorded samples when Settings -> Sound effects
- * is Recorded (default) and the sample has loaded; every effect also has a
- * synthesized version (the fallback, and the Synth setting).
- * Fully synthesized WebAudio sound. A shared noise buffer is generated once;
- * each sound builds a few short-lived nodes (cheap, GC'd by the browser).
+ * WebAudio sound. Every effect and every music instrument plays recorded CC0
+ * samples from Freesound (Settings -> Sound effects = Recorded, the default).
+ * Each also keeps its original synthesized version, which plays until the
+ * samples have decoded and when Settings -> Sound effects = Synthesized.
+ *
+ * Hits are layered: a bright snap (the contact), a body thump that drops in
+ * pitch with weight, a low thump for medium hits, and for heavies a crunch, a
+ * sub boom and a short music duck so the impact cuts through the mix.
  */
 class Audio {
   ctx: AudioContext | null = null;
@@ -17,9 +23,12 @@ class Audio {
   private sfx!: GainNode;
   /** Music bus (classic loop and Rhythm Mode songs both play through it). */
   music!: GainNode;
+  /** Trim for recorded music instruments (one-shots are mastered hot; this sits them where the synth band was). */
+  inst!: GainNode;
   private comp!: DynamicsCompressorNode;
   private noise!: AudioBuffer;
   private lastPlay: Record<string, number> = {};
+  private lastPick: Record<string, number> = {};
   /** Decoded recorded samples by name (file name without extension). */
   private bufs: Record<string, AudioBuffer> = {};
   private musicTimer = 0;
@@ -43,6 +52,9 @@ class Audio {
       this.music = ctx.createGain();
       this.sfx.connect(this.comp);
       this.music.connect(this.comp);
+      this.inst = ctx.createGain();
+      this.inst.gain.value = MIX.inst;
+      this.inst.connect(this.music);
       this.comp.connect(this.master);
       this.master.connect(ctx.destination);
       const len = ctx.sampleRate * 1.0;
@@ -63,21 +75,61 @@ class Audio {
     }
   }
 
-  /** Play a recorded sample; false when the Synth setting is on or it isn't loaded (the caller synthesizes instead). */
-  private rec(name: string | string[], gain: number, rate = 1, delay = 0): boolean {
-    if (settings.sfxStyle === 'synth' || !this.ctx) return false;
-    const n = Array.isArray(name) ? name[Math.floor(fxRng.next() * name.length)] : name;
-    const b = this.bufs[n];
-    if (!b) return false;
-    const ctx = this.ctx;
+  /** Recorded samples are in use and this one has decoded. */
+  has(name: string): boolean { return settings.sfxStyle !== 'synth' && !!this.ctx && !!this.bufs[name]; }
+
+  /** Pick a variant, never the same one twice in a row (repeats are what make hits sound robotic). */
+  private pick(group: string[]): string {
+    if (group.length === 1) return group[0];
+    const key = group[0];
+    let i = Math.floor(fxRng.next() * group.length);
+    if (i === this.lastPick[key]) i = (i + 1) % group.length;
+    this.lastPick[key] = i;
+    return group[i];
+  }
+
+  /**
+   * Play a sample at context time t into a bus (SFX by default). dur > 0 holds
+   * it that long then releases (pitched music notes). False when the Synth
+   * setting is on or the sample isn't loaded, so the caller can synthesize.
+   */
+  sample(name: string, t: number, gain: number, rate = 1, dest?: AudioNode, dur = 0): boolean {
+    if (!this.has(name)) return false;
+    const ctx = this.ctx!;
     const src = ctx.createBufferSource();
-    src.buffer = b;
-    src.playbackRate.value = rate;
+    src.buffer = this.bufs[name];
+    src.playbackRate.value = Math.max(0.1, Math.min(8, rate));
     const g = ctx.createGain();
-    g.gain.value = gain;
-    src.connect(g); g.connect(this.sfx);
-    src.start(ctx.currentTime + delay);
+    g.gain.setValueAtTime(gain, t);
+    src.connect(g); g.connect(dest ?? this.sfx);
+    src.start(t);
+    if (dur > 0) {
+      g.gain.setValueAtTime(gain, t + dur);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.06);
+      src.stop(t + dur + 0.08);
+    }
     return true;
+  }
+
+  /** A pitched sample note: the sample's recorded pitch is rootHz; it is re-pitched to hz. */
+  note(name: string, rootHz: number, t: number, hz: number, dur: number, gain: number, dest?: AudioNode): boolean {
+    return this.sample(name, t, gain, hz / rootHz, dest ?? this.music, dur);
+  }
+
+  /** Play a recorded effect now (a group picks a non-repeating variant). */
+  private rec(name: string | string[], gain: number, rate = 1, delay = 0, dur = 0): boolean {
+    if (!this.ctx) return false;
+    return this.sample(Array.isArray(name) ? this.pick(name) : name, this.ctx.currentTime + delay, gain, rate, undefined, dur);
+  }
+
+  /** Dip the music for a moment so a big impact punches through, then let it swell back. */
+  private duck(depth: number, sec: number): void {
+    const ctx = this.ctx!;
+    const g = this.music.gain, t = ctx.currentTime, base = settings.musicVolume * 0.5;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(base * depth, t + 0.008);
+    g.setTargetAtTime(base, t + 0.03, sec / 3);
   }
 
   applyVolume(): void {
@@ -132,10 +184,29 @@ class Audio {
     const r = 0.94 + fxRng.next() * 0.12;
     const p = pitch * r;
     const v = (0.55 + weight * 0.45) * (0.85 + fxRng.next() * 0.3);
-    if (this.rec(kind === 'heavy' ? 'heavy' : kind === 'kick' ? ['punch3', 'slam'] : ['punch1', 'punch2', 'punch3'], 0.9 * v, p * (kind === 'kick' ? 0.85 : 1))) {
-      if (weight >= 0.7) this.rec('slam', 0.45 * v, p * 0.9);
-      if (kind === 'slash') this.rec('staff', 0.4 * v, p * 1.2);
-      if (crit) this.rec('ping', 0.5, p * 1.3);
+    if (this.has('body1')) {
+      const h = v * MIX.hit;
+      // Combo pitch climbs gently on the recorded layers (full climb sounds chipmunky).
+      const rp = (1 + (pitch - 1) * 0.35) * r;
+      const heavy = weight >= 0.72;
+      const BODY = ['body1', 'body2', 'body3'];
+      // 1. Snap: the bright contact crack, a little louder on light hits so jabs stay crisp.
+      this.rec(['snap1', 'snap2', 'snap3'], (0.5 + 0.25 * (1 - weight)) * h, rp * (kind === 'slash' ? 1.25 : 1.04));
+      // 2. Body: the meat of the hit; heavier hits play it lower and fuller.
+      if (kind === 'kick') { this.rec('kickthud', 0.85 * h, rp * 0.95, 0, 0.25); this.rec(BODY, 0.6 * h, rp * 0.86); }
+      else if (kind === 'slash') { this.rec('staff', 0.55 * h, rp * 1.15); this.rec(BODY, 0.55 * h, rp); }
+      else this.rec(BODY, 0.95 * h, rp * (1.02 - weight * 0.14), 0, 0.16 + weight * 0.12);
+      this.rec(['punch1', 'punch2', 'punch3'], 0.3 * h, rp); // texture layer
+      // 3. Weight: a short low thump from medium hits up.
+      if (weight >= 0.45) this.rec('thump', (0.2 + 0.45 * weight) * h, 1.06 - weight * 0.22, 0, 0.22);
+      // 4. Heavy: bat crack + bone crunch + a short 808 sub hit, and duck the music so it lands.
+      if (heavy) {
+        this.rec('heavy', 0.6 * h, rp * 0.9);
+        this.rec(['crunch1', 'crunch2'], 0.45 * h, rp);
+        this.rec('m_808', 0.7 * h, 0.82, 0, 0.3);
+        this.duck(0.4, 0.25);
+      } else if (weight >= 0.6) this.duck(0.7, 0.12);
+      if (crit) { this.rec('ping', 0.5, rp * 1.3); this.rec('m_glass', 0.3, 2, 0.012); }
       return;
     }
     // body thump
@@ -160,7 +231,7 @@ class Audio {
   launch(): void {
     if (!this.ok('launch', 0.05)) return;
     const t = this.ctx!.currentTime;
-    if (this.rec('launch', 0.8, 1.1)) { this.rec('whoosh2', 0.4, 0.8); return; }
+    if (this.rec('launch', 0.8, 1.1)) { this.rec('whoosh2', 0.4, 0.8); this.rec('thump', 0.25, 1.2, 0, 0.2); return; }
     this.tone(t, 'sine', 140, 720, 0.22, 0.5);
     this.tone(t, 'square', 280, 1200, 0.12, 0.08);
     this.noiseBurst(t, 0.28, 0.35, 'bandpass', 500, 1.2, 4000);
@@ -169,7 +240,12 @@ class Audio {
   spike(power = 1): void {
     if (!this.ok('spike', 0.05)) return;
     const t = this.ctx!.currentTime;
-    if (this.rec('slam', 0.8 + power * 0.2, 0.8)) { this.rec('boom', 0.4 + power * 0.3, 1.1); return; }
+    if (this.rec('slam', 0.8 + power * 0.2, 0.8)) {
+      this.rec('boom', 0.4 + power * 0.3, 1.1);
+      this.rec('thump', 0.45, 0.85, 0, 0.3); this.rec('m_808', 0.4 + power * 0.15, 0.75, 0, 0.45); this.rec(['crunch1', 'crunch2'], 0.3, 0.9);
+      this.duck(0.35, 0.35);
+      return;
+    }
     this.tone(t, 'sine', 110, 28, 0.5 + power * 0.3, 1.0);
     this.tone(t, 'sawtooth', 70, 30, 0.25, 0.18);
     this.noiseBurst(t, 0.5 + power * 0.3, 0.8, 'lowpass', 1400, 0.8, 120);
@@ -180,6 +256,7 @@ class Audio {
   riser(sec: number): void {
     if (!this.ok('riser', 0.3)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec('riser', 0.55, Math.max(0.5, Math.min(2, 2.9 / Math.max(0.5, sec))))) return;
     this.tone(t, 'sawtooth', 110, 880, sec, 0.12, undefined, sec * 0.6);
     this.tone(t, 'sine', 220, 1760, sec, 0.1, undefined, sec * 0.6);
     this.noiseBurst(t, sec, 0.18, 'bandpass', 400, 2, 6000);
@@ -187,6 +264,7 @@ class Audio {
   prompt(good: boolean): void {
     if (!this.ok('prompt', 0.04)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec(good ? 'qte_good' : 'qte_bad', good ? 0.5 : 0.45, good ? 1 + fxRng.next() * 0.08 : 1)) return;
     if (good) { this.tone(t, 'square', 880, 1320, 0.08, 0.12); this.tone(t + 0.05, 'square', 1320, 1760, 0.08, 0.1); }
     else this.tone(t, 'sawtooth', 220, 110, 0.15, 0.12);
   }
@@ -194,7 +272,7 @@ class Audio {
   boom(): void {
     if (!this.ok('boom', 0.08)) return;
     const t = this.ctx!.currentTime;
-    if (this.rec('boom', 1.0, 0.9)) return;
+    if (this.rec('boom', 1.0, 0.9)) { this.rec('m_808', 0.4, 0.7, 0, 0.5); this.duck(0.35, 0.4); return; }
     this.tone(t, 'sine', 90, 22, 1.1, 1.0);
     this.tone(t, 'triangle', 180, 40, 0.5, 0.4);
     this.noiseBurst(t, 1.0, 0.9, 'lowpass', 2000, 0.7, 60);
@@ -204,7 +282,7 @@ class Audio {
   parry(): void {
     if (!this.ok('parry', 0.05)) return;
     const t = this.ctx!.currentTime;
-    if (this.rec('parry', 0.7, 1.05)) return;
+    if (this.rec('parry', 0.75, 1.05)) { this.rec('snap1', 0.4, 1.3); this.rec('m_glass', 0.25, 1.5, 0.01); return; }
     for (const f of [1760, 2637, 3520]) this.tone(t, 'sine', f, f * 0.98, 0.6, 0.18, undefined, 0.001);
     this.tone(t, 'square', 880, 880, 0.08, 0.1);
     this.noiseBurst(t, 0.18, 0.4, 'highpass', 4000, 0.7, 9000);
@@ -279,6 +357,10 @@ class Audio {
   step(heavy = false): void {
     if (!this.ok('step', 0.06)) return;
     const t = this.ctx!.currentTime;
+    if (heavy ? this.rec('land', 0.55, 0.95 + fxRng.next() * 0.1) : this.rec(['step1', 'step2'], 0.22, 0.9 + fxRng.next() * 0.2)) {
+      if (heavy) this.rec('thump', 0.2, 1.2, 0, 0.18);
+      return;
+    }
     this.noiseBurst(t, heavy ? 0.09 : 0.05, heavy ? 0.22 : 0.08, 'lowpass', heavy ? 700 : 1100, 0.7, 200);
     if (heavy) this.tone(t, 'sine', 120, 50, 0.08, 0.2);
   }
@@ -286,6 +368,11 @@ class Audio {
   hurt(): void {
     if (!this.ok('hurt', 0.06)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec(['hurt1', 'hurt2', 'hurt3'], 0.55, 0.96 + fxRng.next() * 0.08)) {
+      this.rec(['body1', 'body2', 'body3'], 0.45, 0.85); this.rec('thump', 0.25, 1, 0, 0.2);
+      this.duck(0.6, 0.2);
+      return;
+    }
     this.tone(t, 'sawtooth', 220, 70, 0.22, 0.25);
     this.noiseBurst(t, 0.15, 0.5, 'lowpass', 1200, 0.8, 200);
   }
@@ -302,6 +389,7 @@ class Audio {
   telegraph(): void {
     if (!this.ok('tele', 0.07)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec('tele', 0.32, 1.15)) return;
     this.tone(t, 'square', 1320, 1320, 0.05, 0.05);
     this.tone(t + 0.06, 'square', 1320, 1320, 0.05, 0.04);
   }
@@ -309,13 +397,18 @@ class Audio {
   throwDart(): void {
     if (!this.ok('throw', 0.05)) return;
     const t = this.ctx!.currentTime;
+    if (this.rec('dart', 0.55, 1.05)) return;
     this.tone(t, 'sawtooth', 900, 300, 0.18, 0.12);
   }
 
   ko(): void {
     if (!this.ok('ko', 0.05)) return;
     const t = this.ctx!.currentTime;
-    if (this.rec('heavy', 0.9, 0.8)) { this.rec('boom', 0.35, 1.3); return; }
+    if (this.rec('impact', 0.85, 1)) {
+      this.rec('heavy', 0.6, 0.8); this.rec(['crunch1', 'crunch2'], 0.45, 0.9); this.rec('m_808', 0.45, 0.7, 0, 0.5);
+      this.duck(0.25, 0.6);
+      return;
+    }
     this.tone(t, 'sine', 160, 30, 0.6, 0.8);
     this.noiseBurst(t, 0.5, 0.6, 'lowpass', 2600, 0.8, 100);
     for (let i = 0; i < 4; i++) this.tone(t + i * 0.04, 'sine', 1200 + i * 400, 1500 + i * 400, 0.25, 0.06);
@@ -335,14 +428,21 @@ class Audio {
     const t = this.ctx!.currentTime;
     const notes = [523, 587, 659, 784, 880, 1046, 1318];
     const n = notes[Math.min(notes.length - 1, rank)];
+    if (this.rec('rankup', 0.5, 0.9 + rank * 0.07)) { if (rank >= 4) this.rec('m_crash', 0.22, 1.1); return; }
     this.tone(t, 'square', n, n, 0.1, 0.08);
     this.tone(t + 0.07, 'square', n * 1.5, n * 1.5, 0.16, 0.08);
     this.tone(t, 'sine', n * 2, n * 2, 0.3, 0.1);
   }
 
-  ui(kind: 'click' | 'select' | 'wave' | 'clear' | 'gameover' | 'move'): void {
+  ui(kind: 'click' | 'select' | 'wave' | 'clear' | 'gameover' | 'move' | 'back'): void {
     if (!this.ok('ui' + kind, 0.03)) return;
     const t = this.ctx!.currentTime;
+    const REC: Record<string, [string, number]> = {
+      move: ['ui_move', 0.35], click: ['ui_click', 0.5], select: ['ui_ok', 0.5], back: ['ui_back', 0.45],
+      wave: ['bell', 0.5], clear: ['clear', 0.55], gameover: ['gameover', 0.6],
+    };
+    if (this.rec(REC[kind][0], REC[kind][1])) return;
+    if (kind === 'back') { this.tone(t, 'square', 990, 660, 0.05, 0.05); return; }
     // Arcade UI focus tick (keyboard / gamepad navigation): a short bright blip.
     if (kind === 'move') { this.tone(t, 'square', 1320, 1500, 0.035, 0.05); return; }
     switch (kind) {
@@ -385,9 +485,18 @@ class Audio {
     }
   }
 
+  /** The Special Bar just filled: a charge-up sting. */
+  ready(): void {
+    if (!this.ok('ready', 0.3)) return;
+    const t = this.ctx!.currentTime;
+    if (this.rec('ready', 0.55)) { this.rec('m_glass', 0.2, 2, 0.18); return; }
+    this.tone(t, 'triangle', 660, 1320, 0.16, 0.18); this.tone(t + 0.08, 'sine', 1320, 1760, 0.2, 0.12);
+  }
+
   /** Metronome click on the music bus at context time t (Rhythm Mode calibration / count-in). */
   click(t: number, accent = false): void {
     if (!this.ctx) return;
+    if (this.sample(accent ? 'metro_hi' : 'metro_lo', t, accent ? 0.8 : 0.6, 1, this.music)) return;
     this.tone(t, 'square', accent ? 1760 : 1320, accent ? 1760 : 1320, 0.04, accent ? 0.22 : 0.15, this.music, 0.001);
     this.noiseBurst(t, 0.02, 0.2, 'highpass', 6000, 0.7, 0, this.music);
   }
@@ -418,6 +527,18 @@ class Audio {
     const roots = [55, 55, 43.65, 49];
     const root = roots[bar];
     const hype = this.intensity;
+    if (this.has('m_kick')) {
+      if (st % 4 === 0) this.sample('m_kick', t, 0.8, 1, this.inst);
+      if (st === 4 || st === 12) { this.sample('m_clap', t, 0.45, 1, this.inst); this.sample('m_snare2', t, 0.3, 1, this.inst); }
+      if (st % 2 === 1 || hype > 0.5) this.sample('m_hat', t, st % 2 === 1 ? 0.3 : 0.16, 1, this.inst);
+      const pt = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0];
+      if (pt[st]) this.note('m_bass', 69.1, t, root * (st === 13 ? 1.5 : st === 11 ? 1.189 : 1), 0.16, 0.55, this.inst);
+      if (hype > 0.3 && st % 2 === 0) {
+        const arp = [4, 3, 2, 1.5, 2, 3, 4, 6];
+        this.note('m_pluck', 258.5, t, root * arp[(st / 2) % 8] * 2, 0.1, 0.12 + hype * 0.12, this.inst);
+      }
+      return;
+    }
     // kick
     if (st % 4 === 0) {
       const o = this.ctx!.createOscillator(); const g = this.ctx!.createGain();
@@ -446,3 +567,4 @@ class Audio {
 }
 
 export const audio = new Audio();
+if (import.meta.env.DEV) (window as unknown as { __audio: Audio }).__audio = audio;

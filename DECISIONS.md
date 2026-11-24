@@ -397,3 +397,28 @@ The pass-6 paper HUD (`render/hud.ts`, `render/paperHud.ts`), the sketch-border 
 **The swap strip** sits at 51% of the height, under the WAVE CLEAR banner and its reward line. Earlier positions covered the banner text.
 
 **The single-file artifact** is the Vite build inlined into one HTML file: the CSS (fonts as data URIs) plus the module script. It needs an explicit `<meta charset="utf-8">`, or the arrows and dots in labels turn into mojibake.
+
+## Every sound from Freesound, and hits that land harder
+
+**Scope.** "All sounds" covers every effect, UI sound and voice, and every instrument in the built-in music. The songs are still sequenced in code, not swapped for recorded loops. Rhythm Mode needs every note on the beat clock's grid, and the songs change with section and fight intensity, which fixed loops can't do. Instead, every drum hit and note the sequencer plays is a Freesound sample. Your-own-song import plays your file as before.
+
+**How the clips were chosen.**
+- **Search:** the Freesound API, filtered to CC0, sorted by rating and weighted by rating count and downloads.
+- **Measurements, since I can't listen:** each candidate was measured for onset delay, length, attack, spectral centroid and low-band share. Snaps should be short and bright, bodies short with strong low-mids, thumps mostly below 200 Hz.
+- **Pitched instruments:** picked from samples named by note, then confirmed with a YIN pitch detector. The measured roots are in the code (`ROOT` in `rhythm/synth.ts`).
+- **Processing:** trimmed to 2 ms before onset, a −50 dB tail cut, a short fade, peak-normalized to −1 dBFS, mono MP3.
+
+**Hit layering (`audio.hit`).**
+1. **Snap:** a short bright crack, a little louder on light hits so jabs stay crisp.
+2. **Body:** a boxing-punch body, played lower and longer as hits get heavier. Kicks use a percussive thud instead, and slashes add the staff swish.
+3. **Texture:** the previous punch set, quietly.
+4. **Thump:** a low thump, from weight 0.45 up.
+5. **Heavy (weight ≥ 0.72):** a bat crack, a bone crunch and a 0.3 s 808 sub hit. The music ducks to 40% for about a quarter second.
+
+Variants never repeat twice in a row; repeated identical samples are what make hits sound robotic. The combo still raises the pitch, but at 35% of the synth's climb, because a full climb sounds chipmunky on recordings. Tails are gated (body 0.16–0.28 s, thump 0.22 s, sub 0.3 s), so fast strings stay distinct instead of smearing.
+
+**Mix calibration.** A Playwright bus-level test plays each song and the classic loop with a bot attacking, and taps the music and SFX buses with analysers. Against the previous commit's recorded build, energy-average SFX level is about 3 dB higher (−13.5 vs −16.5 dB), by design so hits land harder. Music is within about 1–2 dB of the old synth band (dojo sits lower, as its synth version did). The trims live in `MIX` at the top of `core/audio.ts`.
+- **Music trim:** sampled instruments play through an `inst` trim bus (0.3), because mastered one-shots are much hotter than the oscillators were.
+- **Glass-bell combo notes:** these go through the director's per-note gain, so they can still be cancelled when the strike they were scheduled for doesn't happen.
+
+**The synth fallback stays.** It plays until the clips decode (a fraction of a second) and remains a setting (Settings → Sounds & music), so the old sound is one switch away. Audio uses only the FX RNG, so the sim fingerprint is unchanged.

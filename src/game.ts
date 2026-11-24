@@ -128,7 +128,7 @@ export class Game {
     // Special (pass 8): the input phases open after the activation beat; first READY shows a hint.
     this.world.events.on('specialInput', (e) => this.specialInput.begin(this.world, e.family as Family));
     this.world.events.on('specialReady', () => {
-      audio.ui('select');
+      audio.ready();
       if (!save.specialHintSeen && (this.state === 'playing' || this.state === 'tutorial')) {
         save.specialHintSeen = true; writeSave();
         this.menus.banner('SPECIAL READY!', 'hold still on the pad (or press X) to unleash it', 2200);

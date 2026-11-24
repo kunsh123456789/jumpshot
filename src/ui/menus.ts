@@ -80,7 +80,7 @@ export class Menus {
     b.type = 'button';
     b.innerHTML = `<span>${ico ? icon(ico) : ''}${label}</span>`;
     if (back) b.dataset.back = '1';
-    b.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.ui('click'); onClick(); });
+    b.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.ui(back ? 'back' : 'click'); onClick(); });
     parent.appendChild(b);
     return b;
   }
@@ -229,7 +229,7 @@ export class Menus {
     sec('SOUND');
     slider('Master volume', 'masterVolume', 0, 1, 0.05);
     slider('Music volume', 'musicVolume', 0, 1, 0.05);
-    select('Sound effects', 'set-sfxStyle', [['recorded', 'Recorded (CC0)'], ['synth', 'Synthesized']], () => settings.sfxStyle, (v) => { settings.sfxStyle = v as 'recorded' | 'synth'; });
+    select('Sounds & music', 'set-sfxStyle', [['recorded', 'Recorded (Freesound, CC0)'], ['synth', 'Synthesized (original)']], () => settings.sfxStyle, (v) => { settings.sfxStyle = v as 'recorded' | 'synth'; });
     sec('FEEL');
     slider('Screen shake', 'shake', 0, 1.5, 0.05);
     slider('Hit-stop strength', 'hitstop', 0, 1.5, 0.05);

@@ -157,7 +157,19 @@ You carry **one weapon** at a time. All 17 are unlocked from the start. Pick one
 
 ## Sound
 
-Sound effects are recorded CC0 samples from Freesound (credits in `SOUND_CREDITS.md`), bundled with the build (~105 KB). Every effect still has its synthesized version: it plays until the samples load, and **Settings → Sound effects → Synthesized** switches back to the original set.
+Every sound in the game is a CC0 recording from Freesound (credits in `SOUND_CREDITS.md`, 83 clips, about 345 KB, bundled with the build). That covers hits, effects, UI, voice, and every drum and instrument in the built-in music.
+
+- **Hits are layered:** a bright snap for contact, a body thump that drops in pitch as hits get heavier, and a short low thump from medium hits up. Heavy hits add a bat crack, a bone crunch and a short 808 sub hit, and briefly duck the music so they cut through. Variants never repeat twice in a row, and the combo climbs the pitch gently.
+- **Big moments:**
+  - KO finishers: a cinematic impact.
+  - Spikes and slams: a sub boom.
+  - The Special Bar filling: a charge-up sting.
+  - Wave start: a boxing bell.
+  - Wave clear and game over: jingles.
+  - Getting hit: grunts.
+  - Rhythm Mode calibration: a recorded metronome.
+- **Music:** the songs are still sequenced in code, so they stay locked to the beat clock. Each drum is a sample and each note is a re-pitched sample (bass, pluck, lead, shamisen, glass bell, pad). Combo hits in Rhythm Mode ring a glass-bell note on the beat.
+- **Settings → Sounds & music → Synthesized** switches back to the original synthesized set. It also plays for the first moment after launch, until the clips have decoded.
 
 ## Bosses
 

@@ -336,8 +336,11 @@ export class RhythmDirector implements RhythmSim {
     const g = ctx.createGain();
     g.gain.value = 1;
     g.connect(audio.music);
-    audio.tone(tHeard, 'triangle', f, f, 0.22, 0.09, g, 0.002);
-    audio.tone(tHeard, 'sine', f * 2, f * 2, 0.12, 0.04, g, 0.002);
+    // A glass-bell note (CC0 sample, recorded at C5) on the strike's grid point; synth pluck as the fallback.
+    if (!audio.note('m_glass', 523.7, tHeard, f, 0.22, 0.12, g)) {
+      audio.tone(tHeard, 'triangle', f, f, 0.22, 0.09, g, 0.002);
+      audio.tone(tHeard, 'sine', f * 2, f * 2, 0.12, 0.04, g, 0.002);
+    }
     this.note = { gain: g, t: tHeard, serial };
   }
 
