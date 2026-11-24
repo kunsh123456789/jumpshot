@@ -442,3 +442,22 @@ Variants never repeat twice in a row; repeated identical samples are what make h
 - Input fuzz in manual mode (random taps, jumps, swipes and moves, all 18 weapons): the old code crashed with every weapon within 170-1700 frames; the fixed code ran 3000 frames each with none.
 - Real-time soak with a watchdog for sim stalls, stuck slow-mo and long frames: 48 runs (every weapon, every Rhythm song, waves 1-30 including bosses), all clean.
 - Fingerprint identical.
+
+## Punchier hits: pre-mixed punch tiers
+
+**Why the first recorded set felt weak.** Hits stacked 4-7 separate clips at runtime: a wet slap, a boxing-punch body, a mattress thump, a bat crack, a bone crunch and an 808. Their transients didn't line up, each had a different tail, and random gains on every layer made the result loose and smeary. The bus compressor also had a 2 ms attack, which flattened the first milliseconds that carry the punch.
+
+**Now each hit plays one finished punch.** Eleven punches in three tiers (`hit_l1`-`l4`, `hit_m1`-`m4`, `hit_h1`-`h3`), built offline with a Python + ffmpeg script:
+- **Sources:** the core punches are community-proven Freesound punches, including "punch.wav" (about 79k downloads), "Major punch" and "Punch2". They were shortlisted from 280 CC0 candidates by measured attack time, low-mid share, decay and single-hit shape, with slap/splat/wet/bone clips excluded by name.
+- **Cut:** each core is cut at its biggest envelope rise, skipping any built-in whoosh.
+- **Body:** a deep "Hit 3/4" thud is layered under the core, then EQ'd (low shelf +5 dB at 100 Hz, −5 dB at 420 Hz, +2 dB at 2.5 kHz).
+- **Density:** tanh saturation (drive 1.6 light, 1.9 medium, 2.2 heavy) and a hold-then-exponential decay envelope (light 10/40 ms, medium 18/60 ms, heavy 25/95 ms).
+- **Transient:** a high-passed snap or crack goes on top afterwards, unsaturated, so the impact spike stands out. Then a limiter.
+- **Heavies:** pitched down about 15%, with a short 808 tail at low level. Waveform plots were checked before and after: an early heavy draft was a solid block with a beating ripple, two low layers fighting, so the 808 was cut back and the transient moved on top.
+
+**At runtime.**
+- Weight picks the tier: below 0.42 light, below 0.72 medium, otherwise heavy.
+- Variants don't repeat back-to-back. Pitch varies ±3%, the combo climb is 20% of the synth's, and kicks play 6% lower.
+- Heavies duck the music to 45% for about 0.2 s.
+- **Mix:** the glue compressor attack went from 2 ms to 12 ms, ratio from 5 to 4, so the transient passes. A fast limiter (−1.5 dB threshold, 20:1) after the master gain keeps peaks from clipping. SFX energy-average level is now about −13 dB, against −16.5 for the original recorded build and −13.5 for the layered version; music is unchanged.
+- The 14 old layer clips were removed.

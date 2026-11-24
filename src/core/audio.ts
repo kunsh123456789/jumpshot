@@ -21,7 +21,10 @@ function bytesOf(url: string): Promise<ArrayBuffer> {
 }
 
 /** Mix calibration (measured with the bus-level test against the previous build; see DECISIONS.md). */
-const MIX = { inst: 0.3, hit: 0.4 };
+const MIX = { inst: 0.3, hit: 0.9 };
+const HIT_L = ['hit_l1', 'hit_l2', 'hit_l3', 'hit_l4'];
+const HIT_M = ['hit_m1', 'hit_m2', 'hit_m3', 'hit_m4'];
+const HIT_H = ['hit_h1', 'hit_h2', 'hit_h3'];
 
 const SFX_URLS = import.meta.glob('../assets/sfx/*.mp3', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
@@ -31,9 +34,8 @@ const SFX_URLS = import.meta.glob('../assets/sfx/*.mp3', { eager: true, query: '
  * Each also keeps its original synthesized version, which plays until the
  * samples have decoded and when Settings -> Sound effects = Synthesized.
  *
- * Hits are layered: a bright snap (the contact), a body thump that drops in
- * pitch with weight, a low thump for medium hits, and for heavies a crunch, a
- * sub boom and a short music duck so the impact cuts through the mix.
+ * Hits play one finished punch from three tiers (light / medium / heavy),
+ * pre-mixed offline from Freesound punches; heavies also duck the music.
  */
 class Audio {
   ctx: AudioContext | null = null;
@@ -62,9 +64,14 @@ class Audio {
       if (!Ctor) return;
       const ctx = new Ctor();
       this.ctx = ctx;
+      // Glue compressor with a slower attack so a punch's first ~10 ms (the part you feel) passes
+      // untouched, then a fast brick-wall-ish limiter after the master gain so peaks never clip.
       this.comp = ctx.createDynamicsCompressor();
-      this.comp.threshold.value = -14; this.comp.knee.value = 8; this.comp.ratio.value = 5;
-      this.comp.attack.value = 0.002; this.comp.release.value = 0.12;
+      this.comp.threshold.value = -14; this.comp.knee.value = 6; this.comp.ratio.value = 4;
+      this.comp.attack.value = 0.012; this.comp.release.value = 0.14;
+      const limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -1.5; limiter.knee.value = 0; limiter.ratio.value = 20;
+      limiter.attack.value = 0.001; limiter.release.value = 0.06;
       this.master = ctx.createGain();
       this.sfx = ctx.createGain();
       this.music = ctx.createGain();
@@ -74,7 +81,8 @@ class Audio {
       this.inst.gain.value = MIX.inst;
       this.inst.connect(this.music);
       this.comp.connect(this.master);
-      this.master.connect(ctx.destination);
+      this.master.connect(limiter);
+      limiter.connect(ctx.destination);
       const len = ctx.sampleRate * 1.0;
       this.noise = ctx.createBuffer(1, len, ctx.sampleRate);
       const d = this.noise.getChannelData(0);
@@ -202,29 +210,17 @@ class Audio {
     const r = 0.94 + fxRng.next() * 0.12;
     const p = pitch * r;
     const v = (0.55 + weight * 0.45) * (0.85 + fxRng.next() * 0.3);
-    if (this.has('body1')) {
-      const h = v * MIX.hit;
-      // Combo pitch climbs gently on the recorded layers (full climb sounds chipmunky).
-      const rp = (1 + (pitch - 1) * 0.35) * r;
-      const heavy = weight >= 0.72;
-      const BODY = ['body1', 'body2', 'body3'];
-      // 1. Snap: the bright contact crack, a little louder on light hits so jabs stay crisp.
-      this.rec(['snap1', 'snap2', 'snap3'], (0.5 + 0.25 * (1 - weight)) * h, rp * (kind === 'slash' ? 1.25 : 1.04));
-      // 2. Body: the meat of the hit; heavier hits play it lower and fuller.
-      if (kind === 'kick') { this.rec('kickthud', 0.85 * h, rp * 0.95, 0, 0.25); this.rec(BODY, 0.6 * h, rp * 0.86); }
-      else if (kind === 'slash') { this.rec('staff', 0.55 * h, rp * 1.15); this.rec(BODY, 0.55 * h, rp); }
-      else this.rec(BODY, 0.95 * h, rp * (1.02 - weight * 0.14), 0, 0.16 + weight * 0.12);
-      this.rec(['punch1', 'punch2', 'punch3'], 0.3 * h, rp); // texture layer
-      // 3. Weight: a short low thump from medium hits up.
-      if (weight >= 0.45) this.rec('thump', (0.2 + 0.45 * weight) * h, 1.06 - weight * 0.22, 0, 0.22);
-      // 4. Heavy: bat crack + bone crunch + a short 808 sub hit, and duck the music so it lands.
-      if (heavy) {
-        this.rec('heavy', 0.6 * h, rp * 0.9);
-        this.rec(['crunch1', 'crunch2'], 0.45 * h, rp);
-        this.rec('m_808', 0.7 * h, 0.82, 0, 0.3);
-        this.duck(0.4, 0.25);
-      } else if (weight >= 0.6) this.duck(0.7, 0.12);
-      if (crit) { this.rec('ping', 0.5, rp * 1.3); this.rec('m_glass', 0.3, 2, 0.012); }
+    if (this.has('hit_m1')) {
+      // One finished punch per hit: three tiers, each pre-mixed offline from Freesound punches
+      // (core punch + low thud + transient snap, EQ'd, saturated and limited; see DECISIONS.md).
+      const h = MIX.hit * (0.8 + weight * 0.25) * (0.92 + fxRng.next() * 0.16);
+      const rp = (1 + (pitch - 1) * 0.2) * (0.97 + fxRng.next() * 0.06) * (kind === 'kick' ? 0.94 : 1);
+      const tier = weight >= 0.72 ? HIT_H : weight >= 0.42 ? HIT_M : HIT_L;
+      this.rec(tier, h, rp);
+      if (kind === 'slash') this.rec('staff', 0.4 * h, rp * 1.15);
+      if (weight >= 0.72) this.duck(0.45, 0.22);
+      else if (weight >= 0.55) this.duck(0.75, 0.1);
+      if (crit) { this.rec('ping', 0.45, rp * 1.3); this.rec('m_glass', 0.25, 2, 0.012); }
       return;
     }
     // body thump
@@ -249,7 +245,7 @@ class Audio {
   launch(): void {
     if (!this.ok('launch', 0.05)) return;
     const t = this.ctx!.currentTime;
-    if (this.rec('launch', 0.8, 1.1)) { this.rec('whoosh2', 0.4, 0.8); this.rec('thump', 0.25, 1.2, 0, 0.2); return; }
+    if (this.rec('launch', 0.8, 1.1)) { this.rec('whoosh2', 0.4, 0.8); this.rec(HIT_M, 0.45, 0.95); return; }
     this.tone(t, 'sine', 140, 720, 0.22, 0.5);
     this.tone(t, 'square', 280, 1200, 0.12, 0.08);
     this.noiseBurst(t, 0.28, 0.35, 'bandpass', 500, 1.2, 4000);
@@ -260,7 +256,7 @@ class Audio {
     const t = this.ctx!.currentTime;
     if (this.rec('slam', 0.8 + power * 0.2, 0.8)) {
       this.rec('boom', 0.4 + power * 0.3, 1.1);
-      this.rec('thump', 0.45, 0.85, 0, 0.3); this.rec('m_808', 0.4 + power * 0.15, 0.75, 0, 0.45); this.rec(['crunch1', 'crunch2'], 0.3, 0.9);
+      this.rec(HIT_H, 0.6 + power * 0.2, 0.82); this.rec('m_808', 0.35 + power * 0.15, 0.75, 0, 0.4);
       this.duck(0.35, 0.35);
       return;
     }
@@ -300,7 +296,7 @@ class Audio {
   parry(): void {
     if (!this.ok('parry', 0.05)) return;
     const t = this.ctx!.currentTime;
-    if (this.rec('parry', 0.75, 1.05)) { this.rec('snap1', 0.4, 1.3); this.rec('m_glass', 0.25, 1.5, 0.01); return; }
+    if (this.rec('parry', 0.75, 1.05)) { this.rec(HIT_L, 0.35, 1.25); this.rec('m_glass', 0.25, 1.5, 0.01); return; }
     for (const f of [1760, 2637, 3520]) this.tone(t, 'sine', f, f * 0.98, 0.6, 0.18, undefined, 0.001);
     this.tone(t, 'square', 880, 880, 0.08, 0.1);
     this.noiseBurst(t, 0.18, 0.4, 'highpass', 4000, 0.7, 9000);
@@ -376,7 +372,7 @@ class Audio {
     if (!this.ok('step', 0.06)) return;
     const t = this.ctx!.currentTime;
     if (heavy ? this.rec('land', 0.55, 0.95 + fxRng.next() * 0.1) : this.rec(['step1', 'step2'], 0.22, 0.9 + fxRng.next() * 0.2)) {
-      if (heavy) this.rec('thump', 0.2, 1.2, 0, 0.18);
+      if (heavy) this.rec(HIT_L, 0.18, 0.7);
       return;
     }
     this.noiseBurst(t, heavy ? 0.09 : 0.05, heavy ? 0.22 : 0.08, 'lowpass', heavy ? 700 : 1100, 0.7, 200);
@@ -387,7 +383,7 @@ class Audio {
     if (!this.ok('hurt', 0.06)) return;
     const t = this.ctx!.currentTime;
     if (this.rec(['hurt1', 'hurt2', 'hurt3'], 0.55, 0.96 + fxRng.next() * 0.08)) {
-      this.rec(['body1', 'body2', 'body3'], 0.45, 0.85); this.rec('thump', 0.25, 1, 0, 0.2);
+      this.rec(HIT_M, 0.5, 0.88);
       this.duck(0.6, 0.2);
       return;
     }
@@ -423,7 +419,7 @@ class Audio {
     if (!this.ok('ko', 0.05)) return;
     const t = this.ctx!.currentTime;
     if (this.rec('impact', 0.85, 1)) {
-      this.rec('heavy', 0.6, 0.8); this.rec(['crunch1', 'crunch2'], 0.45, 0.9); this.rec('m_808', 0.45, 0.7, 0, 0.5);
+      this.rec(HIT_H, 0.9, 0.78); this.rec('heavy', 0.35, 0.8); this.rec('m_808', 0.4, 0.7, 0, 0.5);
       this.duck(0.25, 0.6);
       return;
     }

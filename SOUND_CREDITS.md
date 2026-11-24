@@ -1,6 +1,6 @@
 # Sound credits
 
-Every sound in the game comes from [Freesound](https://freesound.org) under **Creative Commons 0** (public domain; no attribution required, credited anyway). That covers every hit, effect, UI sound and voice, and every drum and instrument in the built-in music. The clips were trimmed to their onset, made mono, peak-normalized to -1 dBFS and encoded at 48-56 kbps (83 files, about 345 KB).
+Every sound in the game comes from [Freesound](https://freesound.org) under **Creative Commons 0** (public domain; no attribution required, credited anyway). That covers every hit, effect, UI sound and voice, and every drum and instrument in the built-in music. The clips were trimmed to their onset, made mono, peak-normalized to -1 dBFS and encoded at 48-56 kbps (80 files).
 
 Settings -> Sounds & music -> Synthesized switches back to the original synthesized set. That set also plays for the first moment after launch, until the clips have decoded.
 
@@ -8,9 +8,6 @@ Settings -> Sounds & music -> Synthesized switches back to the original synthesi
 
 | File | Freesound sound | Author | License |
 |---|---|---|---|
-| `punch1.mp3` | ["Kamen Rider" style smack punch impact](https://freesound.org/s/770176/) | G40X | CC0 |
-| `punch2.mp3` | [Hit 5](https://freesound.org/s/676465/) | NearTheAtmoshphere | CC0 |
-| `punch3.mp3` | [Tablesmack.wav](https://freesound.org/s/674826/) | Tomasek1a | CC0 |
 | `heavy.mp3` | [Bat_hit2](https://freesound.org/s/851452/) | hashtagsmcgee | CC0 |
 | `whoosh1.mp3` | [Woosh - Plastic perforated steak spatula 4](https://freesound.org/s/742903/) | Sadiquecat | CC0 |
 | `whoosh2.mp3` | [Woosh - Plastic Tray 1](https://freesound.org/s/742942/) | Sadiquecat | CC0 |
@@ -38,23 +35,25 @@ Settings -> Sounds & music -> Synthesized switches back to the original synthesi
 | `ping.mp3` | [Ping12.wav](https://freesound.org/s/266742/) | n_audioman | CC0 |
 | `staff.mp3` | [Wooden Stick Swing 1_2](https://freesound.org/s/485277/) | Joao_Janz | CC0 |
 
-## Hit layers
+## Punch hits
 
-A hit plays several of these together (see DECISIONS.md, "Every sound from Freesound").
+Every hit plays one of eleven pre-mixed punches (`hit_l1`-`hit_l4` light, `hit_m1`-`hit_m4` medium, `hit_h1`-`hit_h3` heavy). Each was built offline from these CC0 Freesound sounds:
+1. A core punch, cut at its main impact (any whoosh before it is skipped).
+2. A low thud layer.
+3. EQ: low shelf +5 dB, mud cut at 420 Hz, bite at 2.5 kHz.
+4. Tanh saturation, then a fast decay envelope.
+5. An unsaturated snap or crack layered on top so the impact spikes out.
+6. A limiter.
 
-| File | Freesound sound | Author | License |
-|---|---|---|---|
-| `snap1.mp3` | [Slap_6.wav](https://freesound.org/s/148999/) | deleted_user_2104797 | CC0 |
-| `snap2.mp3` | [Slap_1.wav](https://freesound.org/s/148998/) | deleted_user_2104797 | CC0 |
-| `snap3.mp3` | [Impact 2](https://freesound.org/s/816738/) | Daftrio | CC0 |
-| `body1.mp3` | [PUNCH-BOXING-02.wav](https://freesound.org/s/348243/) | newagesoup | CC0 |
-| `body2.mp3` | [PUNCH-BOXING-03.wav](https://freesound.org/s/348242/) | newagesoup | CC0 |
-| `body3.mp3` | [Punch Land Medium 2](https://freesound.org/s/686320/) | CJspellsfish | CC0 |
-| `thump.mp3` | [found matress hit.wav](https://freesound.org/s/405705/) | apinasaundi | CC0 |
-| `crunch1.mp3` | [bone break_1.wav](https://freesound.org/s/630593/) | Vinni_R | CC0 |
-| `crunch2.mp3` | [bone break_4.wav](https://freesound.org/s/630590/) | Vinni_R | CC0 |
-| `impact.mp3` | [Sound Design Elements Impact SFX PS 017](https://freesound.org/s/755054/) | AudioPapkin | CC0 |
-| `kickthud.mp3` | [Mute Guitar Bass Kick Hit Percussion.wav](https://freesound.org/s/246286/) | afleetingspeck | CC0 |
+Heavies are pitched down about 15% and add a short tail of the `m_808` sub and the `heavy.mp3` bat crack (both credited elsewhere on this page).
+
+| Used in | Freesound sources (all CC0) |
+|---|---|
+| hit_l1-l4 (light) | [Punch 1](https://freesound.org/s/773737/) by qubodup; [Punch 2](https://freesound.org/s/773738/) by qubodup; [Punch 3](https://freesound.org/s/773739/) by qubodup; [Punch 2.wav](https://freesound.org/s/560325/) by JakeEaton |
+| hit_m1-m4 (medium) | [punch.wav](https://freesound.org/s/104183/) by Ekokubza123; [Punch2.wav](https://freesound.org/s/566435/) by Merrick079; [Punch](https://freesound.org/s/517744/) by danlucaz; [Major punch](https://freesound.org/s/399183/) by janbezouska |
+| hit_h1-h3 (heavy) | [Major punch](https://freesound.org/s/399183/) by janbezouska; [punch.wav](https://freesound.org/s/104183/) by Ekokubza123; [Punch2.wav](https://freesound.org/s/566435/) by Merrick079 |
+| low thud layer (all tiers) | [Hit 3](https://freesound.org/s/676463/) by NearTheAtmoshphere; [Hit 4](https://freesound.org/s/676464/) by NearTheAtmoshphere |
+| transient snap layer | ["Kamen Rider" style smack punch impact](https://freesound.org/s/770176/) by G40X |
 
 ## Effects, voice and UI
 
@@ -66,7 +65,6 @@ A hit plays several of these together (see DECISIONS.md, "Every sound from Frees
 | `step1.mp3` | [Sneaker Shoes Quick Forest Footstep 1_8](https://freesound.org/s/504347/) | Joao_Janz | CC0 |
 | `step2.mp3` | [Sneaker Shoes Quick Forest Footstep 1_13](https://freesound.org/s/504291/) | Joao_Janz | CC0 |
 | `land.mp3` | [land a jump.wav](https://freesound.org/s/540272/) | zepurple | CC0 |
-| `landheavy.mp3` | [Human Impact on Ground](https://freesound.org/s/364690/) | alegemaate | CC0 |
 | `tele.mp3` | [Sword drawn](https://freesound.org/s/545695/) | colorsCrimsonTears | CC0 |
 | `dart.mp3` | [Knife throw 1.aif](https://freesound.org/s/196562/) | kylepyke | CC0 |
 | `rankup.mp3` | [LevelUp.wav](https://freesound.org/s/609335/) | Kenneth_Cooney | CC0 |

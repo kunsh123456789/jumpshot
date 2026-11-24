@@ -159,7 +159,7 @@ You carry **one weapon** at a time. All 17 are unlocked from the start. Pick one
 
 Every sound in the game is a CC0 recording from Freesound (credits in `SOUND_CREDITS.md`, 83 clips, about 345 KB, bundled with the build). That covers hits, effects, UI, voice, and every drum and instrument in the built-in music.
 
-- **Hits are layered:** a bright snap for contact, a body thump that drops in pitch as hits get heavier, and a short low thump from medium hits up. Heavy hits add a bat crack, a bone crunch and a short 808 sub hit, and briefly duck the music so they cut through. Variants never repeat twice in a row, and the combo climbs the pitch gently.
+- **Hits:** every hit plays one finished punch from three tiers: four light jabs, four medium punches and three heavy blows. Each was pre-mixed offline from Freesound punches: the core punch cut at its impact, a low thud for weight, low-end boost and mud cut, saturation, and a crisp snap on top. Heavy hits are pitched down with a short sub tail and briefly duck the music. Variants never repeat back-to-back, and the combo nudges the pitch up. The mix uses a slow-attack compressor that lets the punch transient through, plus a limiter so nothing clips.
 - **Big moments:**
   - KO finishers: a cinematic impact.
   - Spikes and slams: a sub boom.
