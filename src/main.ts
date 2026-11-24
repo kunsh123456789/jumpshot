@@ -105,6 +105,15 @@ if (qs.has('manual')) {
   let t = 0;
   W.__advance = (ms: number) => { t += ms; frame(t); };
 } else {
-  const loop = (now: number) => { frame(now); requestAnimationFrame(loop); };
+  // Schedule the next frame first and contain errors: one exception in a frame must never stop
+  // the loop (that is a permanently frozen game). Each distinct error is logged once.
+  const seen = new Set<string>();
+  const loop = (now: number) => {
+    requestAnimationFrame(loop);
+    try { frame(now); } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!seen.has(msg)) { seen.add(msg); console.error('[jumpshot] frame error (recovered):', e); }
+    }
+  };
   requestAnimationFrame(loop);
 }

@@ -424,3 +424,21 @@ Variants never repeat twice in a row; repeated identical samples are what make h
 **The synth fallback stays.** It plays until the clips decode (a fraction of a second) and remains a setting (Settings → Sounds & music), so the old sound is one switch away. Audio uses only the FX RNG, so the sim fingerprint is unchanged.
 
 **Clips are decoded from the bundle, not fetched.** The single-file build inlines every clip as a base64 `data:` URL. Loading them with `fetch()` worked locally, but a host whose Content-Security-Policy restricts `connect-src` (as the published artifact page likely does) refuses those fetches. The game then quietly stayed on the synthesized fallback, so the published build played no recordings. `bytesOf()` in `core/audio.ts` now decodes `data:` URLs directly with `atob`. A Playwright check serves the build with `connect-src 'none'` and confirms all 83 clips decode.
+
+## Freeze fix: jumping in the air with no jumps left
+
+**The bug.**
+- `jump()` cancelled the current move (`p.move = null`) before checking whether an air jump was left. With none left it returned without changing state.
+- The hero was left in `move` with no move. The next tick dereferenced it (`WeaponSim.tick` → `m.grab`) and threw.
+- The rAF loop was `frame(); requestAnimationFrame(loop)`, so the exception also stopped the loop. The picture stayed on screen and the game never resumed.
+- The trigger is any tap or drag-up jump during an air attack after the double jump is spent. Tap is jump by default, so this was common in real play.
+
+**Fixes.**
+- `jump()` returns before touching the move when no air jump is left, so the attack simply continues.
+- `updateMove` recovers to idle or fall if it ever sees `move` without a move.
+- The loop schedules the next frame before running this one and catches exceptions, logging each distinct one once. A future bug becomes at worst a glitch, never a frozen game.
+
+**Tests.**
+- Input fuzz in manual mode (random taps, jumps, swipes and moves, all 18 weapons): the old code crashed with every weapon within 170-1700 frames; the fixed code ran 3000 frames each with none.
+- Real-time soak with a watchdog for sim stalls, stuck slow-mo and long frames: 48 runs (every weapon, every Rhythm song, waves 1-30 including bosses), all clean.
+- Fingerprint identical.

@@ -390,6 +390,8 @@ export class PlayerController {
 
   private updateMove(w: World): void {
     const p = w.player;
+    // Safety net: a 'move' state without a move must never reach the tick below.
+    if (!p.move) { p.setState(p.grounded ? 'idle' : 'fall'); return; }
     if (w.rhythm && p.moveFrame < p.effStartup) w.rhythm.onMoveTick(w, p);
     const m = p.move!;
     const fr = p.moveFrame;
@@ -508,6 +510,9 @@ export class PlayerController {
    */
   private jump(w: World, drag: boolean): void {
     const p = w.player;
+    // No jump left in the air: do nothing, and above all keep the current attack. Cancelling the
+    // move here without a new state left the hero in 'move' with no move (crash -> frozen game).
+    if (!p.grounded && this.airJumps <= 0) return;
     if (p.move) w.wpn.endMove(p);
     p.move = null;
     if (p.grounded) {
