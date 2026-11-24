@@ -2,6 +2,24 @@ import { settings } from './settings';
 import { fxRng } from './rng';
 
 /** Recorded sound effects (CC0, from Freesound; see SOUND_CREDITS.md), bundled with the build. */
+/**
+ * The clips are inlined into the build as base64 data: URLs. Decode those
+ * directly: hosts with a strict Content-Security-Policy (connect-src) refuse
+ * fetch() of data: URLs, which silently left every sound on the synth fallback.
+ * Real URLs (a dev server or a non-inlined build) still go through fetch.
+ */
+function bytesOf(url: string): Promise<ArrayBuffer> {
+  if (url.startsWith('data:')) {
+    try {
+      const bin = atob(url.slice(url.indexOf(',') + 1));
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return Promise.resolve(out.buffer);
+    } catch (e) { return Promise.reject(e); }
+  }
+  return fetch(url).then((r) => r.arrayBuffer());
+}
+
 /** Mix calibration (measured with the bus-level test against the previous build; see DECISIONS.md). */
 const MIX = { inst: 0.3, hit: 0.4 };
 
@@ -71,7 +89,7 @@ class Audio {
     const ctx = this.ctx!;
     for (const [path, url] of Object.entries(SFX_URLS)) {
       const name = path.slice(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
-      fetch(url).then((r) => r.arrayBuffer()).then((b) => ctx.decodeAudioData(b)).then((buf) => { this.bufs[name] = buf; }).catch(() => { /* synth fallback */ });
+      bytesOf(url).then((b) => ctx.decodeAudioData(b)).then((buf) => { this.bufs[name] = buf; }).catch(() => { /* synth fallback */ });
     }
   }
 

@@ -422,3 +422,5 @@ Variants never repeat twice in a row; repeated identical samples are what make h
 - **Glass-bell combo notes:** these go through the director's per-note gain, so they can still be cancelled when the strike they were scheduled for doesn't happen.
 
 **The synth fallback stays.** It plays until the clips decode (a fraction of a second) and remains a setting (Settings → Sounds & music), so the old sound is one switch away. Audio uses only the FX RNG, so the sim fingerprint is unchanged.
+
+**Clips are decoded from the bundle, not fetched.** The single-file build inlines every clip as a base64 `data:` URL. Loading them with `fetch()` worked locally, but a host whose Content-Security-Policy restricts `connect-src` (as the published artifact page likely does) refuses those fetches. The game then quietly stayed on the synthesized fallback, so the published build played no recordings. `bytesOf()` in `core/audio.ts` now decodes `data:` URLs directly with `atob`. A Playwright check serves the build with `connect-src 'none'` and confirms all 83 clips decode.
