@@ -461,3 +461,45 @@ Variants never repeat twice in a row; repeated identical samples are what make h
 - Heavies duck the music to 45% for about 0.2 s.
 - **Mix:** the glue compressor attack went from 2 ms to 12 ms, ratio from 5 to 4, so the transient passes. A fast limiter (−1.5 dB threshold, 20:1) after the master gain keeps peaks from clipping. SFX energy-average level is now about −13 dB, against −16.5 for the original recorded build and −13.5 for the layered version; music is unchanged.
 - The 14 old layer clips were removed.
+
+## Punches v3: boom + clack
+
+**Feedback:** the punches should be boomier and clackier, never light. So "light" now only means shorter; every punch has both parts. Each is built from three separately shaped parts instead of one saturated blend:
+- **Boom:** "boom.wav" or an 808 boom. Low-passed at 260 Hz with a 190 Hz bump, so its upper body survives on phones. It swells in over 8 ms after contact, so the clack is heard first, and decays over 120 / 170 / 260 ms.
+- **Body:** a proven Freesound punch at its impact, +7 dB at 210 Hz, −5 dB at 480 Hz.
+- **Clack:** the "Kung Fu punch" series and "Punch 1" (peridactyloptrix, the classic movie punch crack), high-passed at 1.3 kHz.
+
+**Clack tuning.**
+- Clacks are normalized by their first-8 ms energy, not by peak. Otherwise very short clicks like "Quick Clack" (2 ms) vanished; that clip and a twig snap read as ticks, not clacks, and were dropped.
+- The mix is padded 5 ms before the limiter. Without that, a clack peaking in its first 0.3 ms was crushed before the limiter's attack.
+
+**Measurements against the previous set:**
+- Every band is up about 2 dB on average: sub 40-150 Hz, thump 180-500 Hz, clack 2-8 kHz.
+- The clack's share of the first 20 ms rose from 0.07-0.38 to 0.36-0.76.
+- Energy-average SFX level in play is about −11.6 dB, against −13.
+
+## Laser Special: the horizontal blast
+
+**Feedback:** the user's reference image shows a horizontal beam from the fist: a fat white core, a thin ragged red flame edge, a rounded start, and the victim smeared into black streaks. Only that beam style was taken from the image; the characters are ours.
+
+**`sp.laser` ("OVERLOAD BEAM", shared by ice, brush, ray gun and thunder under their own names):**
+- **Charge:** 40 frames with a growing flame orb at the fist.
+- **Fire:** the beam shoots out over 8 frames to past the screen edge in the traced direction.
+- **Hold:** the hold lasts as long as the old sweep (longer on PERFECT). Everyone in the beam is held, pushed along it at 1.6 px per frame and hit for 4 every 10 frames, quietly: small sparks, not full ink hit-sparks, because the repeated sparks turned the victims into a black scribble ball.
+- **End:** the beam collapses over 12 frames and everyone caught is launched.
+- **Damage:** comparable to the old sweep.
+
+**Rendering (`drawBlast` in `cineFx.ts`).**
+- **Glow:** a 22% tinted glow lets the white core read on white or cream pages.
+- **Flame edge:** a jittered polygon with random flame tongues and a ragged, streaky end, re-seeded every drawing step so it flickers.
+- **Core:** the white core is inset to 70%, with an elliptical cap at the fist.
+- **Victims:** 5 black ink streaks each, dragged along the beam.
+- **Edge color per weapon:** laser red, ice cyan, ray gun green, brush ink black, thunder gold.
+
+**Sound (`audio.laser`).**
+- **Charge:** "Anime Charge Sound" (its rising last 1.25 s).
+- **Fire:** the first 1.8 s of "heavy beam weapon", plus the impact and an 808.
+- **Hold:** two seamless loops: "Laser/Machine humming" played 22% slower for the deep hum, and "laser beam loop" at low level so the beam is audible on phone speakers. A 7 Hz gain wobble adds the "wub", and the music is ducked.
+- **Seamless loops:** they are padded circularly, so any loop window of exactly the body length is a seamless rotation, even if the MP3 decoder shifts the audio by up to 100 ms.
+- **Stopping:** `laser('end')` fades both loops out, with a timed fade-out as a safety stop.
+- **Measured:** the hum's energy peaks at 32-75 Hz and drops to silence after the end cue.

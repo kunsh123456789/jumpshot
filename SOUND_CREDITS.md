@@ -1,6 +1,6 @@
 # Sound credits
 
-Every sound in the game comes from [Freesound](https://freesound.org) under **Creative Commons 0** (public domain; no attribution required, credited anyway). That covers every hit, effect, UI sound and voice, and every drum and instrument in the built-in music. The clips were trimmed to their onset, made mono, peak-normalized to -1 dBFS and encoded at 48-56 kbps (80 files).
+Every sound in the game comes from [Freesound](https://freesound.org) under **Creative Commons 0** (public domain; no attribution required, credited anyway). That covers every hit, effect, UI sound and voice, and every drum and instrument in the built-in music. The clips were trimmed to their onset, made mono, peak-normalized to -1 dBFS and encoded at 48-56 kbps (84 files).
 
 Settings -> Sounds & music -> Synthesized switches back to the original synthesized set. That set also plays for the first moment after launch, until the clips have decoded.
 
@@ -37,23 +37,27 @@ Settings -> Sounds & music -> Synthesized switches back to the original synthesi
 
 ## Punch hits
 
-Every hit plays one of eleven pre-mixed punches (`hit_l1`-`hit_l4` light, `hit_m1`-`hit_m4` medium, `hit_h1`-`hit_h3` heavy). Each was built offline from these CC0 Freesound sounds:
-1. A core punch, cut at its main impact (any whoosh before it is skipped).
-2. A low thud layer.
-3. EQ: low shelf +5 dB, mud cut at 420 Hz, bite at 2.5 kHz.
-4. Tanh saturation, then a fast decay envelope.
-5. An unsaturated snap or crack layered on top so the impact spikes out.
-6. A limiter.
+Every hit plays one of eleven pre-mixed punches (`hit_l1`-`l4`, `hit_m1`-`m4`, `hit_h1`-`h3`; "light" only means shorter, every punch has a boom and a clack). Each is built offline from three separately shaped parts:
+- **Boom:** a deep impact, low-passed at 260 Hz with a 190 Hz bump, lightly saturated. It swells in 8 ms after the contact and decays over 120-260 ms.
+- **Punch body:** a Freesound punch cut at its impact. EQ: +7 dB at 210 Hz so the thump carries on phone speakers, −5 dB at 480 Hz, +2 dB at 1.2 kHz. Then saturated and given a short envelope.
+- **Clack:** the crack of a movie-style kung-fu punch, high-passed at 1.3 kHz with a +4 dB bump at 3.2 kHz. It's energy-normalized, so every variant gets the same snap, and decays in 14-22 ms.
 
-Heavies are pitched down about 15% and add a short tail of the `m_808` sub and the `heavy.mp3` bat crack (both credited elsewhere on this page).
+The three are summed, limited (with padding so the clack's first millisecond isn't crushed) and normalized.
 
-| Used in | Freesound sources (all CC0) |
+| Part | Freesound sources (all CC0) |
 |---|---|
-| hit_l1-l4 (light) | [Punch 1](https://freesound.org/s/773737/) by qubodup; [Punch 2](https://freesound.org/s/773738/) by qubodup; [Punch 3](https://freesound.org/s/773739/) by qubodup; [Punch 2.wav](https://freesound.org/s/560325/) by JakeEaton |
-| hit_m1-m4 (medium) | [punch.wav](https://freesound.org/s/104183/) by Ekokubza123; [Punch2.wav](https://freesound.org/s/566435/) by Merrick079; [Punch](https://freesound.org/s/517744/) by danlucaz; [Major punch](https://freesound.org/s/399183/) by janbezouska |
-| hit_h1-h3 (heavy) | [Major punch](https://freesound.org/s/399183/) by janbezouska; [punch.wav](https://freesound.org/s/104183/) by Ekokubza123; [Punch2.wav](https://freesound.org/s/566435/) by Merrick079 |
-| low thud layer (all tiers) | [Hit 3](https://freesound.org/s/676463/) by NearTheAtmoshphere; [Hit 4](https://freesound.org/s/676464/) by NearTheAtmoshphere |
-| transient snap layer | ["Kamen Rider" style smack punch impact](https://freesound.org/s/770176/) by G40X |
+| Punch body | [punch.wav](https://freesound.org/s/104183/) by Ekokubza123; [Major punch](https://freesound.org/s/399183/) by janbezouska; [Punch](https://freesound.org/s/517744/) by danlucaz; [Punch 2.wav](https://freesound.org/s/560325/) by JakeEaton; [Punch2.wav](https://freesound.org/s/566435/) by Merrick079; [Punch 1](https://freesound.org/s/773737/) by qubodup; [Punch 2](https://freesound.org/s/773738/) by qubodup; [Punch 3](https://freesound.org/s/773739/) by qubodup |
+| Boom | [boom.wav](https://freesound.org/s/135357/) by Blackie666; [JH 808 1 C (0.5 sec).wav](https://freesound.org/s/679779/) by Johnnie_Holiday |
+| Clack | [Kung Fu punch 1](https://freesound.org/s/209392/) by peridactyloptrix; [Kung Fu punch 3](https://freesound.org/s/209490/) by peridactyloptrix; [Kung Fu punch 4](https://freesound.org/s/209627/) by peridactyloptrix; [Punch 1](https://freesound.org/s/209765/) by peridactyloptrix; [Kung Fu punch 5](https://freesound.org/s/210897/) by peridactyloptrix |
+
+## Laser Special
+
+| File | Freesound source (CC0) | Notes |
+|---|---|---|
+| `laser_charge.mp3` | [Anime Charge Sound.wav](https://freesound.org/s/676451/) by TheLittleCrow | the rising last 1.25 s |
+| `laser_blast.mp3` | [heavy beam weapon](https://freesound.org/s/152322/) by deleted_user_1941307 | the first 1.8 s, faded |
+| `laser_hum.mp3` | [Laser/Machine humming](https://freesound.org/s/166098/) by Shredster7 | seamless 0.85 s loop, played 22% slower for a deeper hum, 7 Hz wobble |
+| `laser_beam.mp3` | [laser](https://freesound.org/s/768431/) by bullsquid_ | seamless 0.85 s loop under the hum, for presence on small speakers |
 
 ## Effects, voice and UI
 

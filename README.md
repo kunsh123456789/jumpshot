@@ -159,8 +159,9 @@ You carry **one weapon** at a time. All 17 are unlocked from the start. Pick one
 
 Every sound in the game is a CC0 recording from Freesound (credits in `SOUND_CREDITS.md`, 83 clips, about 345 KB, bundled with the build). That covers hits, effects, UI, voice, and every drum and instrument in the built-in music.
 
-- **Hits:** every hit plays one finished punch from three tiers: four light jabs, four medium punches and three heavy blows. Each was pre-mixed offline from Freesound punches: the core punch cut at its impact, a low thud for weight, low-end boost and mud cut, saturation, and a crisp snap on top. Heavy hits are pitched down with a short sub tail and briefly duck the music. Variants never repeat back-to-back, and the combo nudges the pitch up. The mix uses a slow-attack compressor that lets the punch transient through, plus a limiter so nothing clips.
+- **Hits:** every punch has a deep boom and a sharp clack. Eleven pre-mixed punches (short, full and heavy) each combine three parts: a boom that swells in right after contact, a Freesound punch body boosted at 210 Hz so it thumps on phone speakers too, and the crack of a movie-style kung-fu punch on top. Heavy hits briefly duck the music. Variants never repeat back-to-back, and the combo nudges the pitch up. The mix lets each punch's first milliseconds through, with a limiter so nothing clips.
 - **Big moments:**
+  - The laser Special: an anime charge-up, a heavy beam blast, then a deep, wobbling laser hum for as long as the beam fires.
   - KO finishers: a cinematic impact.
   - Spikes and slams: a sub boom.
   - The Special Bar filling: a charge-up sting.

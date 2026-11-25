@@ -85,7 +85,7 @@ Status: all Done · Reviewed (Lab sheets 04, 05, 06, 08; in-game screenshots dur
 |---|---|---|---|
 | Fists (Fists, Rocket Gloves, Giant Hammer) | MEGA JUMPSHOT / ROCKET BARRAGE / EARTHSPLITTER | `cine_erupt`, `jumpFlip`, `akick1-3` (one per QTE hit), `cine_axeWind`, `cine_axeHit` | Done · Reviewed |
 | Staff (Staff, Twin Daggers, Bubble Gun) | CYCLONE / BLADE STORM / BUBBLE STORM | `st_heliH` loop + tornado FX, `cine_plant` | Done · Reviewed |
-| Laser (Laser, Ice Spear, Ink Brush, Lightning Fist, Ray Gun) | ORBITAL OVERLOAD / GLACIER BEAM / INK TSUNAMI / THUNDER GOD / DEATH RAY | `cine_charge`, sky beam FX | Done · Reviewed |
+| Laser (Laser, Ice Spear, Ink Brush, Lightning Fist, Ray Gun) | OVERLOAD BEAM / GLACIER BEAM / INK TSUNAMI / THUNDER GOD / DEATH RAY | `cine_charge` (orb), `cine_beam` (fire), horizontal blast FX | Done · Reviewed |
 | Hook (Hook, Chain Whip, Yo-Yo, Paper Planes, Scythe) | WEB TAKEDOWN / WHIP WEB / STRING STORM / PAPER WEB / REAPER WEB | `hk_air`, `hk_pull`, `hk_slamH` + ropes FX | Done · Reviewed |
 | Throw (Throw, Boomerang Shield) | HAMMER SWING / SHIELD BOWL | `th_longArm`, `cine_spin`, `cine_hurl` | Done · Reviewed |
 | Activation pose (ground / air) | all | `cine_activate`, `cine_activateAir` | Done · Reviewed |

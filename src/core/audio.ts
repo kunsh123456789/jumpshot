@@ -499,6 +499,45 @@ class Audio {
     }
   }
 
+  private laserLoops: { src: AudioScheduledSourceNode; g: GainNode }[] = [];
+  /**
+   * Laser Special: an anime charge-up, then the fire blast and a deep humming beam (two seamless
+   * loops: a pitched-down machine hum and a laser-beam loop, with a slow wobble) that runs for
+   * `sec` or until laser('end').
+   */
+  laser(kind: 'charge' | 'fire' | 'end', sec = 2): void {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    if (kind === 'charge') { if (!this.rec('laser_charge', 0.6, 1.0)) this.riser(0.7); return; }
+    if (kind === 'end') { this.stopLaser(0.3); this.rec('m_808', 0.45, 0.6, 0, 0.5); return; }
+    this.stopLaser(0.03);
+    if (!this.rec('laser_blast', 0.7, 0.9)) { this.tone(t, 'sawtooth', 55, 50, sec, 0.25); return; }
+    this.rec('impact', 0.45, 1.1); this.rec('m_808', 0.6, 0.6, 0, 0.7);
+    for (const [name, gain, rate] of [['laser_hum', 0.62, 0.78], ['laser_beam', 0.26, 0.85]] as [string, number, number][]) {
+      if (!this.has(name)) continue;
+      const src = ctx.createBufferSource();
+      src.buffer = this.bufs[name]; src.loop = true; src.loopStart = 0.1; src.loopEnd = 0.95; src.playbackRate.value = rate;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.08);
+      g.gain.setValueAtTime(gain, t + sec); g.gain.exponentialRampToValueAtTime(0.0001, t + sec + 0.35);   // safety stop
+      // slow 7 Hz wobble on the hum: the 'wub' of a big beam
+      const lfo = ctx.createOscillator(), depth = ctx.createGain();
+      lfo.frequency.value = 7; depth.gain.value = gain * 0.18; lfo.connect(depth); depth.connect(g.gain);
+      src.connect(g); g.connect(this.sfx);
+      src.start(t, 0.1); src.stop(t + sec + 0.4); lfo.start(t); lfo.stop(t + sec + 0.4);
+      this.laserLoops.push({ src, g });
+    }
+    this.duck(0.35, sec);
+  }
+  private stopLaser(fade: number): void {
+    const t = this.ctx!.currentTime;
+    for (const { src, g } of this.laserLoops) {
+      g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), t); g.gain.exponentialRampToValueAtTime(0.0001, t + fade);
+      try { src.stop(t + fade + 0.02); } catch { /* already stopped */ }
+    }
+    this.laserLoops.length = 0;
+  }
+
   /** The Special Bar just filled: a charge-up sting. */
   ready(): void {
     if (!this.ok('ready', 0.3)) return;

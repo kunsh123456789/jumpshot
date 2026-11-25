@@ -210,7 +210,10 @@ export class FxDirector {
         case 'shake': this.cam.shake(10 * e.a * settings.shake, 0, 1, 0.4 * e.a); this.cam.punchZoom(0.05 * e.a); break;
         case 'whoosh': audio.launch(); break;
         case 'bigCrack': this.cam.shake(16 * e.a * settings.shake, 0, 1, 0.5); audio.spike(Math.min(1, e.a / 2)); effects.dust(e.x, e.y, 0.8); break;
-        case 'stars': audio.ui('select'); break;
+        case 'stars': if (e.a >= 0.5) audio.ui('select'); break;
+        case 'laserCharge': audio.laser('charge'); break;
+        case 'laserFire': audio.laser('fire', e.a); break;
+        case 'laserEnd': audio.laser('end'); break;
       }
     });
     ev.on('rankUp', (e) => {

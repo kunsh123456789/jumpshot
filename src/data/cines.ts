@@ -25,7 +25,7 @@ export const WEAPON_FAMILY: Record<string, Family> = {
 export const SPECIAL_NAME: Record<string, string> = {
   fists: 'MEGA JUMPSHOT', rocket: 'ROCKET BARRAGE', hammer: 'EARTHSPLITTER', thunder: 'THUNDER GOD',
   staff: 'CYCLONE', daggers: 'BLADE STORM', bubble: 'BUBBLE STORM', scythe: 'REAPER WEB',
-  laser: 'ORBITAL OVERLOAD', ice: 'GLACIER BEAM', brush: 'INK TSUNAMI', raygun: 'DEATH RAY',
+  laser: 'OVERLOAD BEAM', ice: 'GLACIER BEAM', brush: 'INK TSUNAMI', raygun: 'DEATH RAY',
   hook: 'WEB TAKEDOWN', whip: 'WHIP WEB', yoyo: 'STRING STORM', planes: 'PAPER WEB',
   throw: 'HAMMER SWING', shield: 'SHIELD BOWL',
 };
@@ -360,47 +360,55 @@ const spStaff: CineScript = {
 function spinT(c: CineCtx): number { return 50 + c.qte * 12 + (c.tier === 2 ? 20 : 0); }
 
 /**
- * Orbital Overload: charge-up with stars and lightning, then a beam from the sky that sweeps the
- * whole visible arena in the traced direction (and back again on PERFECT), hitting everyone it crosses.
+ * Overload Beam: charge an orb at the fist, then fire a horizontal blast (white core, ragged flame
+ * edge) across the whole screen in the traced direction. Everyone in its path is held, pushed along
+ * it and hit repeatedly, then launched when it collapses. PERFECT fires it longer and wider.
  */
+const CHARGE = 40;
+const BEAM_TONE: Record<string, string> = { ice: '#3fd8ff', raygun: '#3dff7a', brush: '#1b1a17', thunder: '#ffd23f' };
 const spLaser: CineScript = {
-  id: 'sp.laser', name: 'ORBITAL OVERLOAD',
-  len: (c) => 40 + sweepT(c) + 26,
+  id: 'sp.laser', name: 'OVERLOAD BEAM',
+  len: (c) => CHARGE + 8 + sweepT(c) + 26,
   start: (c) => {
     place(c.p, c.p.x, Math.min(c.p.y, G));
-    const dir = Math.cos(c.aim) >= 0 ? 1 : -1;
-    const L = c.w.camLeft + 30, R = c.w.camRight - 30;
-    c.v.xa = dir > 0 ? L : R; c.v.xb = dir > 0 ? R : L;
+    c.v.dir = Math.cos(c.aim) >= 0 ? 1 : -1;
   },
   frame: (c) => {
-    const p = c.p, f = c.f, S = sweepT(c);
-    if (f < 40) {
+    const p = c.p, f = c.f, S = sweepT(c), dir = c.v.dir;
+    p.facing = dir;
+    const hx = p.x + dir * 34 * p.scale, hy = p.cy - 14 * p.scale;   // the fist
+    const far = dir > 0 ? c.w.camRight + 260 : c.w.camLeft - 260;
+    const tone = BEAM_TONE[c.w.weapon.id] ?? '#ff2a1f';
+    if (f < CHARGE) {
       hero(c, 'cine_charge', f % 6);
-      if (f % 8 === 0) { fx(c, 'lightning', p.x + facing(c) * 40, p.cy - 20, 0.7); fx(c, 'stars', p.x, p.cy - 40, 0.6); }
-      if (f === 24) { c.vis.beam = { x1: p.x, y1: G - 900, x2: p.x, y2: p.cy - 30, w: 10 }; }
-      if (f === 38) { fx(c, 'invert', p.x, p.cy); c.vis.beam = null; }
-    } else if (f < 40 + S) {
-      heroLoop(c, 'cine_charge', 40);
-      const u = (f - 40) / S;
-      const k = c.tier === 2 ? (u < 0.5 ? u * 2 : 2 - u * 2) : u;
-      const x = c.v.xa + (c.v.xb - c.v.xa) * (k * k * (3 - 2 * k));
-      const wB = 46 + c.tier * 10;
-      c.vis.beam = { x1: x, y1: G - 900, x2: x, y2: G + 6, w: wB };
-      if (f % 4 === 0) { fx(c, 'shake', x, G, 0.7); fx(c, 'crack', x, G, 0.6); }
-      if (f % 10 === 0) fx(c, 'lightning', x, G - 20, 1);
+      if (f === 0) fx(c, 'laserCharge', hx, hy);
+      if (f % 8 === 0) { fx(c, 'lightning', hx, hy, 0.6); fx(c, 'stars', hx, hy - 30, 0.4); }
+      c.vis.beam = { x1: hx, y1: hy, x2: hx, y2: hy, w: 6 + (f / CHARGE) * 24, style: 'blast', tone, t: f - CHARGE };
+      return;
+    }
+    const g = f - CHARGE, W0 = 58 + c.tier * 12;
+    if (g === 0) { fx(c, 'laserFire', hx, hy, (8 + S + 12) / 60); fx(c, 'invert', hx, hy); fx(c, 'shake', hx, hy, 1.4); }
+    hero(c, g < 8 + S + 12 ? 'cine_beam' : 'cine_charge', g % 6);
+    let w = W0 * (1 + 0.06 * Math.sin(g * 0.9)), x2 = far;
+    if (g < 8) { const k = (g + 1) / 8; x2 = hx + (far - hx) * (k * k * (3 - 2 * k)); w *= 0.6 + 0.4 * k; }
+    else if (g < 8 + S) { if (g % 6 === 0) fx(c, 'shake', hx + dir * 200, hy, 0.45); }
+    else { if (g === 8 + S) fx(c, 'laserEnd', hx, hy); w *= Math.max(0, 1 - (g - 8 - S) / 12); }
+    c.vis.beam = w > 0.5 ? { x1: hx, y1: hy, x2, y2: hy, w, style: 'blast', tone, t: g } : null;
+    if (g < 8 + S) {
       for (const e of c.w.enemies) {
         if (!e.alive || e.state === 'ko') continue;
-        if (Math.abs(e.x - x) < wB + 20 * e.scale && (c.v['h' + e.id] ?? -99) < f - 14) {
-          c.v['h' + e.id] = f;
-          if (!c.w.cine.held.includes(e)) c.w.cine.grab(e);
-          if (!c.group.includes(e)) c.group.push(e);
-          strike(c, e, 11, { weight: 0.6 }); pose(e, 'hurtHeavy', 2);
-        }
+        const along = (e.x - hx) * dir;
+        if (along < -20 || along > (x2 - hx) * dir || Math.abs(e.cy - hy) > w + 46 * e.scale) continue;
+        if (!c.w.cine.held.includes(e)) c.w.cine.grab(e);
+        if (!c.group.includes(e)) c.group.push(e);
+        pose(e, 'hurtHeavy', 2);
+        place(e, Math.max(WORLD.wallMargin, Math.min(WORLD.arenaW - WORLD.wallMargin, e.x + dir * 1.6)), Math.min(e.y, G));
+        if ((c.v['h' + e.id] ?? -99) < f - 10) { c.v['h' + e.id] = f; strike(c, e, 4, { weight: 0.55, quiet: true }); }
       }
-    } else {
-      c.vis.beam = null;
-      if (f === 40 + S) { for (const e of c.group) strike(c, e, 10, { vx: (Math.sign(e.x - p.x) || 1) * 700, vy: -650, release: true, kind: 'launch', weight: 1.1 }); fx(c, 'invert', p.x, p.cy); fx(c, 'shake', p.x, p.cy, 1.8); }
-      hero(c, 'cine_charge', 0);
+    }
+    if (g === 8 + S + 12) {
+      for (const e of c.group) strike(c, e, 12, { vx: dir * 900, vy: -520, release: true, kind: 'launch', weight: 1.1 });
+      fx(c, 'shake', hx, hy, 1.6);
     }
   },
   end: (c) => { c.vis.beam = null; for (const e of c.group) if (e.state === 'cine') strike(c, e, 0, { vy: -600, release: true }); },

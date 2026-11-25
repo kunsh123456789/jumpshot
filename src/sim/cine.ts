@@ -47,7 +47,8 @@ export interface CineCtx {
 }
 
 export interface CineVisual {
-  beam: { x1: number; y1: number; x2: number; y2: number; w: number } | null;
+  /** style 'blast': the laser Special's horizontal beam (white core, ragged flame edge in `tone`); t = frames since firing (< 0 while charging). */
+  beam: { x1: number; y1: number; x2: number; y2: number; w: number; style?: 'blast'; tone?: string; t?: number } | null;
   ropes: number[];          // flat list x1,y1,x2,y2,...
   tornado: { x: number; y: number; r: number; h: number } | null;
   slash: { x1: number; y1: number; x2: number; y2: number; t: number }[];
@@ -229,4 +230,4 @@ export function strike(c: CineCtx, e: Fighter, dmg: number, opt: { dirX?: number
 export function fx(c: CineCtx, kind: CineFxKind, x: number, y: number, a = 1): void {
   c.w.events.emit('cineFx', { kind, x, y, a });
 }
-export type CineFxKind = 'slowmo' | 'focus' | 'invert' | 'shake' | 'crack' | 'bigCrack' | 'scribble' | 'lightning' | 'whirl' | 'stars' | 'boom' | 'whoosh' | 'dust' | 'sparks' | 'tier';
+export type CineFxKind = 'slowmo' | 'focus' | 'invert' | 'shake' | 'crack' | 'bigCrack' | 'scribble' | 'lightning' | 'whirl' | 'stars' | 'boom' | 'whoosh' | 'dust' | 'sparks' | 'tier' | 'laserCharge' | 'laserFire' | 'laserEnd';
