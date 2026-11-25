@@ -93,7 +93,7 @@ export class Game {
     this.pad.attach(canvas);
     this.keyboard = new Keyboard(this.pad);
     this.specialInput = new SpecialInput(this.pad, this.keyboard, this.cam, this.rhythm);
-    this.nav = new UiNav(this.pad, () => !this.paused && (this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'breather'));
+    this.nav = new UiNav(this.pad, () => !this.paused && !this.specialInput?.active && (this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'breather'));
     this.nav.onPause = () => { if (this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'breather') this.togglePause(); };
     this.keyboard.onToggleDebug = () => { this.debug.visible = !this.debug.visible; settings.debug = this.debug.visible; };
     this.keyboard.onPause = () => this.togglePause();
@@ -596,7 +596,8 @@ export class Game {
     }
     if (this.state !== 'gameover' && !this.specialInput.active) this.pad.draw(ctx, performance.now(), realDt);
     this.specialInput.update(realDt, this.paused);
-    this.specialInput.draw(ctx, performance.now());
+    // While paused the pause menu owns the screen: the Special picker / trace overlay isn't drawn over it.
+    if (!this.paused) this.specialInput.draw(ctx, performance.now());
     if (this.debug.visible) {
       const p = this.world.player;
       const c = this.world.ctrl;

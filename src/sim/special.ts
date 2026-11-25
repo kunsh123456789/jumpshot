@@ -9,7 +9,7 @@ import { familyOf, specialScript } from '../data/cines';
 export interface SpecialResult {
   /** Trace score 0..1 (coverage, accuracy, speed) and its parts (debug). */
   trace: number; coverage: number; accuracy: number; speed: number;
-  /** QTE prompts hit / total, and how many were Perfect. */
+  /** Legacy QTE fields: qteCount is 0 now (trace-only grading); qteHits (0-3, from the trace score) scales the cinematic's length. */
   qteHits: number; qteCount: number; perfects: number;
   /** Aim angle (laser sweep / throw hurl), radians in world space. */
   aim: number;

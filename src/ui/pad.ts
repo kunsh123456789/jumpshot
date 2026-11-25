@@ -105,7 +105,7 @@ export class DrawPad {
   private jumpFiredY = 0;
   private holdFired = false;
   /**
-   * Special-input mode: when set, every pointer goes straight here (trace / QTE) and the normal
+   * Special-input mode: when set, every pointer goes straight here (Special picker / trace) and the normal
    * gesture recognizer is bypassed. The whole screen accepts input while it is set.
    */
   rawSink: ((phase: 'down' | 'move' | 'up', x: number, y: number, t: number) => void) | null = null;

@@ -22,7 +22,7 @@ export function drawCineFx(ctx: CanvasRenderingContext2D, w: World, _alpha: numb
   const step = DRAW.stepped ? Math.floor((time * 60) / DRAW.stepTicks) : Math.floor(time * 30);
   ctx.save();
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  // ---- freeze bubble (Special activation / trace / QTE) ----
+  // ---- freeze bubble (Special activation / picker / trace) ----
   const bub = sp.bubble ?? c?.vis.bubble ?? null;
   if (bub) {
     sd = 991 + step * 7;

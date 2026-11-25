@@ -7,7 +7,7 @@ import { classifyDir, type DrawPad } from '../ui/pad';
  *  - Attack: I / J / K / L = up / left / down / right; press two together for diagonals
  *  - Shift = heavy, Space = tap (jump; Shift+Space or F = dodge/parry)
  *  - W / ↑ = jump (hold for a higher jump), S / ↓ = low stance, X or Enter = Special
- *  - While a Special is being traced: arrows / WASD = the shown directions, Space = tap prompts
+ *  - While a Special is open: arrows / WASD move the picker or follow the shown trace directions; Space / Enter / X pick
  *  - 1-5 = pick a weapon (loadout screen, or swap during the between-wave breather)
  *  - ` = debug overlay, Esc/P = pause, [ = 0.1x slow-mo, ] = freeze + step one frame, \ = resume
  * Diagonal chords are resolved by polling (no timers): poll() runs every sim tick.

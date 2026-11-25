@@ -258,10 +258,13 @@ select:focus-visible { outline: none; border-color: var(--cyan); box-shadow: var
 .sp { position: absolute; left: 50%; top: max(calc(var(--u) * 12px), env(safe-area-inset-top)); transform: translateX(-50%); width: calc(var(--u) * 270px); text-align: center; }
 .sp .bar { position: relative; height: calc(var(--u) * 24px); transform: skewX(var(--skew)); background: #1a0b22; border: var(--line) solid var(--steel1); display: flex; gap: calc(var(--u) * 3px); padding: calc(var(--u) * 3px); }
 .sp .seg { flex: 1; background: #2c1235; position: relative; overflow: hidden; }
-.sp .seg i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #ff7a00, var(--gold), #fff3a0); transition: width .12s ease-out; }
+.sp .seg i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #ff7a00, var(--gold), #fff3a0); transition: transform .12s ease-out; }
 .sp .t { display: inline-block; margin-top: calc(var(--u) * 5px); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; background: var(--scrim); padding: calc(var(--u) * 2px) calc(var(--u) * 12px); transform: skewX(var(--skew)); color: var(--steel1); }
 .sp .flame { position: absolute; left: 0; right: 0; top: calc(var(--u) * -22px); height: calc(var(--u) * 28px); background: radial-gradient(ellipse at 50% 100%, rgba(255, 180, 40, .85), rgba(255, 46, 136, 0) 70%); filter: blur(calc(var(--u) * 2px)); opacity: 0; transition: opacity .2s; }
-.sp.ready .bar { box-shadow: var(--glow-g), 0 0 calc(var(--u) * 36px) rgba(255, 46, 136, .7); border-color: #fff; animation: readyPulse .8s ease-in-out infinite; }
+.sp.ready .bar { border-color: #fff; }
+/* READY glow: a separate layer whose opacity pulses (compositor-only; no per-frame repaint) */
+.sp .bar::after { content: ''; position: absolute; inset: calc(var(--u) * -3px); box-shadow: var(--glow-g), 0 0 calc(var(--u) * 36px) rgba(255, 46, 136, .7); opacity: 0; pointer-events: none; will-change: opacity; }
+.sp.ready .bar::after { animation: glowPulse .8s ease-in-out infinite; }
 .sp.ready .flame { opacity: 1; animation: flame .35s steps(3, end) infinite; }
 .sp.ready .t { color: var(--gold); text-shadow: 0 0 calc(var(--u) * 8px) #ff7a00; }
 .sp.active .seg i { background: repeating-linear-gradient(90deg, #fff 0 calc(var(--u) * 8px), var(--cyan) calc(var(--u) * 8px) calc(var(--u) * 16px)); animation: march .4s linear infinite; }
@@ -326,11 +329,11 @@ select:focus-visible { outline: none; border-color: var(--cyan); box-shadow: var
 @keyframes comboPop { 0% { transform: skewX(var(--skew)) scale(1.28, .82); } 100% { transform: skewX(var(--skew)) scale(1); } }
 @keyframes comboDrop { to { opacity: 0; transform: translateY(calc(var(--u) * 20px)); } }
 @keyframes rankSlam { 0% { transform: scale(2.1) rotate(-12deg); } 100% { transform: scale(1) rotate(0); } }
-@keyframes readyPulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
+@keyframes glowPulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
 @keyframes readyFlash { 0% { box-shadow: 0 0 0 calc(var(--u) * 40px) rgba(255, 210, 63, .0), var(--glow-g); transform: skewX(var(--skew)) scale(1.25); } 100% { transform: skewX(var(--skew)) scale(1); } }
 @keyframes flame { 0% { transform: scaleY(1); } 50% { transform: scaleY(1.25) translateY(calc(var(--u) * -2px)); } 100% { transform: scaleY(.9); } }
 @keyframes march { from { background-position: 0 0; } to { background-position: calc(var(--u) * 16px) 0; } }
-@keyframes lowHp { 0% { filter: brightness(1); } 100% { filter: brightness(1.5); } }
+@keyframes lowHp { 0% { opacity: 1; } 100% { opacity: .6; } }
 @keyframes blink { 0% { opacity: 1; } 100% { opacity: .45; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; } }
 /* Reduce flashes: looping pulses (READY glow, flames, marching segments) play once and hold. */
@@ -362,3 +365,16 @@ body.calm *, body.calm *::before, body.calm *::after { animation-iteration-count
 body.perf .btn, body.perf .tile, body.perf .mtile, body.perf .sp .bar, body.perf .portrait { box-shadow: none !important; }
 body.perf .sp .flame, body.perf .ttl-logo { filter: none; }
 body.perf .ttl-prompt, body.perf .sp.ready .bar, body.perf .hud .hint2 { animation: none; }
+
+/* ---- HUD performance (refinement pass) ----
+   Bar fills scale on the compositor instead of changing width (no layout per frame), HUD blocks
+   are contained so a change in one never invalidates the others, and Mobile performance mode
+   stops the purely decorative loops. */
+.hud .hpbar .lag, .hud .hpbar .fill, .hud .heat .bar i, .sp .seg i, .hud .boss .bar i, .hud .rankbar i { right: 0; width: auto; transform-origin: 0 50%; will-change: transform; }
+.hud .tl, .sp, .hud .plate.tr, .hud .combo, .hud .boss, .hud .card { contain: layout style; }
+.sp .flame { will-change: transform; }
+body.perf .sp.ready .flame, body.perf .sp.active .seg i, body.perf .sp.ready .bar::after { animation: none; }
+body.perf .sp.ready .bar::after { opacity: .8; }
+/* A full-screen panel opened from the title (song picker) hides the title underneath, so the logo
+   doesn't peek out above it. */
+#ui:has(> .music-panel, .layer.dim .music-panel) .ttl { visibility: hidden; }

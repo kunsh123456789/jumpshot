@@ -31,7 +31,7 @@ export interface CineCtx {
   weaponId: string;
   /** Frame since start. */
   f: number;
-  /** Special result tier 0 SLOPPY / 1 CLEAN / 2 PERFECT, and successful QTE prompts. */
+  /** Special result tier 0 SLOPPY / 1 CLEAN / 2 PERFECT, and qte (0-3, from the trace score: scales the cinematic's length). */
   tier: number;
   qte: number;
   /** Damage multiplier for this run (tier). */

@@ -281,7 +281,7 @@ function bossKO(base: CineScript): CineScript {
 }
 
 // ======================================================================= SPECIAL MOVES (B4)
-/** Mega Jumpshot: ground eruption launches everyone, leap to the apex, a kick per QTE success, meteor axe-kick. */
+/** Mega Jumpshot: ground eruption launches everyone, leap to the apex, more kicks for a better trace, meteor axe-kick. */
 const spFists: CineScript = {
   id: 'sp.fists', name: 'MEGA JUMPSHOT',
   len: (c) => 40 + kicks(c) * 8 + 40,

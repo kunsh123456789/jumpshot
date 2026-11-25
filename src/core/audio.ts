@@ -266,7 +266,7 @@ class Audio {
     this.noiseBurst(t, 0.06, 0.6, 'bandpass', 2200, 1);
   }
 
-  /** Special (pass 8): a rising sweep under the trace phase, and a high ping for each QTE prompt. */
+  /** Special: a rising sweep under the trace phase, and the grade sting when the trace ends (good = CLEAN / PERFECT). */
   riser(sec: number): void {
     if (!this.ok('riser', 0.3)) return;
     const t = this.ctx!.currentTime;

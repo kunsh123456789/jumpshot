@@ -48,7 +48,7 @@ export interface Settings {
    * snap (a GPU read-back), floor reflections and the menu blur. On by default on touch devices.
    */
   mobilePerf: boolean;
-  /** Special (pass 8): Assist = wider trace band + longer timers; Skip QTE = the prompts count as a Clean result. */
+  /** Special: Assist = wider trace band + a longer fuse. */
   specialAssist: boolean;
 }
 

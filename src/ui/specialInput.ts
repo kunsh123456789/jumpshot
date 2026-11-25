@@ -350,6 +350,7 @@ export class SpecialInput {
     w.special.submit(res);
     const tier = res.trace >= SPECIAL.tierPerfect ? 2 : res.trace >= SPECIAL.tierClean ? 1 : 0;
     this.resultTier = SPECIAL.tierNames[tier];
+    audio.prompt(tier > 0);
     this.debug.push(`${this.weaponId} -> ${this.resultTier}`);
     this.phase = 'result';
     this.resultT = 0.9;

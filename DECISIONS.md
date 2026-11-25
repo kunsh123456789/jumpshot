@@ -530,3 +530,22 @@ Variants never repeat twice in a row; repeated identical samples are what make h
 - The result carries `weapon`. `SpecialSystem.begin` uses it for the family (who gets caught), the script and `specialStart`.
 - `CineCtx.weaponId` carries it into the cinematic, for example the laser beam's edge color.
 - The equipped weapon doesn't change. The hero keeps holding it through another weapon's cinematic, which reads fine because the Special cinematics are mostly poses and effects.
+
+## Refinement pass
+
+**Audit.** Every screen at desktop, phone landscape and phone portrait, a CPU profile and a stress test (emulated iPhone, 4× CPU throttle, wave 25 with 10 enemies, bot attacking), a `drawImage` call-site timer, and an input-conflict review.
+
+**Fixed.**
+- **HUD cost:** about 4-5 ms per frame on a throttled phone, now about 1.
+  - Every bar fill (HP, lag, heat, Special segments, boss, rank) scales with `transform: scaleX` instead of changing `width`, so there's no layout per frame.
+  - The READY glow pulses opacity on its own layer instead of animating `filter` on an element with a large box-shadow, so there's no repaint per frame. The low-HP blink is an opacity pulse too.
+  - HUD element lookups are cached instead of queried every frame, and HUD blocks are CSS-contained.
+  - Mobile performance mode stops the decorative loops (flame, marching segments, glow pulse).
+  - **Result:** the stress test went from about 35-39 fps to about 43 fps, a measured −8 fps HUD cost down to within noise.
+- **Pausing during the Special picker or trace** no longer draws the overlay through the pause menu.
+- **Song picker:** the title (logo and buttons) is hidden while the song picker is open, so the logo no longer peeks out above the panel.
+- **Gamepad during a Special:** buttons used to also inject attacks or jumps into the frozen game, which could fire after the Special. Gameplay gamepad input is now off while the Special overlay is open.
+- **Grade feedback:** the trace's grade plays the success / fail sting (the old prompt sounds), so you hear SLOPPY vs CLEAN / PERFECT.
+- Stale comments about the removed QTE were corrected.
+
+**Measured but left alone.** The one heavy `drawImage` is the Pixel Look's single upscale of the low-res world layer, about 1 ms per frame at 1× in a GPU-less headless browser. On real phones that canvas copy runs on the GPU. Desktop holds 60 fps (p99 22 ms) and the JS heap stays flat over a 25 s stress run.

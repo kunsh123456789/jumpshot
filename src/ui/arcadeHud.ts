@@ -83,6 +83,7 @@ export class ArcadeHud {
     q(el, '.hint2').style.position = 'static';
   }
 
+  private refs: { combo: El; card: El; pops: El; segs: El[] } | null = null;
   private set(key: string, val: string, apply: (v: string) => void): void {
     if (this.cache.get(key) === val) return;
     this.cache.set(key, val);
@@ -97,14 +98,15 @@ export class ArcadeHud {
     this.set('vis', String(this.visible), (v) => { this.el.hidden = v !== 'true'; });
     if (!this.visible) return;
     const el = this.el, p = w.player, c = w.combo, sp = w.special;
-    // Special input phases: the combo block and pop-ups step aside for the trace / QTE overlay.
+    const R = this.refs ??= { combo: q(el, '.combo'), card: q(el, '.card'), pops: q(el, '.pops'), segs: [] as El[] };
+    // Special input phases: the combo block and pop-ups step aside for the picker / trace overlay.
     this.set('spmode', String(sp.phase === 'intro' || sp.phase === 'input'), (v) => { el.classList.toggle('spmode', v === 'true'); });
 
     // ---- health ----
     const hpF = Math.max(0, p.hp / p.maxHp);
     this.hpLag += (hpF - this.hpLag) * Math.min(1, dt * (hpF < this.hpLag ? 2.5 : 12));
-    this.set('hpw', hpF.toFixed(3), (v) => { q(el, '.hpbar .fill').style.width = (+v * 100) + '%'; });
-    this.set('hpl', this.hpLag.toFixed(3), (v) => { q(el, '.hpbar .lag').style.width = (+v * 100) + '%'; });
+    this.set('hpw', hpF.toFixed(3), (v) => { q(el, '.hpbar .fill').style.transform = `scaleX(${v})`; });
+    this.set('hpl', this.hpLag.toFixed(3), (v) => { q(el, '.hpbar .lag').style.transform = `scaleX(${v})`; });
     this.set('hplow', String(hpF < 0.3), (v) => { q(el, '.hpbar .fill').classList.toggle('low', v === 'true'); });
     this.set('hpt', `${Math.ceil(p.hp)} / ${p.maxHp}`, (v) => { q(el, '[data-k=hp]').textContent = v; });
     // ---- weapon + heat ----
@@ -118,7 +120,7 @@ export class ArcadeHud {
     if (heat) {
       const over = w.wpn.overheat > 0;
       const f = over ? w.wpn.overheat / Math.max(1, heat.overheatSec * 60) : w.wpn.heat;
-      this.set('heatF', f.toFixed(2), (v) => { q(el, '.heat .bar i').style.width = (+v * 100) + '%'; });
+      this.set('heatF', f.toFixed(2), (v) => { q(el, '.heat .bar i').style.transform = `scaleX(${v})`; });
       this.set('heatHot', String(over), (v) => { q(el, '.heat').classList.toggle('hot', v === 'true'); q(el, '[data-k=heatlbl]').textContent = v === 'true' ? 'OVERHEAT!' : 'HEAT'; });
     }
     // ---- score + wave ----
@@ -130,10 +132,11 @@ export class ArcadeHud {
     const segs = SPECIAL.segments;
     this.set('segs', String(segs), (v) => { q(el, '.sp .bar').innerHTML = Array.from({ length: +v }, () => '<div class="seg"><i></i></div>').join(''); });
     const st = sp.busy ? 'active' : sp.ready ? 'ready' : 'charging';
-    const segEls = el.querySelectorAll<El>('.sp .seg i');
+    if (R.segs.length !== segs) R.segs = [...el.querySelectorAll<El>('.sp .seg i')];
+    const segEls = R.segs;
     for (let i = 0; i < segEls.length; i++) {
       const f = sp.busy ? 1 : Math.max(0, Math.min(1, (sp.charge - i * SPECIAL.full) / SPECIAL.full));
-      this.set('seg' + i, f.toFixed(2), (v) => { segEls[i].style.width = (+v * 100) + '%'; });
+      this.set('seg' + i, f.toFixed(2), (v) => { segEls[i].style.transform = `scaleX(${v})`; });
     }
     if (st !== this.specialState) {
       const spEl = q(el, '.sp');
@@ -150,14 +153,14 @@ export class ArcadeHud {
     if (boss) {
       const f = Math.max(0, boss.hp / boss.maxHp);
       this.bossLag += (f - this.bossLag) * Math.min(1, dt * (f < this.bossLag ? 2 : 10));
-      this.set('bossF', f.toFixed(3), (v) => { q(el, '.boss .fill').style.width = (+v * 100) + '%'; });
-      this.set('bossL', this.bossLag.toFixed(3), (v) => { q(el, '.boss .lag').style.width = (+v * 100) + '%'; });
+      this.set('bossF', f.toFixed(3), (v) => { q(el, '.boss .fill').style.transform = `scaleX(${v})`; });
+      this.set('bossL', this.bossLag.toFixed(3), (v) => { q(el, '.boss .lag').style.transform = `scaleX(${v})`; });
       this.set('bossN', boss.def!.name.toUpperCase() + (boss.def?.boss ? ` · PHASE ${boss.ai.phase}` : ''), (v) => { q(el, '[data-k=bossnm]').textContent = v; });
       this.set('bossFl', String(fx.bossBarFlash > 0), (v) => { q(el, '.boss').classList.toggle('flash', v === 'true'); });
     } else this.bossLag = 1;
     // ---- combo + rank ----
     const showCombo = c.hits > 1 || c.style > 0;
-    const combo = q(el, '.combo');
+    const combo = R.combo;
     this.set('comboOn', String(showCombo), (v) => { combo.hidden = v !== 'true'; });
     if (showCombo) {
       const hitsVisible = c.hits > 1;
@@ -169,13 +172,13 @@ export class ArcadeHud {
       this.set('rank', String(c.rank), (v) => { const r = q(el, '[data-k=rank]'); r.textContent = STYLE.ranks[+v]; r.className = `rank r${v}`; });
       if (fx.rankSlam > 0.95 && fx.rankSlam !== this.lastSlam) this.restart(q(el, '[data-k=rank]'), 'slam');
       this.lastSlam = fx.rankSlam;
-      this.set('rankF', c.rankFill().toFixed(2), (v) => { q(el, '.rankbar i').style.width = (+v * 100) + '%'; });
+      this.set('rankF', c.rankFill().toFixed(2), (v) => { q(el, '.rankbar i').style.transform = `scaleX(${v})`; });
       const fin = !p.grounded && c.airJuggle >= CINE.airMinJuggle && !c.airFinisherUsed;
       this.set('fin', String(fin), (v) => { q(el, '.hint2').hidden = v !== 'true'; });
     }
     // ---- combo summary card ----
     const ce = fx.lastComboEnd;
-    const card = q(el, '.card');
+    const card = R.card;
     if (ce && fx.comboEndT > 0) {
       if (!this.cardShown) {
         this.cardShown = true;
@@ -188,7 +191,7 @@ export class ArcadeHud {
     // ---- crit ----
     this.set('crit', String(p.critTimer > 0), (v) => { q(el, '.crit').hidden = v !== 'true'; });
     // ---- popups (PERFECT PARRY, finisher names, boss intros) ----
-    const pops = q(el, '.pops');
+    const pops = R.pops;
     for (const pp of fx.popups) {
       let e = this.popEls.get(pp);
       if (!e) {

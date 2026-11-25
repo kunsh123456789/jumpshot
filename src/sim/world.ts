@@ -60,7 +60,7 @@ export class World {
   readonly cine = new CinePlayer();
   /** The last enemy of the wave just went down: its KO finisher starts at the end of this step. */
   pendingKO: Fighter | null = null;
-  /** The world outside the hero is frozen (Special: trace / QTE phases and its cinematic). */
+  /** The world outside the hero is frozen (Special: picker / trace phases and its cinematic). */
   get frozen(): boolean { return this.cine.freezeOthers || this.special.freeze; }
   /** Set while the nuke cheat KOs everything (no KO finisher). */
   noKOFinisher = false;
