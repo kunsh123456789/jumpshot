@@ -62,7 +62,7 @@ These are the **Fists** moves (the default weapon). Other weapons replace the mo
 - **Finishers** (per weapon, with slow-mo, camera push-ins and inverted impact frames):
   - **Air Finisher**: after 5+ hits in an air juggle, flick ↓ in the air (once per air combo). Fists: the **JUMPSHOT FINISHER** meteor axe kick.
   - **Last-Hit Finisher**: when the last enemy of a wave goes down, a short K.O. cinematic plays (any input skips it). Bosses get a longer multi-stage version.
-- **Special Bar** (under the HP bar): fills from hits (more for long combos, air hits and multi-hits), on-beat Perfects in Rhythm Mode, perfect parries, orbs, KOs, and a little from taking damage. When it reads **READY**, **hold still on the pad** (or press **X**) for your weapon's Special: the world freezes, you **trace** the path shown (the Hook connects dots over the real enemies), then hit 2-4 quick **prompts** (swipe / tap / rapid-tap). The result is SLOPPY, CLEAN or PERFECT; even a bad result still lands a weaker Special. Settings has **Special assist** (wider path, longer timers) and **Skip the QTE prompts** (counts as Clean).
+- **Special Bar** (under the HP bar): fills from hits (more for long combos, air hits and multi-hits), on-beat Perfects in Rhythm Mode, perfect parries, orbs, KOs, and a little from taking damage. When it reads **READY**, **hold still on the pad** (or press **X**): the world freezes and a picker shows every weapon's Special. **Tap the one you want**, even one you don't have equipped (or ←/→ + Enter, or d-pad + A on a gamepad). After 4 seconds your equipped weapon's Special is used. Then **drag its one path** in a single stroke (the Hook's path connects dots over the real enemies; the Throw ends with a flick that aims the hurl). How well you trace sets the result: SLOPPY, CLEAN or PERFECT. Even a bad trace still lands a weaker Special. Settings has **Special assist** (wider path, longer timer).
 - The style rank (D → SSS) multiplies your score. An elite arrives every 5th wave and a boss every 10th.
 - **Between waves** there is a 3-second breather: the arena is clear, you heal 35%, the floor cracks reset and the next wave's title comes up. It continues on its own (in Rhythm Mode the next wave starts on a bar line). A small **Swap weapon** strip is available during the breather.
 - **📱 Mobile performance** (top of Settings, on by default on phones and tablets) cuts lag in big fights: it renders at 1x pixel density, skips the Pixel Look's per-frame palette snap (a GPU read-back that phones are slow at), the floor reflections and the menu blur. Gameplay is identical. With it, a 15-enemy fight on an emulated phone at 4x CPU throttle went from ~20 fps to ~45-50 fps.
@@ -121,7 +121,7 @@ The interface is a bold arcade-fighter design: navy plates, a cyan / magenta / g
 - **Under HP:** combo count with damage %, the style-rank hex and the AIR FINISHER hint.
 - **Bosses:** a boss bar.
 
-**Drawn on the canvas** (they track the world): damage numbers, the Rhythm beat lane and judgments, and the Special trace and QTE.
+**Drawn on the canvas** (they track the world): damage numbers, the Rhythm beat lane and judgments, and the Special picker and trace.
 
 **Menus** (title, loadout, settings, pause, results, song picker, calibration) work with touch, mouse, keyboard and gamepad.
 

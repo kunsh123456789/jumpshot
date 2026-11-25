@@ -503,3 +503,30 @@ Variants never repeat twice in a row; repeated identical samples are what make h
 - **Seamless loops:** they are padded circularly, so any loop window of exactly the body length is a seamless rotation, even if the MP3 decoder shifts the audio by up to 100 ms.
 - **Stopping:** `laser('end')` fades both loops out, with a timed fade-out as a safety stop.
 - **Measured:** the hum's energy peaks at 32-75 Hz and drops to silence after the end cue.
+
+## Specials: one path, and any weapon's Special
+
+**Feedback:** activating a Special should be just one path to drag, and you should be able to choose which weapon's Special to use, even one that isn't equipped.
+
+**Flow now:**
+1. **Activate:** long-press or X triggers the freeze bubble and activation pose, as before.
+2. **Pick:** a panel of weapon tiles opens, with the equipped weapon highlighted and marked "E". The highlighted Special's name and weapon are shown below the tiles.
+3. **Trace:** that Special's one path is shown and dragged in a single stroke.
+4. **Cinematic:** the chosen Special's cinematic plays.
+
+**The button prompts (QTE) are gone.**
+- The trace score (coverage 0.5, accuracy 0.35, speed 0.15) alone sets SLOPPY / CLEAN / PERFECT, with the same thresholds (0.5 / 0.82).
+- A complete, accurate trace is PERFECT; half a path is about CLEAN; no trace is SLOPPY.
+- The cinematics' length knob (`qte`, 0-3) is now derived from the trace score.
+- The "Skip the QTE prompts" setting and the QTE tunables were removed.
+
+**The picker (`SpecialInput` pick phase, canvas, Arcade style).**
+- **Weapons offered:** `availableWeapons()`, the same list as the loadout and swap strip, so the Ray Gun appears only with its cheat.
+- **Input:** one tap on a tile picks and goes. Keyboard: arrows move, Enter / Space / X picks. Gamepad: d-pad or stick moves, A picks. It uses the same raw input sinks as the trace, so the whole screen takes input.
+- **Auto-pick:** after `SPECIAL.pickSec` (4 s, a gold bar counts down) the highlighted Special is used. Browsing extends the timer to at least 1.5 s, so it never fires mid-choice.
+- **Layout:** rows are balanced (17 tiles: 9 + 8 on desktop, 6 + 6 + 5 on phone portrait) and every row is centered. The panel sits below the HUD on phones, with tiles at least 44 px.
+
+**Sim side.**
+- The result carries `weapon`. `SpecialSystem.begin` uses it for the family (who gets caught), the script and `specialStart`.
+- `CineCtx.weaponId` carries it into the cinematic, for example the laser beam's edge color.
+- The equipped weapon doesn't change. The hero keeps holding it through another weapon's cinematic, which reads fine because the Special cinematics are mostly poses and effects.

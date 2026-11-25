@@ -35,7 +35,6 @@ import { updateRefFx } from './render/weaponFx';
 import { CodeListener, enforceLocks } from './ui/cheats';
 import { SpecialInput } from './ui/specialInput';
 import { UiNav } from './ui/nav';
-import type { Family } from './data/cines';
 
 type GState = 'title' | 'tutorial' | 'countdown' | 'playing' | 'breather' | 'gameover';
 
@@ -126,7 +125,7 @@ export class Game {
     document.addEventListener('visibilitychange', () => { if (document.hidden && (this.state === 'playing' || this.state === 'tutorial') && !this.paused) this.togglePause(); });
     this.world.events.on('waveClear', () => this.onWaveClear());
     // Special (pass 8): the input phases open after the activation beat; first READY shows a hint.
-    this.world.events.on('specialInput', (e) => this.specialInput.begin(this.world, e.family as Family));
+    this.world.events.on('specialInput', () => this.specialInput.begin(this.world));
     this.world.events.on('specialReady', () => {
       audio.ready();
       if (!save.specialHintSeen && (this.state === 'playing' || this.state === 'tutorial')) {

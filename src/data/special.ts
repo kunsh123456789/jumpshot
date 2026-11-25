@@ -1,5 +1,3 @@
-import type { Family } from './cines';
-
 /**
  * The Special Bar and Special moves (revision pass 8, PART B). All tunables.
  * See TUNING.md ("Special Bar").
@@ -49,25 +47,12 @@ export const SPECIAL = {
   wAccuracy: 0.35,
   wSpeed: 0.15,
 
-  // ---- QTE phase ----
-  /** Prompt window (ms) of the shrinking ring; Assist uses qteWindowAssist. Perfect = in the last perfectFrac of it. */
-  qteWindowMs: 950,
-  qteWindowAssist: 1400,
-  perfectFrac: 0.35,
-  /** Late grace after the ring closes (ms). */
-  lateGraceMs: 120,
-  /** Rapid-tap burst: taps needed. */
-  mashTaps: 6,
-  mashWindowMs: 1500,
-  /** Skip QTE (Settings): counts as this fraction of prompts hit (a CLEAN result). */
-  skipQteFrac: 0.75,
+  // ---- weapon pick ----
+  /** Seconds the Special picker waits before using the highlighted (equipped) weapon's Special. */
+  pickSec: 4,
 
   // ---- result tiers ----
-  /** total = trace * wTrace + qteHitFraction * wQte + perfect bonus. */
-  wTrace: 0.55,
-  wQte: 0.45,
-  perfectBonus: 0.03,
-  /** SLOPPY below clean, CLEAN below perfect, PERFECT at or above. */
+  /** The trace score alone grades it: SLOPPY below clean, CLEAN below perfect, PERFECT at or above. */
   tierClean: 0.5,
   tierPerfect: 0.82,
   /** Damage multiplier per tier (SLOPPY, CLEAN, PERFECT). */
@@ -80,12 +65,3 @@ export const SPECIAL = {
   rangeStaff: 620,
   rangeThrow: 560,
 } as const;
-
-/** QTE prompts per family: 'N' / 'S' / 'E' / 'W' = swipe that way ('F' = toward the facing side), 'tap', 'mash'. */
-export const QTE_PROMPTS: Record<Family, string[]> = {
-  fists: ['N', 'tap', 'F', 'S'],
-  staff: ['F', 'tap', 'mash', 'N'],
-  laser: ['tap', 'mash', 'F'],
-  hook: ['F', 'S', 'tap'],
-  throw: ['mash', 'F', 'tap', 'S'],
-};

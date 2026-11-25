@@ -378,7 +378,7 @@ const spLaser: CineScript = {
     p.facing = dir;
     const hx = p.x + dir * 34 * p.scale, hy = p.cy - 14 * p.scale;   // the fist
     const far = dir > 0 ? c.w.camRight + 260 : c.w.camLeft - 260;
-    const tone = BEAM_TONE[c.w.weapon.id] ?? '#ff2a1f';
+    const tone = BEAM_TONE[c.weaponId] ?? '#ff2a1f';
     if (f < CHARGE) {
       hero(c, 'cine_charge', f % 6);
       if (f === 0) fx(c, 'laserCharge', hx, hy);

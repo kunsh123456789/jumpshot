@@ -188,13 +188,10 @@ The super meter is gone; the **Special Bar** replaces it.
 | traceSec, traceSecAssist | Trace time limit (s); Assist's longer limit. Rhythm Mode rounds it to whole beats |
 | tolerance, toleranceAssist | Trace band (fraction of the smaller screen side) and the Assist multiplier |
 | wCoverage, wAccuracy, wSpeed | Trace score weights |
-| qteWindowMs, qteWindowAssist, perfectFrac, lateGraceMs | QTE ring window, Assist window, the Perfect zone (last fraction of the window), late grace |
-| mashTaps, mashWindowMs | Rapid-tap burst prompt |
-| skipQteFrac | Skip QTE setting: counts as this fraction of prompts hit (a Clean result) |
-| wTrace, wQte, perfectBonus, tierClean, tierPerfect | Total = trace x wTrace + QTE hit fraction x wQte + Perfects x perfectBonus; SLOPPY < tierClean <= CLEAN < tierPerfect <= PERFECT |
+| pickSec | The Special picker auto-uses the highlighted (equipped) weapon after this many seconds |
+| tierClean, tierPerfect | The trace score alone grades it: SLOPPY < tierClean <= CLEAN < tierPerfect <= PERFECT |
 | tierDamage, tierNames | Damage multiplier per tier; the tier words |
 | rangeFists, rangeStaff, rangeThrow | Who gets caught by the Mega Jumpshot / Cyclone, and the Hammer Swing's grab range |
-| `QTE_PROMPTS` | Prompts per family: N / S / E / W swipe, F = toward the facing side, tap, mash |
 
 ## CINE (cinematics: finishers and Specials, `data/tuning.ts`)
 | Key | Purpose |

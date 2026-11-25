@@ -15,6 +15,8 @@ export interface SpecialResult {
   aim: number;
   /** Hook: enemy ids connected by the trace, in order. */
   dots: number[];
+  /** The weapon whose Special was picked (any available weapon, not only the equipped one). */
+  weapon?: string;
   judgments: string[];
 }
 
@@ -26,8 +28,8 @@ export type SpecialPhase = 'charging' | 'intro' | 'input' | 'cine';
  * a Special is running. When READY, a long-press in place (or X / Enter)
  * starts it: the world freezes inside a bubble, the hero strikes the
  * activation pose (invulnerable), then the input phases run in real time on
- * the UI side (trace, then QTE) and hand back a SpecialResult; its tier picks
- * the strength of the weapon's cinematic (sim/cine.ts + data/cines.ts).
+ * the UI side (pick a weapon's Special, then trace its path) and hand back a
+ * SpecialResult; the trace grade picks the strength of that weapon's cinematic (sim/cine.ts + data/cines.ts).
  * Every phase has a timeout, so a Special can never soft-lock.
  */
 export class SpecialSystem {
@@ -87,7 +89,6 @@ export class SpecialSystem {
     p.invuln = Math.max(p.invuln, 9999);
     p.vx = 0; p.vy = 0;
     this.bubble = { x: p.x, y: p.cy, r: 10 };
-    w.events.emit('specialStart', { weapon: w.weapon.id, family: familyOf(w.weapon.id), name: specialScript(w.weapon.id).name, x: p.x, y: p.cy });
   }
 
   /** Input phases call this (from the UI) with the result; it is applied on the next sim step. */
@@ -107,7 +108,7 @@ export class SpecialSystem {
     if (this.bubble) this.bubble.r += (SPECIAL.bubbleRadius - this.bubble.r) * 0.25;
     if (this.phase === 'intro' && this.t >= SPECIAL.introFrames) {
       this.phase = 'input'; this.t = 0;
-      w.events.emit('specialInput', { family: familyOf(w.weapon.id) });
+      w.events.emit('specialInput', { family: familyOf(w.weapon.id) });   // the UI opens the weapon pick, then the trace
     } else if (this.phase === 'input') {
       let r = this.pending;
       // Safety: never wait forever (lost focus, UI closed): resolve as SLOPPY.
@@ -123,12 +124,12 @@ export class SpecialSystem {
   private begin(w: World, r: SpecialResult): void {
     this.pending = null;
     this.last = r;
-    const qf = r.qteCount > 0 ? r.qteHits / r.qteCount : 0;
-    const total = r.trace * SPECIAL.wTrace + qf * SPECIAL.wQte + r.perfects * SPECIAL.perfectBonus;
+    const total = r.trace;
     const tier = total >= SPECIAL.tierPerfect ? 2 : total >= SPECIAL.tierClean ? 1 : 0;
     this.lastTier = tier; this.lastTotal = total;
     w.events.emit('specialTier', { tier, name: SPECIAL.tierNames[tier], x: w.player.x, y: w.player.cy });
-    const fam = familyOf(w.weapon.id);
+    const wid = r.weapon ?? w.weapon.id;
+    const fam = familyOf(wid);
     const p = w.player;
     const live = (e: Fighter) => e.alive && e.state !== 'ko' && e.state !== 'dead' && e.kind !== 'dummy';
     let main: Fighter | null = null;
@@ -148,8 +149,9 @@ export class SpecialSystem {
     this.freeze = false;
     this.bubble = null;
     this.phase = 'cine';
-    w.cine.start(w, specialScript(w.weapon.id), 'special', main, group, {
-      tier, qte: r.qteHits, dmg: SPECIAL.tierDamage[tier], aim: r.aim, freeze: true,
+    w.events.emit('specialStart', { weapon: wid, family: fam, name: specialScript(wid).name, x: p.x, y: p.cy });
+    w.cine.start(w, specialScript(wid), 'special', main, group, {
+      tier, qte: r.qteHits, dmg: SPECIAL.tierDamage[tier], aim: r.aim, freeze: true, weapon: wid,
     });
   }
 }

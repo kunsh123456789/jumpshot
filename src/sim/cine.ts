@@ -27,6 +27,8 @@ export interface CineCtx {
   main: Fighter | null;
   /** Everyone caught (specials). */
   group: Fighter[];
+  /** The weapon this cinematic belongs to (a Special can be another weapon's than the equipped one). */
+  weaponId: string;
   /** Frame since start. */
   f: number;
   /** Special result tier 0 SLOPPY / 1 CLEAN / 2 PERFECT, and successful QTE prompts. */
@@ -83,7 +85,7 @@ export class CinePlayer {
 
   reset(): void { this.script = null; this.ctx = null; this.held.length = 0; this.freezeOthers = false; }
 
-  start(w: World, s: CineScript, kind: CineKind, main: Fighter | null, group: Fighter[], opt: { tier?: number; qte?: number; dmg?: number; aim?: number; freeze?: boolean } = {}): void {
+  start(w: World, s: CineScript, kind: CineKind, main: Fighter | null, group: Fighter[], opt: { tier?: number; qte?: number; dmg?: number; aim?: number; freeze?: boolean; weapon?: string } = {}): void {
     const p = w.player;
     if (p.move) w.wpn.endMove(p);
     w.wpn.recall(p);
@@ -93,7 +95,7 @@ export class CinePlayer {
     this.freezeOthers = !!opt.freeze;
     this.held.length = 0;
     const c: CineCtx = {
-      w, p, main, group, f: 0, tier: opt.tier ?? 1, qte: opt.qte ?? 0, dmg: opt.dmg ?? 1, aim: opt.aim ?? 0,
+      w, p, main, group, weaponId: opt.weapon ?? w.weapon.id, f: 0, tier: opt.tier ?? 1, qte: opt.qte ?? 0, dmg: opt.dmg ?? 1, aim: opt.aim ?? 0,
       v: {}, vis: emptyVis(), skipping: false, bossDmg: 0,
     };
     this.ctx = c;

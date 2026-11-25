@@ -2,8 +2,7 @@ import { layout } from '../core/layout';
 import { settings } from '../core/settings';
 import { audio } from '../core/audio';
 import { WORLD } from '../data/tuning';
-import { RHYTHM } from '../data/rhythm';
-import { SPECIAL, QTE_PROMPTS } from '../data/special';
+import { SPECIAL } from '../data/special';
 import type { Family } from '../data/cines';
 import type { World } from '../sim/world';
 import type { SpecialResult } from '../sim/special';
@@ -11,31 +10,31 @@ import type { Camera } from '../core/camera';
 import type { DrawPad } from './pad';
 import type { Keyboard } from '../core/keyboard';
 import type { RhythmDirector } from '../rhythm/director';
-import { classifyDir } from './pad';
 import { getUiScale } from './arcadeHud';
-import { specialScript } from '../data/cines';
+import { specialScript, familyOf } from '../data/cines';
+import { WEAPONS, availableWeapons } from '../data/weapons';
+import { ICON } from './icons';
 
 /**
- * The Special's input phases (revision pass 8, B3), run in REAL time on the UI
- * side while the sim keeps stepping with the world frozen (so Rhythm Mode's
- * beat clock never drifts):
+ * The Special's input (revision pass 9), run in REAL time on the UI side while
+ * the sim keeps stepping with the world frozen (so Rhythm Mode's beat clock
+ * never drifts):
  *
- *  1. TRACE: a weapon-specific guide path (a dotted pen line with arrowheads and
- *     a start dot) over the pad; trace it in one continuous stroke before the
- *     fuse burns down. Ink fills the path as the finger follows it. Scored on
- *     coverage, accuracy (distance from the path inside a tolerance band) and
- *     speed. The Hook's path is connect-the-dots through the real enemies.
+ *  1. PICK: choose whose Special to use: any available weapon, not just the
+ *     equipped one. One tap on a tile (or arrows + Enter / X, or the gamepad
+ *     d-pad + A) picks it; the equipped weapon is highlighted and is used if
+ *     nothing is chosen within SPECIAL.pickSec.
+ *  2. TRACE: that Special's guide path over the screen. Drag it in one stroke
+ *     before the fuse burns down; the grade (coverage, accuracy, speed) alone
+ *     sets SLOPPY / CLEAN / PERFECT. The Hook's path is connect-the-dots through
+ *     the real enemies; the Throw ends with a free flick that aims the hurl.
  *     Keyboard: press the shown arrows in order.
- *  2. QTE: 2-4 prompts (a directional swipe, a tap, or a rapid-tap burst) with a
- *     shrinking ring; hit each inside its window. In Rhythm Mode each prompt
- *     lands on a beat and is judged Perfect / Great / Good / Miss.
  *
- * Neither phase can fail outright: the result only picks the tier. Assist
- * (Settings) widens the band and lengthens the timers; Skip QTE counts as Clean.
+ * The trace can't fail outright: the result only picks the tier. Assist
+ * (Settings) widens the band and lengthens the fuse.
  * UI: drawn on the canvas in the Arcade style (draw()), sized by the shared --u scale.
  */
-type Phase = 'off' | 'trace' | 'qte' | 'result';
-interface Prompt { kind: 'swipe' | 'tap' | 'mash'; dir: number; due: number; start: number; done: boolean; ok: boolean; judge: string; taps: number }
+type Phase = 'off' | 'pick' | 'trace' | 'result';
 
 const DIR_KEY: Record<string, number> = { right: 0, up: 2, left: 4, down: 6 };
 const DIR_GLYPH = ['→', '↗', '↑', '↖', '←', '↙', '↓', '↘'];
@@ -62,11 +61,15 @@ export class SpecialInput {
   private flickPts: number[] = [];
   private facing = 1;
   private traceScore = 0; private cov = 0; private acc = 0; private spd = 0;
-  // ---- qte ----
-  private prompts: Prompt[] = [];
-  private pi = 0;
-  private downX = 0; private downY = 0;
-  private judgments: string[] = [];
+  // ---- pick ----
+  /** The weapon whose Special is being used (chosen in the pick phase). */
+  weaponId = 'fists';
+  private pickIds: string[] = [];
+  private pickSel = 0;
+  private pickT = 0;
+  private pickCols = 9;
+  private pickRects: { x: number; y: number; s: number }[] = [];
+  private gpPrev = { l: false, r: false, u: false, d: false, a: false };
   private resultT = 0;
   private resultTier = '';
   private debug: string[] = [];
@@ -81,14 +84,36 @@ export class SpecialInput {
     return [r.x + s * (WORLD.viewW / 2 + this.cam.ox + z * (x - this.cam.x) - layout.viewX0), r.y + s * (this.cam.groundScreen + this.cam.oy + z * (y - this.cam.y) - layout.viewY0)];
   }
 
-  begin(w: World, fam: Family): void {
-    this.w = w; this.fam = fam;
+  /** Open the Special input: first the weapon pick, then the trace. */
+  begin(w: World): void {
+    this.w = w;
+    this.pickIds = availableWeapons().slice();
+    if (!this.pickIds.includes(w.weapon.id)) this.pickIds.unshift(w.weapon.id);
+    this.pickSel = Math.max(0, this.pickIds.indexOf(w.weapon.id));
+    this.weaponId = w.weapon.id;
+    this.pickT = SPECIAL.pickSec;
+    this.phase = 'pick';
+    this.debug = [];
+    this.pad.rawSink = (ph, x, y, t) => this.onPointer(ph, x, y, t);
+    this.keyboard.specialSink = (k, down) => this.onKey(k, down);
+  }
+
+  private choose(i: number): void {
+    if (this.phase !== 'pick') return;
+    this.pickSel = i;
+    this.weaponId = this.pickIds[i];
+    audio.ui('select');
+    this.startTrace(familyOf(this.weaponId));
+  }
+
+  private startTrace(fam: Family): void {
+    const w = this.w!;
+    this.fam = fam;
     this.facing = w.player.facing || 1;
     this.phase = 'trace';
     this.elapsed = 0; this.prog = 0; this.dist = 0; this.distN = 0;
     this.stroke = false; this.strokeDone = false; this.trail = []; this.flickPts = [];
     this.keyIdx = 0; this.keyMiss = 0;
-    this.judgments = [];
     this.aim = this.facing > 0 ? 0.04 : Math.PI - 0.04;
     const assist = settings.specialAssist;
     this.tol = SPECIAL.tolerance * Math.min(innerWidth, innerHeight) * (assist ? SPECIAL.toleranceAssist : 1);
@@ -98,8 +123,6 @@ export class SpecialInput {
     if (spb > 0) lim = Math.max(2, Math.round(lim / spb)) * spb;
     this.limit = lim;
     this.buildPath();
-    this.pad.rawSink = (ph, x, y, t) => this.onPointer(ph, x, y, t);
-    this.keyboard.specialSink = (k, down) => this.onKey(k, down);
     audio.riser(lim);
   }
 
@@ -199,6 +222,12 @@ export class SpecialInput {
 
   // ------------------------------------------------------------------ input
   private onPointer(ph: 'down' | 'move' | 'up', x: number, y: number, t: number): void {
+    if (this.phase === 'pick') {
+      if (ph !== 'down') return;
+      const i = this.pickRects.findIndex((r) => x >= r.x && x <= r.x + r.s && y >= r.y && y <= r.y + r.s);
+      if (i >= 0) this.choose(i);
+      return;
+    }
     if (this.phase === 'trace') {
       if (ph === 'down') {
         if (this.strokeDone) return;
@@ -209,19 +238,16 @@ export class SpecialInput {
         this.stroke = false; this.strokeDone = true;
         this.finishTrace();
       }
-    } else if (this.phase === 'qte') {
-      if (ph === 'down') { this.downX = x; this.downY = y; }
-      else if (ph === 'up') {
-        const dx = x - this.downX, dy = y - this.downY;
-        if (Math.hypot(dx, dy) > 34) this.qteInput('swipe', classifyDir(dx, dy), t);
-        else this.qteInput('tap', -1, t);
-      }
     }
   }
 
   private onKey(k: 'up' | 'down' | 'left' | 'right' | 'tap', down: boolean): void {
     if (!down) return;
-    const t = performance.now();
+    if (this.phase === 'pick') {
+      if (k === 'tap') { this.choose(this.pickSel); return; }
+      this.movePick(k === 'left' ? -1 : k === 'right' ? 1 : k === 'up' ? -this.pickCols : this.pickCols);
+      return;
+    }
     if (this.phase === 'trace') {
       if (k === 'tap') return;
       const d = DIR_KEY[k];
@@ -232,9 +258,31 @@ export class SpecialInput {
         if (this.fam === 'throw' || this.fam === 'laser') this.aim = Math.atan2(d === 2 ? -1 : d === 6 ? 1 : 0, d === 0 ? 1 : d === 4 ? -1 : 0);
         if (this.keyIdx >= this.keys.length) this.finishTrace();
       } else this.keyMiss++;
-    } else if (this.phase === 'qte') {
-      this.qteInput(k === 'tap' ? 'tap' : 'swipe', k === 'tap' ? -1 : DIR_KEY[k], t);
     }
+  }
+
+  private movePick(d: number): void {
+    const n = this.pickIds.length;
+    const i = this.pickSel + d;
+    this.pickSel = Math.abs(d) === 1 ? (i + n) % n : Math.max(0, Math.min(n - 1, i));
+    this.pickT = Math.max(this.pickT, 1.5);   // browsing keeps the picker open a moment longer
+    audio.ui('move');
+  }
+
+  /** Gamepad in the picker: d-pad / stick moves, A picks (polled; edges only). */
+  private pollPadPick(): void {
+    const gp = typeof navigator.getGamepads === 'function' ? [...navigator.getGamepads()].find((g) => g && g.connected) : null;
+    if (!gp) return;
+    const b = (i: number) => !!gp.buttons[i]?.pressed;
+    const ax = gp.axes[0] ?? 0, ay = gp.axes[1] ?? 0;
+    const now = { l: b(14) || ax < -0.5, r: b(15) || ax > 0.5, u: b(12) || ay < -0.5, d: b(13) || ay > 0.5, a: b(0) };
+    const p = this.gpPrev;
+    if (now.l && !p.l) this.movePick(-1);
+    if (now.r && !p.r) this.movePick(1);
+    if (now.u && !p.u) this.movePick(-this.pickCols);
+    if (now.d && !p.d) this.movePick(this.pickCols);
+    this.gpPrev = now;
+    if (now.a && !p.a) this.choose(this.pickSel);
   }
 
   private sampleTrace(x: number, y: number, t: number): void {
@@ -268,60 +316,7 @@ export class SpecialInput {
       if (Math.hypot(dx, dy) > 20) this.aim = Math.atan2(dy * 0.3, dx);
     }
     this.debug = [`TRACE ${this.fam}: score ${this.traceScore.toFixed(2)} coverage ${this.cov.toFixed(2)} accuracy ${this.acc.toFixed(2)} speed ${this.spd.toFixed(2)} ${keyboard ? '(keys)' : ''}${this.fam === 'hook' ? ' dots ' + this.dots.filter((d) => d.hit).length + '/' + this.dots.length : ''}`];
-    this.startQte();
-  }
-
-  // ------------------------------------------------------------------ QTE
-  private startQte(): void {
-    if (settings.specialSkipQte) { this.submit(); return; }
-    this.phase = 'qte';
-    const list = QTE_PROMPTS[this.fam];
-    const now = performance.now();
-    const win = settings.specialAssist ? SPECIAL.qteWindowAssist : SPECIAL.qteWindowMs;
-    // Rhythm Mode: one prompt per beat (every other beat when the tempo is fast), from the first beat >= 500 ms away.
-    const dues: number[] = [];
-    const spb = this.spb();
-    if (spb > 0) {
-      const ck = this.rhythm.clock, nowA = this.rhythm.heardAt(now);
-      const step = spb < 0.4 ? 2 : 1;
-      let b = Math.ceil(ck.beatAt(nowA + 0.5));
-      for (let i = 0; i < list.length; i++, b += step) dues.push(now + (ck.timeOfBeat(b) - nowA) * 1000);
-    } else for (let i = 0; i < list.length; i++) dues.push(now + 350 + win * (i + 1) + 120 * i);
-    this.prompts = list.map((k, i) => {
-      const dir = k === 'N' ? 2 : k === 'S' ? 6 : k === 'E' ? 0 : k === 'W' ? 4 : k === 'F' ? (this.facing > 0 ? 0 : 4) : -1;
-      const kind: Prompt['kind'] = k === 'tap' ? 'tap' : k === 'mash' ? 'mash' : 'swipe';
-      const w = kind === 'mash' ? SPECIAL.mashWindowMs : win;
-      return { kind, dir, due: dues[i], start: dues[i] - w, done: false, ok: false, judge: '', taps: 0 };
-    });
-    this.pi = 0;
-  }
-
-  private qteInput(kind: 'swipe' | 'tap', dir: number, t: number): void {
-    const pr = this.prompts[this.pi];
-    if (!pr || pr.done || t < pr.start - 150) return;
-    if (pr.kind === 'mash') {
-      if (kind !== 'tap') return;
-      pr.taps++;
-      if (pr.taps >= SPECIAL.mashTaps) this.judge(pr, true, t);
-      return;
-    }
-    const right = pr.kind === kind && (kind === 'tap' || pr.dir === dir);
-    this.judge(pr, right, t);
-  }
-
-  private judge(pr: Prompt, ok: boolean, t: number): void {
-    pr.done = true; pr.ok = ok;
-    if (!ok) pr.judge = 'MISS';
-    else if (this.w?.rhythm && this.spb() > 0) {
-      const d = Math.abs(t - settings.rhythmOffset - pr.due);
-      pr.judge = d <= RHYTHM.perfectMs ? 'PERFECT' : d <= RHYTHM.greatMs ? 'GREAT' : d <= RHYTHM.goodMs * 1.6 || pr.kind === 'mash' ? 'GOOD' : 'GOOD';
-    } else {
-      const w = pr.due - pr.start;
-      pr.judge = pr.kind === 'mash' ? 'GOOD' : (pr.due - t) <= w * SPECIAL.perfectFrac && t <= pr.due + SPECIAL.lateGraceMs ? 'PERFECT' : 'GOOD';
-    }
-    this.judgments.push(pr.judge);
-    audio.prompt(ok);
-    this.pi++;
+    this.submit();
   }
 
   // ------------------------------------------------------------------ frame
@@ -329,15 +324,14 @@ export class SpecialInput {
     if (this.phase === 'off') return;
     const w = this.w;
     if (!w || (w.special.phase !== 'input' && this.phase !== 'result')) { this.close(); return; }
-    if (paused) { for (const p of this.prompts) { p.due += dt * 1000; p.start += dt * 1000; } return; }
-    const now = performance.now();
-    if (this.phase === 'trace') {
+    if (paused) return;
+    if (this.phase === 'pick') {
+      this.pollPadPick();
+      this.pickT -= dt;
+      if (this.pickT <= 0) this.choose(this.pickSel);
+    } else if (this.phase === 'trace') {
       this.elapsed += dt;
       if (this.elapsed >= this.limit) { this.stroke = false; this.finishTrace(); }
-    } else if (this.phase === 'qte') {
-      const pr = this.prompts[this.pi];
-      if (!pr) this.submit();
-      else if (now > pr.due + SPECIAL.lateGraceMs + (pr.kind === 'mash' ? 200 : 0)) this.judge(pr, false, now);
     } else if (this.phase === 'result') {
       this.resultT -= dt;
       if (this.resultT <= 0) this.close();
@@ -346,22 +340,17 @@ export class SpecialInput {
 
   private submit(): void {
     const w = this.w!;
-    const skip = settings.specialSkipQte;
-    const n = Math.max(1, QTE_PROMPTS[this.fam].length);
-    const hits = skip ? Math.round(n * SPECIAL.skipQteFrac) : this.prompts.filter((p) => p.ok).length;
-    const perfects = skip ? 0 : this.prompts.filter((p) => p.judge === 'PERFECT').length;
     const res: SpecialResult = {
       trace: this.traceScore, coverage: this.cov, accuracy: this.acc, speed: this.spd,
-      qteHits: hits, qteCount: skip ? n : Math.max(1, this.prompts.length), perfects,
+      // no QTE any more: the trace alone grades it. qteHits only scales the cinematic's length (0-3).
+      qteHits: Math.round(this.traceScore * 3), qteCount: 0, perfects: 0,
       aim: this.aim, dots: this.dots.filter((d) => d.hit).map((d) => d.id),
-      judgments: skip ? ['SKIPPED (auto-Clean)'] : this.judgments.slice(),
+      judgments: [], weapon: this.weaponId,
     };
     w.special.submit(res);
-    const qf = res.qteHits / res.qteCount;
-    const total = res.trace * SPECIAL.wTrace + qf * SPECIAL.wQte + perfects * SPECIAL.perfectBonus;
-    const tier = total >= SPECIAL.tierPerfect ? 2 : total >= SPECIAL.tierClean ? 1 : 0;
+    const tier = res.trace >= SPECIAL.tierPerfect ? 2 : res.trace >= SPECIAL.tierClean ? 1 : 0;
     this.resultTier = SPECIAL.tierNames[tier];
-    this.debug.push(`QTE ${res.qteHits}/${res.qteCount} [${res.judgments.join(' ')}]  total ${total.toFixed(2)} -> ${this.resultTier}`);
+    this.debug.push(`${this.weaponId} -> ${this.resultTier}`);
     this.phase = 'result';
     this.resultT = 0.9;
     this.release();
@@ -379,8 +368,8 @@ export class SpecialInput {
   /**
    * Special mode look: the screen dims to navy with radial speed lines; the guide path is a
    * glowing cyan tube with chevrons, the traced part fills magenta, the fuse is a gold timer
-   * ring under the Special's name banner; QTE prompts are a magenta hex button inside a
-   * shrinking cyan ring; tier words slam in as a banner.
+   * ring under the Special's name banner; tier words slam in as a banner. The pick phase is a
+   * grid of weapon tiles (drawPick).
    */
   draw(ctx: CanvasRenderingContext2D, now: number): void {
     if (this.phase === 'off') return;
@@ -398,8 +387,8 @@ export class SpecialInput {
     for (let i = 0; i < 48; i++) { const a = rot + (i / 48) * Math.PI * 2; ctx.moveTo(W / 2 + Math.cos(a) * R * 0.18, H * 0.58 + Math.sin(a) * R * 0.18); ctx.lineTo(W / 2 + Math.cos(a) * R, H * 0.58 + Math.sin(a) * R); }
     ctx.stroke();
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    const name = this.w ? specialScript(this.w.weapon.id).name : 'SPECIAL';
-    this.banner(ctx, name, W / 2, Math.max(54 * u, H * 0.14), 30 * u, magenta);
+    if (this.phase === 'pick') { this.drawPick(ctx, now, u); ctx.restore(); return; }
+    this.banner(ctx, specialScript(this.weaponId).name, W / 2, Math.max(54 * u, H * 0.14), 30 * u, magenta);
     if (this.phase === 'trace') {
       const P = this.path, n = P.length / 2;
       const line = (upto: number) => { ctx.beginPath(); for (let i = 0; i <= upto; i++) i ? ctx.lineTo(P[i * 2], P[i * 2 + 1]) : ctx.moveTo(P[0], P[1]); };
@@ -451,39 +440,64 @@ export class SpecialInput {
       this.text(ctx, hint, fx, fy + FR + 24 * u, 18 * u, '#fff', 'Oswald', true);
       const kb = this.keys.map((d, i) => (i < this.keyIdx ? '·' : DIR_GLYPH[d])).join(' ');
       this.text(ctx, 'KEYS  ' + kb, fx, fy + FR + 48 * u, 13 * u, cyan, 'Oswald', true);
-    } else if (this.phase === 'qte') {
-      const pr = this.prompts[this.pi];
-      const pad = layout.pad;
-      const cx = W / 2, cy = pad.y + pad.h * 0.42;
-      if (pr) {
-        const total = pr.due - pr.start, k = Math.max(0, Math.min(1, (pr.due - now) / total));
-        const R0 = 52 * u, Rr = R0 + k * 110 * u;
-        ctx.shadowColor = cyan; ctx.shadowBlur = 10 * u;
-        ctx.strokeStyle = k < SPECIAL.perfectFrac ? gold : cyan; ctx.lineWidth = 5 * u; ctx.beginPath(); ctx.arc(cx, cy, Rr, 0, Math.PI * 2); ctx.stroke();
-        ctx.shadowColor = magenta; ctx.shadowBlur = 18 * u;
-        ctx.fillStyle = magenta; ctx.beginPath();
-        for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i + Math.PI / 6; i ? ctx.lineTo(cx + Math.cos(a) * R0, cy + Math.sin(a) * R0) : ctx.moveTo(cx + Math.cos(a) * R0, cy + Math.sin(a) * R0); }
-        ctx.closePath(); ctx.fill();
-        ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4 * u; ctx.stroke();
-        const txt = pr.kind === 'tap' ? 'TAP!' : pr.kind === 'mash' ? `${pr.taps}/${SPECIAL.mashTaps}` : DIR_GLYPH[pr.dir];
-        this.text(ctx, txt, cx, cy + 2 * u, (pr.kind === 'swipe' ? 58 : 28) * u, '#fff', 'Russo One');
-        const what = pr.kind === 'tap' ? 'TAP' : pr.kind === 'mash' ? 'MASH TAP!' : 'SWIPE ' + ['RIGHT', '', 'UP', '', 'LEFT', '', 'DOWN', ''][pr.dir];
-        this.text(ctx, `${what} · ${this.pi + 1} / ${this.prompts.length}`, cx, cy + R0 + 26 * u, 15 * u, '#fff', 'Oswald', true);
-        // progress pips
-        for (let i = 0; i < this.prompts.length; i++) {
-          const p2 = this.prompts[i], x = cx + (i - (this.prompts.length - 1) / 2) * 34 * u, y = cy - R0 - 34 * u;
-          ctx.fillStyle = !p2.done ? (i === this.pi ? '#fff' : '#3a4566') : p2.ok ? gold : '#ff3b3b';
-          ctx.save(); ctx.translate(x, y); ctx.transform(1, 0, -0.25, 1, 0, 0); ctx.fillRect(-12 * u, -4 * u, 24 * u, 8 * u); ctx.restore();
-        }
-      }
-      const last = this.judgments[this.judgments.length - 1];
-      if (last) this.text(ctx, last + (last === 'MISS' ? '' : '!'), cx, cy - 104 * u, 34 * u, last === 'MISS' ? '#ff3b3b' : last === 'PERFECT' ? cyan : gold, 'Russo One');
     } else if (this.phase === 'result') {
       const t = this.resultTier;
       const k = 1 + Math.max(0, this.resultT - 0.7) * 2;
       this.banner(ctx, t + '!', W / 2, H * 0.42, 44 * u * k, t === 'PERFECT' ? magenta : t === 'CLEAN' ? '#2a6bff' : '#3a4566');
     }
     ctx.restore();
+  }
+
+  /** The weapon picker: a panel with a balanced grid of tiles (equipped one marked), the highlighted Special's name and an auto-pick timer. */
+  private drawPick(ctx: CanvasRenderingContext2D, now: number, u: number): void {
+    const W = innerWidth, H = innerHeight;
+    const cyan = '#2ee6ff', magenta = '#ff2e88', gold = '#ffd23f';
+    const n = this.pickIds.length;
+    const s = Math.max(44, Math.min(70 * u, (W - 60) / 9 - 10));
+    const gap = Math.max(8, s * 0.16);
+    const maxCols = Math.max(1, Math.floor((W - 48 + gap) / (s + gap)));
+    const rows = Math.ceil(n / maxCols), cols = Math.ceil(n / rows);     // balanced rows (17 -> 9 + 8)
+    this.pickCols = cols;
+    const gridW = cols * s + (cols - 1) * gap, gridH = rows * s + (rows - 1) * gap;
+    const titleH = 44 * u, infoH = 118 * u, padX = 20 * u, padY = 16 * u;
+    const panelW = Math.min(W - 16, gridW + padX * 2), panelH = titleH + gridH + infoH + padY * 2;
+    const top = Math.max(layout.safe.top + 92 * u, (H - panelH) / 2);
+    // panel
+    ctx.save(); ctx.translate(W / 2, top + panelH / 2); ctx.transform(1, 0, -0.08, 1, 0, 0);
+    ctx.fillStyle = 'rgba(11,16,38,0.93)'; ctx.fillRect(-panelW / 2, -panelH / 2, panelW, panelH);
+    ctx.strokeStyle = cyan; ctx.lineWidth = 2; ctx.strokeRect(-panelW / 2, -panelH / 2, panelW, panelH);
+    ctx.restore();
+    this.banner(ctx, 'CHOOSE YOUR SPECIAL', W / 2, top, 24 * u, magenta);
+    const y0 = top + titleH + padY * 0.5;
+    this.pickRects = [];
+    const equipped = this.w?.weapon.id;
+    for (let i = 0; i < n; i++) {
+      const id = this.pickIds[i], r = Math.floor(i / cols), c = i % cols;
+      const inRow = Math.min(cols, n - r * cols);
+      const rowX = (W - (inRow * s + (inRow - 1) * gap)) / 2;            // centre every row, the last one too
+      const x = rowX + c * (s + gap), y = y0 + r * (s + gap), on = i === this.pickSel;
+      this.pickRects.push({ x, y, s });
+      ctx.save(); ctx.translate(x + s / 2, y + s / 2);
+      if (on) { const k = 1.08 + Math.sin(now / 140) * 0.03; ctx.scale(k, k); }
+      ctx.transform(1, 0, -0.18, 1, 0, 0);
+      ctx.shadowColor = on ? gold : 'transparent'; ctx.shadowBlur = on ? 18 * u : 0;
+      ctx.fillStyle = on ? '#2a2410' : '#172042'; ctx.fillRect(-s / 2, -s / 2, s, s);
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = on ? gold : id === equipped ? cyan : '#3a4566'; ctx.lineWidth = on ? 4 : 2; ctx.strokeRect(-s / 2, -s / 2, s, s);
+      ctx.restore();
+      ctx.save(); ctx.translate(x + s * 0.18, y + s * 0.16); ctx.scale((s * 0.64) / 24, (s * 0.64) / 24);
+      ctx.strokeStyle = on ? gold : '#e8eefc'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.stroke(new Path2D(ICON[id] ?? ICON.star)); ctx.restore();
+      if (id === equipped) this.text(ctx, 'E', x + s - 9, y + 10, 11, cyan, 'Oswald');
+    }
+    const id = this.pickIds[this.pickSel];
+    const ny = y0 + gridH + 34 * u;
+    this.text(ctx, specialScript(id).name, W / 2, ny, Math.max(18, 30 * u), '#fff', 'Russo One');
+    this.text(ctx, (WEAPONS[id as keyof typeof WEAPONS]?.name ?? id).toUpperCase() + (id === equipped ? ' · EQUIPPED' : ''), W / 2, ny + 30 * u, Math.max(11, 15 * u), cyan, 'Oswald');
+    const k = Math.max(0, Math.min(1, this.pickT / SPECIAL.pickSec)), bw = Math.min(panelW * 0.7, 320 * u);
+    ctx.fillStyle = '#3a4566'; ctx.fillRect(W / 2 - bw / 2, ny + 50 * u, bw, 6 * u);
+    ctx.fillStyle = k < 0.3 ? '#ff3b3b' : gold; ctx.fillRect(W / 2 - bw / 2, ny + 50 * u, bw * k, 6 * u);
+    this.text(ctx, 'TAP A SPECIAL  ·  ← → + ENTER  ·  PAD: D-PAD + A', W / 2, ny + 72 * u, Math.max(10, 13 * u), '#c9d3f0', 'Oswald');
   }
 
   /** A skewed magenta band with italic display lettering (the Arcade banner). */

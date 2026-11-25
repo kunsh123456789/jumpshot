@@ -192,7 +192,7 @@ export class Menus {
     const pctOf = (v: number) => `${Math.round(v * 100)}%`;
     const slider = (label: string, key: 'masterVolume' | 'musicVolume' | 'shake' | 'hitstop' | 'sensitivity' | 'padRegion', min: number, max: number, step: number, after?: () => void) =>
       range(label, 'set-' + key, min, max, step, () => settings[key], (v) => { settings[key] = v; audio.applyVolume(); after?.(); }, pctOf);
-    const check = (label: string, key: 'leftHanded' | 'debug' | 'reduceFlashes' | 'rhythmMode' | 'beatHud' | 'boil' | 'highContrast' | 'cheatGod' | 'cheatRayGun' | 'cheatNuke' | 'mobilePerf' | 'specialAssist' | 'specialSkipQte', after?: () => void) => {
+    const check = (label: string, key: 'leftHanded' | 'debug' | 'reduceFlashes' | 'rhythmMode' | 'beatHud' | 'boil' | 'highContrast' | 'cheatGod' | 'cheatRayGun' | 'cheatNuke' | 'mobilePerf' | 'specialAssist', after?: () => void) => {
       const row = document.createElement('label');
       row.className = 'row';
       const span = document.createElement('span');
@@ -225,7 +225,6 @@ export class Menus {
     check('Left-handed pad', 'leftHanded', () => { window.dispatchEvent(new Event('resize')); this.placePause(); });
     sec('SPECIAL');
     check('Special assist (wider path, longer timers)', 'specialAssist');
-    check('Skip the QTE prompts (auto-Clean)', 'specialSkipQte');
     sec('SOUND');
     slider('Master volume', 'masterVolume', 0, 1, 0.05);
     slider('Music volume', 'musicVolume', 0, 1, 0.05);

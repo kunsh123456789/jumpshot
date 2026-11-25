@@ -50,7 +50,6 @@ export interface Settings {
   mobilePerf: boolean;
   /** Special (pass 8): Assist = wider trace band + longer timers; Skip QTE = the prompts count as a Clean result. */
   specialAssist: boolean;
-  specialSkipQte: boolean;
 }
 
 /** Touch-first device (phones / tablets): turns Mobile Performance on by default. */
@@ -90,7 +89,6 @@ export const settings: Settings = {
   highContrast: false,
   mobilePerf: false,
   specialAssist: false,
-  specialSkipQte: false,
 };
 
 const DEFAULTS_REV = 2;
