@@ -169,6 +169,12 @@ export class FxDirector {
         case 'iceWall': case 'iceBreak': audio.weapon('deflect'); effects.embers(e.x, e.y, 10, '#bfeeff'); break;
         case 'vent': audio.weapon('overheat'); effects.dust(e.x, e.y + 60, 0.8); break;
         case 'puff': effects.embers(e.x, e.y, 10, '#ff4040'); break;
+        // grappling hook mobility (sim/grapple.ts)
+        case 'gFire': audio.weapon('hookFire'); break;
+        case 'gAttach': audio.weapon('hookHit'); effects.dust(e.x, e.y, 0.25 * e.a); break;
+        case 'gRelease': audio.whoosh(0.35 + 0.5 * e.a); break;
+        case 'gCling': audio.step(true); audio.weapon('hookHit'); effects.dust(e.x, e.y, 0.35); break;
+        case 'gWallJump': audio.dodge(); audio.whoosh(0.6); effects.dust(e.x, e.y + 40, 0.4); break;
       }
     });
     ev.on('telegraph', () => { audio.telegraph(); });

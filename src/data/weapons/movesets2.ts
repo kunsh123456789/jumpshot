@@ -2,7 +2,7 @@ import type { WeaponV2 } from './types';
 import { addMove, CANCEL, MOVES, type MoveDef, type MoveInput } from '../moves';
 import { tplAnim } from './author';
 import { PLAYER } from '../tuning';
-import type { AnimDef } from '../anims/types';
+import { drawn, type AnimDef } from '../anims/types';
 
 /**
  * The reworked movesets (approved list, pass 9): every weapon gets a signature
@@ -67,12 +67,19 @@ const fists2: WeaponV2 = {
 add('hook', { id: 'hk2_tie', name: 'Tether', tags: ['heavy'], startup: 9, active: 3, recovery: 18, damage: 6, hitstun: 40, kbX: 0, kbY: 0, hitbox: { x: 50, y: 92, r: 1 }, reach: 300, ranged: 440, dash: false, aimCone: 45, beam: { len: 440, width: 26, pierce: false, color: '#1b1a17', style: 'whip' }, cancelInto: CANCEL.heavy, sound: 'slash', weight: 0.5, trail: tr('#ffd23f', 10), x2: { tie: 420 } }, 'throw');
 add('hook', { id: 'hk2_trip', name: 'Trip Line', tags: ['light', 'sweep'], startup: 7, active: 4, recovery: 18, damage: 8, hitstun: 34, kbX: 300, kbY: -420, knockdown: true, hitbox: { x: 120, y: 20, r: 90 }, reach: 130, maxTargets: 6, cancelInto: CANCEL.light, sound: 'slash', weight: 0.55, trail: tr('#ffd23f', 10) }, 'low');
 add('hook', { id: 'hk2_dive', name: 'Grapple Dive', tags: ['air', 'down', 'heavy'], startup: 6, active: 6, recovery: 16, damage: 12, hitstun: 40, kbX: 260, kbY: -500, knockdown: true, hitstop: 8, shake: 12, hitbox: { x: 30, y: 20, r: 80 }, reach: 40, dash: false, cancelInto: ['dodge', 'special'], sound: 'spike', weight: 0.9, afterimage: true, trail: tr('#ffd23f', 14), x2: { self: { vx: 0, vy: 1700 }, landWave: { dmg: 6, range: 220, speed: 900, launch: -520 } } }, 'airDown');
+// Grappling mobility (sim/grapple.ts): the body kick while swinging, and the dive kick off a wall.
+variant('hk_aswing', 'hk3_kick', { name: 'Swing Kick', damage: 9, hitstun: 34, kbX: 700, kbY: -420, hitstop: 5, shake: 6, zoom: 0.15, sound: 'kick', weight: 0.6 });
+// Move-list names for the ↗ slot (the grapple takes the input before these could run).
+variant('hk_swing', 'hk3_web', { name: 'Web Swing' });
+variant('hk_aswing', 'hk3_aweb', { name: 'Web Swing' });
+variant('hk_azip', 'hk3_wallKick', { name: 'Wall Dive', damage: 18, hitstun: 38, kbX: 1000, kbY: -320, hitstop: 9, shake: 12, zoom: 0.45 });
 const hook2: WeaponV2 = {
-  desc: 'Spider: yank, zip and swing; TETHER two enemies so hitting one drags the other.',
-  ground: { side: { light: 'hk_pull', heavy: 'hk_zip' }, upDiag: { light: 'hk_swing', heavy: 'hk2_tie' }, up: { light: 'hk_air', heavy: 'hk_airH' }, downDiag: { light: 'hk2_trip', heavy: 'hk2_trip' }, down: { light: 'hk_slam', heavy: 'hk_slamH' } },
-  air: { side: { light: 'hk_apull', heavy: 'hk_azip' }, upDiag: { light: 'hk_aswing', heavy: 'hk_aswing' }, up: { light: 'hk_aair', heavy: 'hk_aair' }, downDiag: { light: 'hk2_dive', heavy: 'hk2_dive' }, down: { light: 'hk2_dive', heavy: 'hk2_dive' } },
+  desc: 'Spider: swing from the roof, zip to the walls and stick; yank, zip and TETHER enemies.',
+  ground: { side: { light: 'hk_pull', heavy: 'hk_zip' }, upDiag: { light: 'hk3_web', heavy: 'hk2_tie' }, up: { light: 'hk_air', heavy: 'hk_airH' }, downDiag: { light: 'hk2_trip', heavy: 'hk2_trip' }, down: { light: 'hk_slam', heavy: 'hk_slamH' } },
+  air: { side: { light: 'hk_apull', heavy: 'hk_azip' }, upDiag: { light: 'hk3_aweb', heavy: 'hk3_aweb' }, up: { light: 'hk_aair', heavy: 'hk_aair' }, downDiag: { light: 'hk2_dive', heavy: 'hk2_dive' }, down: { light: 'hk2_dive', heavy: 'hk2_dive' } },
   dodge: { distance: 0, frames: PLAYER.dodgeFrames + 4, rope: false, kind: 'zipUp' },
-  tips: ['→ yank + punch · heavy: zip kick', '↗ swing kick · heavy: TETHER two enemies', '↘ TRIP LINE · ↓ slam yank · air ↓ GRAPPLE DIVE', 'Dodge = zip up to the ceiling'],
+  passive: { grapple: true },
+  tips: ['↗ ↖ SWING from the roof (keep holding to keep swinging, flick again to chain) · you kick whoever you swing through', '← → with nobody that side: ZIP to the wall and stick · tap or swipe away to WALL JUMP, at an enemy: WALL DIVE', '→ at an enemy: yank + punch · heavy: zip kick · ground ↗ heavy: TETHER two enemies', '↘ TRIP LINE · ↓ slam yank · air ↓ GRAPPLE DIVE · dodge = zip up and hang'],
   anims: [],
 };
 
@@ -85,12 +92,27 @@ add('staff', { id: 'st2_lowspin', name: 'Low Spin', tags: ['light', 'sweep'], st
 add('staff', { id: 'st2_polekick', name: 'Pole Kick', tags: ['heavy', 'down'], startup: 12, active: 18, recovery: 20, damage: 7, hitstun: 32, kbX: 700, kbY: -360, knockdown: true, hitstop: 6, shake: 9, hitbox: { x: 0, y: 70, r: 0 }, aoe: 230, reach: 80, maxTargets: 10, multiHit: { interval: 6, count: 3 }, cancelInto: CANCEL.heavy, sound: 'kick', weight: 0.85, trail: tr('#ffd23f', 14, 'footA'), fx: { whirl: 190 } }, 'twirl');
 add('staff', { id: 'st2_windmill', name: 'Windmill', tags: ['air', 'light'], startup: 5, active: 16, recovery: 12, damage: 4, hitstun: 30, kbX: 220, kbY: -260, hitbox: { x: 50, y: 86, r: 70 }, reach: 70, maxTargets: 6, multiHit: { interval: 5, count: 4 }, cancelInto: CANCEL.air, sound: 'slash', weight: 0.5, trail: tr('#bff4ff', 12) }, 'air');
 add('staff', { id: 'st2_drill', name: 'Drill Dive', tags: ['air', 'down'], startup: 6, active: 16, recovery: 14, damage: 4, hitstun: 32, kbX: 60, kbY: 520, hitbox: { x: 20, y: 30, r: 72 }, reach: 40, maxTargets: 6, multiHit: { interval: 4, count: 4 }, selfVY: 260, cancelInto: ['dodge', 'special'], sound: 'spike', weight: 0.7, trail: tr('#ffd23f', 14) }, 'airDown');
+// Pole Vault Kick (ground → heavy): run in, plant the staff, vault up off it and drive both feet in.
+// The vault is real: at contact the hero launches up and forward (x2.self) while the kick lands.
+add('staff', { id: 'st2_vaultKick', name: 'Pole Vault Kick', tags: ['heavy'], startup: 9, active: 8, recovery: 18, damage: 19, hitstun: 44, kbX: 1350, kbY: -420, knockdown: true, hitstop: 10, shake: 14, zoom: 0.45, poise: 3, hitbox: { x: 46, y: 78, r: 62 }, reach: 125, maxTargets: 4, cancelInto: CANCEL.heavy, sound: 'kick', weight: 1, afterimage: true, trail: tr('#ffd23f', 18, 'footA'), fx: { crescent: true }, slowmo: { scale: 0.4, sec: 0.16 }, x2: { self: { vx: 520, vy: -920, free: true } } });
+(anims.staff ??= []).push(drawn({ id: 'st2_vaultKick', strike: 'leg', reach: 'footA', drawings: [
+  // run-in plant: staff jabbed into the floor ahead, weight driving onto it
+  { hold: 5, p: { rootY: -22, lean: 0.62, head: -0.15, aU: 1.05, aL: -0.15, bU: 0.85, bL: 0.0, footA: 30, footB: -46, flex: -5 } },
+  // lift off the pole: hips swing up, knees tucked to the chest
+  { hold: 4, p: { plant: 0, rootY: -46, lean: -0.35, head: 0.1, aU: 0.55, aL: 0.1, bU: 0.4, bL: 0.15, laU: 1.7, laL: -2.1, lbU: 1.45, lbL: -1.95, flex: 5, stretch: 0.95 }, smear: ['footA', 'footB'] },
+  // the kick: laid back along the pole, both feet shot straight out
+  { hold: 8, p: { plant: 0, rootY: -24, lean: -1.0, head: 0.45, aU: -0.45, aL: 0.25, bU: -0.25, bL: 0.3, laU: 1.95, laL: -0.04, lbU: 1.78, lbL: 0.06, stretch: 1.12 }, smear: ['footA', 'footB'], impact: true },
+  // follow-through: tumbling over the top
+  { hold: 10, p: { plant: 0, rootY: -10, lean: -0.35, head: 0.2, aU: 2.2, aL: 0.6, bU: 1.6, bL: 0.8, laU: 1.1, laL: -1.4, lbU: 0.7, lbL: -1.0 } },
+  // ready to land
+  { hold: 8, p: { plant: 0, rootY: 0, lean: 0.2, head: -0.1, aU: 1.3, aL: 1.2, bU: 0.6, bL: 1.6, laU: 0.4, laL: -0.6, lbU: -0.1, lbL: -0.4 } },
+] }));
 const staff2: WeaponV2 = {
   desc: 'Spin Master: HOLD after ↗ to keep the staff spinning (it deflects shots); let go to fling.',
-  ground: { side: { light: 'st_twirl1', heavy: 'st_spin' }, upDiag: { light: 'st2_spin', heavy: 'st_toss' }, up: { light: 'st_vault', heavy: 'st2_rocket' }, downDiag: { light: 'st2_lowspin', heavy: 'st_heliH' }, down: { light: 'st_plant', heavy: 'st2_polekick' } },
+  ground: { side: { light: 'st_twirl1', heavy: 'st2_vaultKick' }, upDiag: { light: 'st2_spin', heavy: 'st_toss' }, up: { light: 'st_vault', heavy: 'st2_rocket' }, downDiag: { light: 'st2_lowspin', heavy: 'st_heliH' }, down: { light: 'st_plant', heavy: 'st2_polekick' } },
   air: { side: { light: 'st2_windmill', heavy: 'st_aswingH' }, upDiag: { light: 'st_aheli', heavy: 'st_aheli' }, up: { light: 'st_arise', heavy: 'st_arise' }, downDiag: { light: 'st2_drill', heavy: 'st_plunge' }, down: { light: 'st2_drill', heavy: 'st_plunge' } },
   dodge: { distance: 200, frames: PLAYER.dodgeFrames + 4, rope: false, kind: 'vault' },
-  tips: ['↗ MOMENTUM SPIN: keep holding to spin, let go to fling · heavy: boomerang', '↑ vault · heavy: POLE ROCKET (sky-high, then crash)', '↘ low spin · ↓ plant · heavy: POLE KICK', 'Air → windmill · air ↓ drill · Dodge = vault over'],
+  tips: ['↗ MOMENTUM SPIN: keep holding to spin, let go to fling · heavy: boomerang', '↑ vault · heavy: POLE ROCKET (sky-high, then crash)', '↘ low spin · ↓ plant · heavy: POLE KICK', '→ twirl string · heavy: POLE VAULT KICK · air → windmill · air ↓ drill · Dodge = vault over'],
   anims: [],
 };
 

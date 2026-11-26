@@ -79,7 +79,7 @@ export class Moveset2 {
       else this.addPatch(p.grounded ? p.x : fx, X.ice.r, X.ice.frames);
     }
     if (X.iceWall) this.addWall(w, p.x + p.facing * X.iceWall.dist, p.facing, X.iceWall.frames);
-    if (X.self) { p.vx = p.facing * X.self.vx; p.vy = X.self.vy; p.grounded = false; p.stall = 0; }
+    if (X.self && !X.self.free) { p.vx = p.facing * X.self.vx; p.vy = X.self.vy; p.grounded = false; p.stall = 0; }
     if (X.puff && p.target && p.target.alive && Math.abs(p.target.x - p.x) < 200) {
       shockwave(w, p.target.x, p.target.cy, X.puff, 3, p.target, '#ff4040');
       this.fx(w, 'puff', p.target.cx, p.target.cy, X.puff / 120);

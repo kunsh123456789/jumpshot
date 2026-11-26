@@ -3,6 +3,7 @@ import { drawWeaponFx, drawRefFx } from './weaponFx';
 import { drawExtraFx } from './weaponFx2';
 import { drawCineFx } from './cineFx';
 import { drawMoveset2Fx } from './moveset2Fx';
+import { drawGrappleFx } from './grappleFx';
 import type { Camera } from '../core/camera';
 import { ANIM, WORLD } from '../data/tuning';
 import { settings } from '../core/settings';
@@ -102,6 +103,7 @@ export class Renderer {
     for (const f of order) drawShadow(ctx, f, alpha, time);
     effects.drawParticles(ctx, false);
     effects.drawGhosts(ctx);
+    drawGrappleFx(ctx, world, alpha, time, 1.6);
     for (const f of order) drawFighter(ctx, f, alpha, time, dt);
     drawWeaponFx(ctx, world, alpha, time, 1.6);
     drawMoveset2Fx(ctx, world, time, 1.6);
@@ -206,6 +208,7 @@ export class Renderer {
       g.restore();
     }
 
+    drawGrappleFx(g, world, alpha, time, wpp);
     for (const f of order) drawInkFighter(g, f, alpha, time, wpp);
     drawWeaponFx(g, world, alpha, time, wpp);
     drawMoveset2Fx(g, world, time, wpp);

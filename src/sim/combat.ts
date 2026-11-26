@@ -243,7 +243,7 @@ function burst(w: World, v: Fighter): void {
     if (!p.grounded) p.vy = -200;
     p.move = null;
     p.followTarget = null;
-    p.setState('hurt', 14);
+    w.grapple.cut(p); p.setState('hurt', 14);
   }
   w.events.emit('burst', { x: v.x, y: v.cy, enemy: v });
 }
@@ -418,6 +418,7 @@ export function hurtPlayer(w: World, dmg: number, dirX: number, kbX: number, kbY
   p.flash = 4;
   p.vx = dirX * Math.max(kbX, PLAYER.hurtKnockback) * 0.8;
   if (!p.grounded || kbY < -300) { p.vy = Math.min(p.vy, kbY * 0.6); p.grounded = false; }
+  w.grapple.cut(p);
   p.setState('hurt', PLAYER.hurtStunFrames);
   p.hitstop = hitstopFrames(5);
   p.critTimer = 0;

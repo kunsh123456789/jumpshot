@@ -43,6 +43,7 @@ export interface Passive {
   souls?: boolean;     // scythe: KOs release souls that heal; at low HP hits steal life
   skate?: boolean;     // ice: faster on ice patches
   vent?: boolean;      // laser: overheating vents a knockback steam burst
+  grapple?: boolean;   // hook: swing from the roof, zip to the walls and cling, wall-jump (sim/grapple.ts)
 }
 
 /** A reworked moveset that replaces the original when Settings -> Movesets is New. */

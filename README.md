@@ -153,14 +153,35 @@ Every weapon has a reworked **signature moveset**. **Settings → Weapons → Mo
 | Weapon | Signature | New moves | Dodge | Special |
 |---|---|---|---|---|
 | **Fists** (Brawler) | **Fury**: hits fill it; while it burns, punches hit harder and boom louder | Jab, jab, **Power Cross** (shockwave puff) · heavy **Haymaker** · ↑ heavy **Dragon Uppercut** · air ↓ **Meteor Elbow** | **Slip**: dodge or parry an attack and you counter-punch automatically | MEGA JUMPSHOT |
-| **Grappling Hook** (Spider) | **Tether** two enemies: hitting one drags and hurts the other | ↗ heavy **Tether** · ↘ **Trip Line** · air ↓ **Grapple Dive** (lands with a shockwave) | **Zip up** to the ceiling | WEB TAKEDOWN |
-| **Staff** (Spin Master) | **Momentum spin**: keep holding after ↗ and the staff keeps spinning (deflects shots); let go to fling | ↑ heavy **Pole Rocket** · ↘ **Low Spin** · ↓ heavy **Pole Kick** · air → **Windmill** · air ↓ **Drill Dive** | **Vault** over the enemy | CYCLONE |
+| **Grappling Hook** (Spider) | **Grapple mobility**: swing from the roof, zip to the walls and stick to them (see below) · **Tether** two enemies: hitting one drags and hurts the other | ↗ ↖ **Web Swing** · ← → with nobody that side **Wall Zip** · ground ↗ heavy **Tether** · ↘ **Trip Line** · air ↓ **Grapple Dive** (lands with a shockwave) | **Zip up** to the roof and hang | WEB TAKEDOWN |
+| **Staff** (Spin Master) | **Momentum spin**: keep holding after ↗ and the staff keeps spinning (deflects shots); let go to fling | → heavy (Shift + →) **Pole Vault Kick**: plant the staff, vault off it and drive both feet in · ↑ heavy **Pole Rocket** · ↘ **Low Spin** · ↓ heavy **Pole Kick** · air → **Windmill** · air ↓ **Drill Dive** | **Vault** over the enemy | CYCLONE |
 | **Laser** (Gunslinger) | **Range matters**: up close every shot is a **Point-Blank Blast**; overheating vents a knockback steam burst | → close **Point-Blank Blast** · ↗ **Blast Jump** · ↓ close **Muzzle Slam** | **Recoil dash** (shoots behind you) | OVERLOAD BEAM |
 | **Whip** (Tamer) | **Sweet-spot crack**: tip hits do double damage | → heavy **Sonic Crack** (stuns the line) · ↑ heavy **Lasso Spin** (swing an enemy as a weapon) · ↓ heavy **Tamer's Ring** · air → **Tarzan Swing** | **Backflip** | **LION TAMER**: figure-8 path; lashes spin everyone, then one crack yanks them into a pile and launches it |
 | **Hammer** (Earthshaker) | **Floor shockwaves** on every slam (jump over them!); swings have **super armor** | ↓ **Quake** (waves both ways) · ↓ heavy **Fault Line** (rock spikes + a forward wave) · ↑ heavy Ground Pound + waves · air ↓ Meteor Hammer + huge waves | **Hammer hop** over the enemy | **EARTHSPLITTER**: down-then-V path; leap, slam, the floor splits both ways and slabs launch everyone |
 | **Daggers** (Assassin) | **Backstab**: hits from behind (and any move that lands behind) always crit; cuts **bleed** | → heavy **Shadow Dash** (the cuts land after you pass) · ↓ **Smoke Bomb** (vanish, reappear behind them with a Backstab) · ↓ heavy **Execute** (detonates every bleed) | **Smoke teleport** | **BLADE STORM**: star path; time stops, you blink behind each enemy leaving slashes, then every slash lands at once |
 | **Ice** (Frost) | **Slippery floor**: ice patches make enemies slide (and **shatter** into each other); you skate faster on ice | ↘ **Ice Slide** (leaves a trail) · ↓ **Frost Floor** · ↓ heavy **Glacier Wall** (blocks and freezes) · air ↓ **Icicle Drop** | **Skate** (long slide that leaves ice) | **DEEP FREEZE**: X path; the screen freezes, enemies become ice statues, one punch shatters them |
 | **Scythe** (Reaper) | **Doom**: hits put skull marks on enemies, 3 = **REAPED** · KOs drop **souls** that heal · below 30% HP hits **steal life** | Doom on the reap string, Death Spiral, Reaping Pull and Harvest · ↓ **Grave Rise** (dead hands hold enemies) | **Phase** (turn ghostly, pass through) | **REAPER**: crescent path; the world goes black and white and a giant shadow scythe sweeps through everyone; their souls heal you |
+
+**Grappling hook mobility** (Hook, New moveset). A girder roof runs across the top of the arena, and both walls take the hook.
+- **↗ / ↖: Web Swing.** The rope bites the roof ahead and you swing under it.
+  - A quick flick swings one arc and lets go at the top with all the speed.
+  - **Keep your finger down** (or the attack key held) to keep swinging back and forth.
+  - Flick ↗ again mid-swing to **chain** to the next rope.
+  - You **kick** every enemy you swing through.
+- **On a rope:**
+  - tap / jump: **web jump** (always upward);
+  - ↑: reel up and hang;
+  - ← → with nobody that side: zip to that wall;
+  - ↓: **Grapple Dive**;
+  - any other attack lets go and strikes;
+  - the arrow keys / stick steer the swing.
+- **← / → with no enemy on that side: Wall Zip.** You zip to the wall and **stick** to it, slowly sliding down. Swinging hard into a wall also sticks you to it. From the wall:
+  - tap, or swipe away: **wall jump**;
+  - swipe toward an enemy: **Wall Dive** kick;
+  - ↑: climb to the roof;
+  - ↓: drop.
+- **Air ↑ with nothing overhead:** zip to the roof and hang. **Dodge** does the same, and stays a dodge: you're briefly untouchable.
+- Letting go of any rope keeps your momentum (low air drag for a moment) and gives your air jump back.
 
 ## Sound
 

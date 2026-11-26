@@ -664,6 +664,8 @@ export class Game {
       if (ex > maxX) maxX = ex;
       if (ey < minY && d < 400 && e.state !== 'ko') minY = ey;
     }
+    // Grappling: keep the rope's roof bite in view.
+    if (w.grapple.active && w.grapple.phase !== 'cling') minY = Math.min(minY, w.grapple.ay + 160);
     this.cam.targetX = sx / sw + p.facing * CAMERA.lookAheadX;
     const spread = maxX - minX;
     let z = CAMERA.baseZoom - clamp((spread - CAMERA.crowdSpreadStart) / (CAMERA.crowdSpreadFull - CAMERA.crowdSpreadStart), 0, 1) * (CAMERA.baseZoom - CAMERA.minZoom);

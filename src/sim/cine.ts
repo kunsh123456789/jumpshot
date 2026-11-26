@@ -106,6 +106,7 @@ export class CinePlayer {
       v: {}, vis: emptyVis(), skipping: false, bossDmg: 0,
     };
     this.ctx = c;
+    w.grapple.cut(p);
     p.setState('cine');
     p.invuln = Math.max(p.invuln, 9999);
     p.vx = 0; p.vy = 0;

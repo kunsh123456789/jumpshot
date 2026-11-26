@@ -1,3 +1,4 @@
+import { Grapple } from './grapple';
 import { EventBus } from '../core/events';
 import { Fighter } from './fighter';
 import type { SimEvents } from './events';
@@ -40,6 +41,8 @@ export class World {
   readonly wpn = new WeaponSim();
   /** Reworked movesets' mechanics (Settings -> Movesets: New). */
   readonly v2 = new Moveset2();
+  /** Grappling hook mobility (hook, New moveset): roof swings, wall zips, wall clings. */
+  readonly grapple = new Grapple();
   gameOver = false;
   /** Tutorial: whether the training dummy attacks. */
   dummyAttacks = false;
@@ -95,6 +98,7 @@ export class World {
     this.ctrl.reset();
     this.wpn.reset();
     this.v2.reset();
+    this.grapple.reset();
     this.special.reset();
     this.cine.reset();
     this.pendingKO = null;
@@ -122,6 +126,7 @@ export class World {
     this.weapon = weaponById(id);
     this.wpn.reset();
     this.v2.reset();
+    this.grapple.reset();
     this.player.weapon = this.weapon.id;
     this.player.weaponOut = false;
     this.events.emit('weaponSwap', { id: this.weapon.id });

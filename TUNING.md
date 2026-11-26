@@ -456,3 +456,23 @@ Weapon moves are ordinary `MoveDef`s (`addMove`) with these generic hooks, all r
 | slipCounter | Fists: the move thrown after a slipped or parried attack |
 
 Per-move numbers (damage, frames, shockwave range/speed, ice radius/frames, vanish frames, delays) live in `data/weapons/movesets2.ts`.
+
+## Grappling hook mobility (`GRAPPLE` in data/weapons/tuning.ts)
+
+| Key | What it does |
+|---|---|
+| roofHeight | The roof the hook bites: this far above the floor (470) |
+| hipH, handOff | Rig geometry: the hip above the feet, and the hands above the hip with arms up (the rope runs to the hands) |
+| minLen, maxLen | Rope length to the hip: tight hang / longest swing |
+| ahead, aheadGround, aheadPerSpeed, aheadMax | How far ahead the rope lands (in the air / from the floor), plus some of the current speed |
+| yank, groundClear | From the floor: the running start along the arc, and how high above the floor the first swing's bottom passes |
+| gravity, pump, steer, reel, reelUp, maxSpeed | Swing physics: gravity, the forward push on the downswing, stick steering, reel speeds (normal / zip-up), top speed |
+| releaseAt | A flick lets go once this far past the anchor (as a fraction of the rope) while rising |
+| maxHold, maxAuto | Longest held swing / longest un-held swing (frames) |
+| pop, jumpPop, fling, flingDrag | Let-go pop, web-jump pop, frames of low air drag after letting go, and that drag |
+| hang | Dodge / ↑ zip-up: frames hanging under the roof before dropping (unless held) |
+| zipSpeed, clingSlide, clingSlip, clingMax | Wall zip speed; the cling's slide speed, when the slide speeds up, and how long you can stay |
+| wallJumpVx/Vy, wallFlatVx/Vy | Wall jump launch (up and away) and the flat side kick-off |
+| kickSpeed, kickR | Body kicks while swinging: minimum speed and radius (move `hk3_kick`) |
+| sideClear | ← → zips to the wall only when no enemy is on that side within this range |
+

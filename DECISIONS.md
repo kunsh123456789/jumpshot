@@ -603,3 +603,50 @@ Variants never repeat twice in a row; repeated identical samples are what make h
 - Input fuzz on all 10 weapons and a 10-weapon soak with Specials both came out clean.
 - Each new Special was captured at fixed cinematic frames.
 - **Balance is a first pass;** the numbers are in `V2` (`data/weapons/tuning.ts`) and in `movesets2.ts`.
+
+## Grappling hook mobility, and the staff's Pole Vault Kick
+
+**Asked:** "swing along the roof or grapple to a wall like spiderman… highly mobility based". Built into the hook's **New** moveset only (`Passive.grapple`); the Original set is untouched.
+
+**A roof and walls to grab.** The arena had neither, so the hook's New set draws a pencil girder 470 units up (`ROOF_Y`) and the two wall faces. They are light gray so they read as scenery, not a second floor. Nothing else collides with them.
+
+**The swing is a rope, not an animation (`sim/grapple.ts`).**
+- The hip is a particle on a rope to the anchor, solved position-based in two substeps:
+  1. predict the move;
+  2. project onto the rope;
+  3. take the velocity from the move;
+  4. strip the radial part while the rope is taut.
+- Without step 4, reeling in turned straight into an upward fling: the first build slid the hero along the roof.
+- The floor shortens the rope (the hero skims it), and the walls stick the hero.
+- Release speed is whatever the rope gave, so the momentum is real.
+
+**Hold to keep swinging.**
+- A swipe commits mid-drag, so the finger is still down. Keep it there to swing back and forth (up to 4.3 s); lift it to let go at the top of the arc.
+- A plain flick auto-releases on the upswing.
+- This reuses `World.attackHeld` from the staff spin.
+
+**Inputs are context, not new buttons.**
+- ↗ ↖ always swing; ground ↗ heavy stays Tether.
+- ← → zip to a wall only when nobody is on that side within 560, so the yank and zip kick still work on enemies.
+- Air ↑ zips up only with nothing overhead.
+- On a rope or a wall, the directions become rope or wall actions (`PlayerController.grappleInput`).
+
+**New states `swing` and `cling`** own the hero's position; the controller skips its own physics.
+- Anything else that takes the hero (a hit, a cinematic) cuts the rope on the next tick.
+- Letting go gives the air jump back, plus 48 frames of low air drag (`Fighter.fling`). Without it, the usual 0.96 per-frame drag killed the swing's speed within a second.
+
+**Drawings:** four new loops (`data/anims/grappleSet.ts`). The swing and hang are drawn upright with both arms straight up; the poser turns the whole body about the hip (`spinAdd`) so the arms line up with the rope.
+
+**Attacks while grappling** keep the mobility offensive:
+- the body kick (`hk3_kick`): once per enemy per rope, above 430 u/s;
+- the Wall Dive (`hk3_wallKick`): the zip kick variant.
+
+**The dodge** (zipUp) now zips to the roof and hangs for 46 frames, keeping the dodge's invulnerability and parry window.
+
+**Staff Pole Vault Kick.** Asked: "shift side attack with the staff … like a pole vault kick".
+- Shift + → is the ground side heavy, so the New staff's heavy side is now `st2_vaultKick`: run in, plant the staff, then a two-foot kick at contact.
+- The kick: 19 damage, knockdown, a crescent, and a short slow-mo.
+- The vault is real: the hero launches up and forward, through `x2.self` with the new `free` flag.
+- That launch fires the frame **after** contact. Otherwise the hit's own air-stall and hit-stop ate it, and the first build rose only 9 units.
+- The old Spinning Sweep stays in the Original set.
+

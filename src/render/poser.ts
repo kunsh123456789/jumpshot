@@ -9,6 +9,7 @@ import type { AnimDef } from '../data/anims/types';
 import { RIGS } from './rig';
 import '../data/anims/heroSet';
 import '../data/anims/enemySet';
+import '../data/anims/grappleSet';
 import { gripPose, gripWeight, WEAPON_VICTORY, type GripState } from '../data/weapons/grips';
 import { PLAYER } from '../data/tuning';
 
@@ -153,6 +154,13 @@ export function poseFighter(f: Fighter, _time: number): void {
     case 'dodge': {
       const d = f.grounded ? ANIMS.dodge : ANIMS.airDodge;
       a.show(d, (f.stateFrame * d.len) / Math.max(1, f.dodgeLen), 1); return;
+    }
+    case 'swing': case 'cling': {
+      // Grappling hook: the drawing by phase; the whole body turns to line the arms up with the rope.
+      const def = f.grapPose === 3 ? ANIMS.grapCling : f.grapPose === 2 ? ANIMS.grapZip : f.grapPose === 1 ? ANIMS.grapSwing : ANIMS.grapHang;
+      a.run(def, rate, 2);
+      a.spinAdd = f.grapSpin * (f.facing < 0 ? -1 : 1);
+      return;
     }
     case 'jumpSquat': a.show(ANIMS.jumpSquat, Math.min(ANIMS.jumpSquat.len - 1, f.stateFrame), 1); grip(f, a, 'crouch'); return;
     case 'jumpFollow': case 'fall': {

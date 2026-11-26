@@ -9,7 +9,7 @@ import type { SwipeEvent } from '../ui/pad';
 import { clamp, ease } from '../core/math';
 import { overlaps, playerHit, sideHit } from './combat';
 import { airGravity } from './physics';
-import { WEAPON_T } from '../data/weapons/tuning';
+import { GRAPPLE, WEAPON_T } from '../data/weapons/tuning';
 
 interface Buffered { ev: SwipeEvent; age: number; heavy: boolean; used: boolean }
 
@@ -89,6 +89,11 @@ export class PlayerController {
       if (st.alive && MOVES[V2.slipCounter] && Math.abs(st.x - p.x) < 300) this.startMove(w, MOVES[V2.slipCounter], st, st.x > p.x ? 0 : 4, false, -1);
     }
     if (p.flash > 0) p.flash--;
+    // Grapple: anything else that took the hero (a hit, a cinematic) cuts the rope.
+    const gr = w.grapple;
+    if (gr.active && p.state !== 'swing' && p.state !== 'cling') gr.cut(p);
+    if (gr.active) this.airJumps = PLAYER.airJumps;
+    if (p.fling > 0 && (p.grounded || p.state === 'move' || p.state === 'hurt')) p.fling = 0;
 
     // Age the buffer only while the player could act: never during hit-stop (above)
     // or while committed to a move before its cancel window, so long dashes and
@@ -112,6 +117,7 @@ export class PlayerController {
     switch (p.state) {
       case 'move': this.updateMove(w); break;
       case 'dodge': this.updateDodge(w); break;
+      case 'swing': case 'cling': gr.update(w, p); break;
       case 'hurt':
         if (--p.timer <= 0) p.setState(p.grounded ? 'idle' : 'fall');
         break;
@@ -157,6 +163,7 @@ export class PlayerController {
   private canAct(p: Fighter, tags: MoveTag[] | null, tap: boolean): boolean {
     switch (p.state) {
       case 'idle': case 'land': case 'fall': case 'jumpFollow': case 'walk':
+      case 'swing': case 'cling':
         return true;
       case 'jumpSquat':
         return false;
@@ -181,6 +188,10 @@ export class PlayerController {
 
   private tryExecute(w: World, b: Buffered): boolean {
     const p = w.player;
+    if (w.weapon.passive?.grapple) {
+      const r = this.grappleInput(w, b);
+      if (r !== null) return r;
+    }
     if (b.ev.kind === 'jump') {
       if (!this.canAct(p, null, true)) return false;
       this.jump(w, true);
@@ -216,6 +227,83 @@ export class PlayerController {
     this.startMove(w, plan.move, plan.target, b.ev.dir, plan.crossUp || (!!plan.move.behind && !!plan.target), b.ev.segId);
     this.curEv = null;
     return true;
+  }
+
+  /**
+   * Grappling hook mobility (hook, New moveset). Returns true/false when the input was handled
+   * here (consumed / not yet possible), null to fall through to the normal move resolution.
+   *  - ↗ ↖ (light anywhere, heavy in the air): web-swing from the roof; again mid-swing to chain.
+   *  - ↑ in the air with nothing overhead: zip up to the roof and hang.
+   *  - ← → with no enemy on that side: zip to that wall and cling to it.
+   *  - on a rope: tap/jump = let go with a pop, ↓ = grapple dive, other attacks let go and strike.
+   *  - on a wall: tap / swipe away = wall jump, at an enemy = dive kick, ↑ = climb to the roof, ↓ = drop.
+   */
+  private grappleInput(w: World, b: Buffered): boolean | null {
+    const p = w.player, g = w.grapple;
+    const ev = b.ev;
+    const isTap = ev.kind === 'tap' || ev.kind === 'jump';
+    const d = ev.dir;
+    const sx = isTap ? 0 : dirSignX(d);
+    if (p.state === 'cling') {
+      const away = -g.side;
+      if (isTap) { g.wallJump(w, p, false); return true; }
+      if (d === 2) { g.swing(w, p, away, true, GRAPPLE.hang); return true; }
+      if (d === 6) { g.drop(p); return true; }
+      if (sx === away) {
+        // at an enemy on that side: dive kick into it; otherwise kick off the wall
+        const t = this.enemyToward(w, away, d === 5 || d === 7 ? 1 : 0);
+        if (t && MOVES.hk3_wallKick) { g.drop(p); this.startMove(w, MOVES.hk3_wallKick, t, d, false, ev.segId); return true; }
+        g.wallJump(w, p, d === 0 || d === 4);
+        return true;
+      }
+      if (sx === g.side) { g.wallJump(w, p, false); return true; } // into the wall: spring up and off it
+      return true;
+    }
+    if (p.state === 'swing') {
+      if (g.t < 3) return false; // the rope is still biting
+      if (isTap) { g.release(w, p, GRAPPLE.jumpPop, true); return true; }
+      if (d === 1 || d === 3) { g.swing(w, p, sx, false); return true; }
+      if (d === 2) { g.swing(w, p, p.facing, true, GRAPPLE.hang); return true; }
+      if ((d === 0 || d === 4) && !this.enemyToward(w, sx, 0)) { g.zipWall(w, p, sx); return true; }
+      if (d === 6 && MOVES.hk2_dive) { g.drop(p); this.startMove(w, MOVES.hk2_dive, null, d, false, ev.segId); return true; }
+      // any other attack: let go and strike with the air move
+      g.drop(p);
+      return null;
+    }
+    if (isTap) return null;
+    const free = this.canAct(p, ['light', 'air', 'heavy'], false);
+    if (!free) return null;
+    if ((d === 1 || d === 3) && (!b.heavy || !p.grounded)) { g.swing(w, p, sx, false); return true; }
+    if (d === 2 && !p.grounded && !this.enemyAbove(w)) { g.swing(w, p, p.facing, true, GRAPPLE.hang); return true; }
+    if ((d === 0 || d === 4) && !this.enemyToward(w, sx, 0)) { g.zipWall(w, p, sx); return true; }
+    return null;
+  }
+
+  /** An enemy on side `sx` within the grapple's side range (`low` = only ones below the hero). */
+  private enemyToward(w: World, sx: number, low: number): Fighter | null {
+    const p = w.player;
+    let best: Fighter | null = null, bd = Infinity;
+    for (const e of w.enemies) {
+      if (!e.alive || e.remove || e.state === 'ko' || e.state === 'dead') continue;
+      const dx = e.x - p.x;
+      if (Math.sign(dx) !== sx || Math.abs(dx) > GRAPPLE.sideClear) continue;
+      if (low && e.cy < p.cy) continue;
+      if (Math.abs(e.cy - p.cy) > 330) continue;
+      const dd = Math.abs(dx) + Math.abs(e.cy - p.cy) * 0.5;
+      if (dd < bd) { bd = dd; best = e; }
+    }
+    return best;
+  }
+
+  /** An enemy roughly overhead (an air ↑ then attacks it instead of zipping to the roof). */
+  private enemyAbove(w: World): boolean {
+    const p = w.player;
+    for (const e of w.enemies) {
+      if (!e.alive || e.state === 'ko' || e.state === 'dead') continue;
+      const dy = p.cy - e.cy, dx = Math.abs(e.x - p.x);
+      if (dy > 20 && dy < 360 && dx < dy * 0.9 + 60) return true;
+    }
+    return false;
   }
 
   private resolve(w: World, dir: number, heavy: boolean): { move: MoveDef; target: Fighter | null; crossUp: boolean } | null {
@@ -442,10 +530,12 @@ export class PlayerController {
     if (fr === S) {
       this.x2Done = !!m.x2 && w.v2.onContact(w, p, m);
       w.events.emit('whoosh', { x: p.x, y: p.cy, weight: m.weight, fighter: p });
-      if (!p.grounded) { p.vy = Math.min(p.vy, 0); p.stall = Math.max(p.stall, m.active + 3); }
+      if (!p.grounded && !m.x2?.self?.free) { p.vy = Math.min(p.vy, 0); p.stall = Math.max(p.stall, m.active + 3); }
       if (m.afterimage) w.events.emit('afterimage', { fighter: p });
     }
 
+    // A free self-launch (the pole vault) fires the frame after contact, past the kick's hit-stop.
+    if (m.x2?.self?.free && fr === S + 1) { p.vx = p.facing * m.x2.self.vx; p.vy = m.x2.self.vy; p.grounded = false; p.stall = 0; p.stallCount = 0; }
     // Staff momentum spin (new moveset): keeps going while the attack is held; letting go flings.
     if (m.x2?.spin && fr >= S + m.x2.spin.min && fr < S + m.active && !w.attackHeld) {
       const t = p.target;
@@ -610,6 +700,10 @@ export class PlayerController {
       case 'slip': // duck in place: an attack slipped here is countered automatically
         p.dodgeToX = clampX(p.x + away * 30); w.v2.slipTarget = null; break;
       case 'zipUp': // hook a point overhead and get yanked up
+        if (w.weapon.passive?.grapple) { // the grapple: zip to the roof and hang there
+          w.grapple.swing(w, p, threat ? away : p.facing, true, GRAPPLE.hang);
+          break;
+        }
         p.dodgeToX = p.x; p.grounded = false; p.vy = -1050; p.stall = 0; p.jumpKind = 'hop'; p.airFrames = 0; w.wpn.dodgeRope(p, p.x); break;
       case 'vault': case 'backflip': {
         // vault: hop OVER the threat; backflip: arc away from it
@@ -679,7 +773,7 @@ export class PlayerController {
   // ---------------------------------------------------------------------
   private physics(w: World): void {
     const p = w.player;
-    const dashing = (p.state === 'move' && p.dashFrames > 0 && p.moveFrame <= p.dashFrames) || w.wpn.ownsPlayer;
+    const dashing = (p.state === 'move' && p.dashFrames > 0 && p.moveFrame <= p.dashFrames) || w.wpn.ownsPlayer || p.state === 'swing' || p.state === 'cling';
     // A grab that caught nothing doesn't hang in the air (no floating on whiffed air throws).
     const whiffGrab = p.move !== null && !!p.move.grab && !w.wpn.held && p.moveFrame >= p.dashFrames;
     const hanging = p.state === 'move' && p.move !== null && !p.grounded && p.moveFrame < p.effStartup && !whiffGrab;
@@ -689,7 +783,7 @@ export class PlayerController {
         p.vy = Math.min(PHYS.maxFall, p.vy + g / 60);
         p.y += p.vy / 60;
         p.x += p.vx / 60;
-        p.vx *= 0.96;
+        if (p.fling > 0) { p.fling--; p.vx *= GRAPPLE.flingDrag; } else p.vx *= 0.96;
       } else if (hanging && !dashing) {
         // Ease into the air hang instead of stopping dead.
         p.vy *= 0.55; p.vx *= 0.7;

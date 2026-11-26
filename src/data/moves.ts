@@ -146,7 +146,7 @@ export interface X2Spec {
   /** Fists power cross: a shockwave puff of this radius at the victim. */
   puff?: number;
   /** Self-launch at contact (blast jump, pole rocket, dragon uppercut carry). */
-  self?: { vx: number; vy: number };
+  self?: { vx: number; vy: number; /** a real launch: no air stall at contact (the pole vault) */ free?: boolean };
 }
 
 export interface BeamSpec { len: number; width: number; pierce: boolean; color: string; hits?: number; style?: 'laser' | 'whip' | 'lightning' | 'ice' | 'ink' | 'scythe' }

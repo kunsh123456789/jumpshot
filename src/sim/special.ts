@@ -83,6 +83,7 @@ export class SpecialSystem {
     this.t = 0;
     this.freeze = true;
     this.pending = null;
+    w.grapple.cut(p);
     p.setState('cine');
     p.cineAnim = p.grounded ? 'cine_activate' : 'cine_activateAir';
     p.cineT = 0;

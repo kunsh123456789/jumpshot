@@ -14,7 +14,9 @@ export type FState =
   /** Player: the jump's anticipation crouch (a few frames before take-off). */
   | 'jumpSquat'
   /** Scripted cinematic (finishers, specials): position and drawing driven by the cinematic player. */
-  | 'cine';
+  | 'cine'
+  /** Player, grappling hook (New moveset): on a roof rope / zipping to a wall, or stuck to a wall (sim/grapple.ts). */
+  | 'swing' | 'cling';
 
 export const MAX_HITLIST = 12;
 
@@ -138,6 +140,10 @@ export class Fighter {
   // ---- Jump / air presentation (revision pass 8) ----
   /** What put the hero in the air: a jump, an air jump, a launcher leap, a vault, a dodge hop. */
   jumpKind: 'none' | 'jump' | 'air' | 'leap' | 'hop' = 'none';
+  /** Frames of low air drag after letting go of a grapple (the swing's momentum carries). */
+  fling = 0;
+  /** Grapple drawing (0 hang, 1 swing, 2 zip, 3 cling) and the body turn toward the rope (world radians). */
+  grapPose = 0; grapSpin = 0;
   /** Frames since leaving the ground (or since the last air jump). */
   airFrames = 0;
   /** Variable-height boost frames left (drag / held key). */
