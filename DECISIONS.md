@@ -686,3 +686,16 @@ Yank and Rodeo reuse the hook's tether moves; Disarm needed a new `x2.disarm`.
 - It shows waves 1-40 (one boss cycle) and notes that the cycle then repeats.
 - It is not on the pause menu (the title screen is where you plan a run).
 
+## Hammer KO finisher: HAMMER CRUSH (from the player's sketch)
+
+**Sent through the Reference Sketchpad:** a stick fighter standing over a downed enemy with the hammer raised high overhead; note: "add this as one of the finishers for when using the hammer".
+- **Moment:** the last enemy of a wave dies, as with every KO finisher, so it plays for the hammer instead of the fists-family roundhouse (`KO_OWN` in `data/cines.ts`).
+- **Beats:**
+  1. the enemy crumples to the floor;
+  2. the hero holds the hammer overhead in slow motion (about 40 frames);
+  3. the slam on frame 42 (bigger crack, invert flash, heavy shake and boom);
+  4. the enemy is knocked out.
+- **Drawings:** two new loops in `data/anims/cineSet.ts` (`cine_hammerUp`, `cine_hammerSlam`).
+- **Bosses:** the existing boss wrapper (three hits first) applies, so the Hammer finisher is the closer of those.
+- **Other weapons:** not affected. The hammer's air finisher and the Original moveset are unchanged.
+

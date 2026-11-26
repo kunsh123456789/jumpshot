@@ -101,5 +101,21 @@ export const plantSplit = drawn({ id: 'cine_plant', strike: 'arm', drawings: [
   { hold: 10, p: CROUCH },
 ] });
 
-const ALL: AnimDef[] = [axeWind, axeHit, roundhouse, xslash, spinGrab, hurl, pileDrive, erupt, charge, beamHold, activate, activateAir, plantSplit];
+/**
+ * Hammer KO finisher (from the player's own sketch): feet planted wide, both hands up gripping the
+ * hammer high overhead, leaning back (held long), then the whole body drops into the slam.
+ */
+export const hammerUp = drawn({ id: 'cine_hammerUp', drawings: [
+  { hold: 6, p: { rootY: -22, lean: 0.1, head: -0.1, aU: 2.3, aL: 0.9, bU: 2.1, bL: 1.1, footA: 26, footB: -28, flex: -3 } },
+  { hold: 8, p: { rootY: -26, lean: -0.22, head: 0.12, aU: 2.95, aL: 0.25, bU: 2.8, bL: 0.35, footA: 30, footB: -32, flex: -5, stretch: 1.06 } },
+  { hold: 30, p: { rootY: -28, lean: -0.3, head: 0.18, aU: 3.1, aL: 0.08, bU: 2.95, bL: 0.2, footA: 32, footB: -34, flex: -6, stretch: 1.1 } },
+] });
+export const hammerSlam = drawn({ id: 'cine_hammerSlam', strike: 'arm', drawings: [
+  { hold: 2, p: { rootY: -34, lean: 0.35, head: -0.2, aU: 1.7, aL: 0.4, bU: 1.5, bL: 0.5, footA: 36, footB: -34, flex: -4, stretch: 1.08 }, smear: ['handA', 'handB'] },
+  { hold: 6, p: { rootY: -50, lean: 0.85, head: -0.35, aU: 0.55, aL: 0.2, bU: 0.4, bL: 0.3, footA: 44, footB: -40, flex: -8, stretch: 0.95 }, smear: ['handA', 'handB'], impact: true },
+  { hold: 18, p: { rootY: -48, lean: 0.8, head: -0.3, aU: 0.5, aL: 0.2, bU: 0.4, bL: 0.3, footA: 44, footB: -40, flex: -8 } },
+  { hold: 12, p: CROUCH },
+] });
+
+const ALL: AnimDef[] = [axeWind, axeHit, hammerUp, hammerSlam, roundhouse, xslash, spinGrab, hurl, pileDrive, erupt, charge, beamHold, activate, activateAir, plantSplit];
 registerAnims(ALL, 'cineSet (pass 8)');

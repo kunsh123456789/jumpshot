@@ -187,6 +187,30 @@ const koFists: CineScript = {
   },
   end: (c) => { const m = c.main; if (m && m.state === 'cine') { m.deathStyle = 1; strike(c, m, 0, { vx: facing(c) * 1500, vy: -760, release: true }); } },
 };
+/**
+ * Hammer KO (designed from the player's sketch): the last enemy is floored, the hero stands over it
+ * with the hammer raised high overhead in slow motion, then brings it down for the kill.
+ */
+const koHammer: CineScript = {
+  id: 'ko.hammer', name: 'HAMMER CRUSH', len: () => 78,
+  start: (c) => { koSetup(c, 84); fx(c, 'slowmo', c.p.x, c.p.cy, 0.3); fx(c, 'focus', c.p.x, c.p.cy, 0.4); c.v.x0 = c.p.x; },
+  frame: (c) => {
+    const p = c.p, m = c.main!, f = c.f, side = facing(c);
+    // the victim crumples to the floor, then lies there
+    pose(m, 'knockdown', f < 14 ? f : 13);
+    place(m, m.x, G);
+    // hero: steps up beside the body, raises the hammer (held long), then slams
+    if (f < 40) { hero(c, 'cine_hammerUp', f); place(p, c.v.x0, G); }
+    else heroHit(c, 'cine_hammerSlam', 42);
+    if (f === 20) fx(c, 'stars', p.x, p.cy - 60, 0.5);
+    if (f === 42) {
+      m.deathStyle = 0;
+      strike(c, m, 0, { vx: side * 120, vy: -380, release: true, kind: 'finisher', weight: 1.5 });
+      fx(c, 'bigCrack', m.x, G, 2.2); fx(c, 'invert', m.x, m.cy); fx(c, 'shake', m.x, m.cy, 2.2); fx(c, 'boom', m.x, m.cy); fx(c, 'dust', m.x, G);
+    }
+  },
+  end: (c) => { const m = c.main; if (m && m.state === 'cine') { m.deathStyle = 0; strike(c, m, 0, { vx: facing(c) * 120, vy: -380, release: true }); } },
+};
 const koStaff: CineScript = {
   id: 'ko.staff', name: 'X-SLASH', len: () => 58,
   start: (c) => { koSetup(c, 90); fx(c, 'slowmo', c.p.x, c.p.cy, 0.3); fx(c, 'focus', c.p.x, c.p.cy, 0.3); c.v.x0 = c.p.x; },
@@ -638,14 +662,16 @@ export function specialKind(weapon: string): SpecialKind { return SP2[weapon] ? 
 const AIR: Record<Family, CineScript> = { fists: airFists, staff: airStaff, laser: airLaser, hook: airHook, throw: airThrow };
 const KO: Record<Family, CineScript> = { fists: koFists, staff: koStaff, laser: koLaser, hook: koHook, throw: koThrow };
 const SP: Record<Family, CineScript> = { fists: spFists, staff: spStaff, laser: spLaser, hook: spHook, throw: spThrow };
-const BOSS_KO: Partial<Record<Family, CineScript>> = {};
+/** Weapons with their own KO finisher instead of their family's. */
+const KO_OWN: Record<string, CineScript> = { hammer: koHammer };
+const BOSS_KO: Record<string, CineScript> = {};
 
 export function familyOf(weapon: string): Family { return WEAPON_FAMILY[weapon] ?? 'fists'; }
 export function airFinisher(weapon: string): CineScript { return AIR[familyOf(weapon)]; }
 export function koFinisher(weapon: string, victim: Fighter): CineScript {
-  const fam = familyOf(weapon);
-  if (isBoss(victim)) return BOSS_KO[fam] ?? (BOSS_KO[fam] = bossKO(KO[fam]));
-  return KO[fam];
+  const base = KO_OWN[weapon] ?? KO[familyOf(weapon)];
+  if (isBoss(victim)) return BOSS_KO[base.id] ?? (BOSS_KO[base.id] = bossKO(base));
+  return base;
 }
 export function specialScript(weapon: string): CineScript {
   const own = SP2[weapon];
