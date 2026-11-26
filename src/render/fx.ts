@@ -169,6 +169,7 @@ export class FxDirector {
         case 'iceWall': case 'iceBreak': audio.weapon('deflect'); effects.embers(e.x, e.y, 10, '#bfeeff'); break;
         case 'vent': audio.weapon('overheat'); effects.dust(e.x, e.y + 60, 0.8); break;
         case 'puff': effects.embers(e.x, e.y, 10, '#ff4040'); break;
+        case 'disarm': effects.text('DISARMED!', e.x, e.y, '#ffd23f', 20, 0.7); audio.weapon('deflect'); effects.embers(e.x, e.y, 8, '#ffd23f'); break;
         // grappling hook mobility (sim/grapple.ts)
         case 'gFire': audio.weapon('hookFire'); break;
         case 'gAttach': audio.weapon('hookHit'); effects.dust(e.x, e.y, 0.25 * e.a); break;

@@ -6,6 +6,8 @@ import { MovePreview } from './preview';
 import { anyUnlocked, isUnlocked, enterCode } from './cheats';
 import { STYLE } from '../data/tuning';
 import { icon } from './icons';
+import { roadNode, afterRoad, type RoadNode } from '../data/roadmap';
+import { ARENA_ORDER } from '../render/background';
 
 /**
  * DOM menus in the Arcade Fighter design system (revision pass 8 UI; styles in
@@ -94,7 +96,7 @@ export class Menus {
   // ---------------- Title ----------------
   showTitle(high: number, onSettings: () => void, mode: { rhythm: boolean; onToggle: (rhythm: boolean) => void } | null = null,
     loadout: { name: string; open: () => void } | null = null, onStart: (() => void) | null = null,
-    extra: { tutorial: () => void; reset: () => void } | null = null): void {
+    extra: { tutorial: () => void; roadmap: () => void; reset: () => void } | null = null): void {
     const el = this.layer('title', 'layer passthrough ttl');
     el.innerHTML = `<div class="ttl-scrim"></div><h1 class="ttl-logo">JUMPSHOT</h1><div class="ttl-sub">SWIPE · LAUNCH · JUGGLE · SPIKE</div>`;
     // Easter egg: tap the logo 5 times for a cheat-code box (touch devices; keyboards can just type).
@@ -138,6 +140,7 @@ export class Menus {
       const row3 = document.createElement('div');
       row3.className = 'row2 ttl-extra';
       this.btn(row3, 'TUTORIAL', extra.tutorial, 'btn small', 'target').id = 'title-tutorial';
+      this.btn(row3, 'ROADMAP', extra.roadmap, 'btn small', 'target').id = 'title-roadmap';
       this.btn(row3, 'RESET GAME', () => this.confirmReset(extra.reset), 'btn small danger', 'retry').id = 'title-reset';
       el.appendChild(row3);
     }
@@ -392,6 +395,66 @@ export class Menus {
   }
 
   /** Secret code box (from 5 taps on the title logo). */
+  // ---------------- Roadmap ----------------
+  /**
+   * The level roadmap: waves 1-40 as four stages of ten (each ends in a boss), built from the real
+   * wave / enemy / page / arena tables. Tap, focus or arrow onto a wave for its details.
+   */
+  showRoadmap(bestWave: number, onClose: () => void): void {
+    const el = this.layer('roadmap', 'layer dim');
+    const p = document.createElement('div');
+    p.className = 'panel rm';
+    p.style.maxWidth = 'min(96vw, calc(var(--u) * 900px))';
+    p.innerHTML = `<h2>${icon('target')} ROADMAP</h2>`;
+    const body = document.createElement('div');
+    body.className = 'pad rm-body';
+    const detail = document.createElement('div');
+    detail.className = 'rm-detail';
+    detail.setAttribute('aria-live', 'polite');
+    const bossNames = [10, 20, 30, 40].map((w) => roadNode(w, ARENA_ORDER).boss!);
+    const show = (n: RoadNode) => {
+      const state = n.wave < bestWave ? 'CLEARED' : n.wave === bestWave ? 'YOUR BEST' : 'AHEAD';
+      detail.innerHTML = `<div class="rm-dh"><b>WAVE ${n.wave}</b><span class="rm-tag ${n.kind}">${n.kind === 'boss' ? 'BOSS' : n.kind === 'elite' ? 'ELITE' : 'WAVE'}</span><span class="rm-tag st">${state}</span></div>
+        <div>${n.boss ? `<b>${n.boss.name}</b>${n.boss.sub !== 'BOSS' ? ' · ' + n.boss.sub : ''}: ${n.boss.note}` : n.enemies}</div>
+        <div class="rm-meta">${n.newEnemy ? `NEW: ${n.newEnemy} · ` : ''}${n.arena} arena · ${n.page} page · enemies ${n.hp}% HP, ${n.dmg}% damage</div>`;
+    };
+    body.appendChild(detail);
+    for (let s = 0; s < 4; s++) {
+      const sec = document.createElement('div');
+      sec.className = 'rm-stage';
+      const b = bossNames[s];
+      sec.innerHTML = `<div class="rm-sh"><b>STAGE ${s + 1}</b><span>waves ${s * 10 + 1}-${s * 10 + 10}</span><em>BOSS · ${b.name}</em></div>`;
+      const row = document.createElement('div');
+      row.className = 'rm-row';
+      for (let i = 1; i <= 10; i++) {
+        const n = roadNode(s * 10 + i, ARENA_ORDER);
+        const done = n.wave < bestWave;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `rm-node ${n.kind}${done ? ' done' : ''}${n.wave === bestWave ? ' best' : ''}`;
+        btn.innerHTML = `<span>${n.kind === 'boss' ? '☠' : n.kind === 'elite' ? '★' : n.wave}</span>${n.kind === 'wave' ? '' : `<small>${n.wave}</small>`}`;
+        btn.setAttribute('aria-label', `Wave ${n.wave}${n.kind === 'boss' ? ', boss' : n.kind === 'elite' ? ', elite' : ''}${done ? ', cleared' : ''}`);
+        btn.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.ui('move'); show(n); });
+        btn.addEventListener('focus', () => show(n));
+        btn.addEventListener('mouseenter', () => show(n));
+        row.appendChild(btn);
+      }
+      sec.appendChild(row);
+      body.appendChild(sec);
+    }
+    const foot = document.createElement('div');
+    foot.className = 'hint rm-after';
+    foot.textContent = afterRoad();
+    body.appendChild(foot);
+    p.appendChild(body);
+    const bar = document.createElement('div');
+    bar.className = 'sticky-foot';
+    this.btn(bar, 'DONE', () => { this.close('roadmap'); onClose(); }, 'btn primary small', 'check', true).id = 'rm-done';
+    p.appendChild(bar);
+    el.appendChild(p);
+    show(roadNode(Math.min(40, Math.max(1, bestWave)), ARENA_ORDER));
+  }
+
   /** "Are you sure?" before wiping everything (the reset can't be undone). */
   confirmReset(onYes: () => void): void {
     const el = this.layer('reset', 'layer dim');

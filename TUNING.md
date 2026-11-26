@@ -476,3 +476,12 @@ Per-move numbers (damage, frames, shockwave range/speed, ice radius/frames, vani
 | kickSpeed, kickR | Body kicks while swinging: minimum speed and radius (move `hk3_kick`) |
 | sideClear | ← → zips to the wall only when no enemy is on that side within this range |
 
+## Shield enemies (`SHIELD` in data/enemies.ts)
+
+| Key | What it does |
+|---|---|
+| hp | Shield enemy HP (was 95) |
+| blocksToBreak | Blocked hits before the guard cracks open (any heavy or guardbreak move, or a hit from behind, breaks it at once) |
+
+The boss meteor numbers are in `BOSS` (`meteorWarn` frames of warning, `meteorRadius`); the warning zone is drawn at the real hit width, `meteorRadius + 20` (`render/meteorWarn.ts`).
+

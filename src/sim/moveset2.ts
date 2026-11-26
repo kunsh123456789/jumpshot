@@ -95,6 +95,8 @@ export class Moveset2 {
     }
     if (X.tie && p.target) this.tieNear(w, p.target, X.tie);
     if (X.detonate) this.detonate(w, X.detonate);
+    if (X.disarm) this.disarm(w, p, X.disarm.range, X.disarm.stun);
+    if (X.poof) { this.puff(p.x, p.cy); this.fx(w, 'smoke', p.x, p.cy, 1); }
     if (X.vanish) {
       p.vanish = X.vanish;
       p.invuln = Math.max(p.invuln, X.vanish + 6);
@@ -316,6 +318,29 @@ export class Moveset2 {
       this.fx(w, 'execute', e.cx, e.cy, 1);
     }
   }
+  /** Disarm Crack: interrupt every telegraphed attack in front of the hero and swat enemy projectiles. */
+  private disarm(w: World, p: Fighter, range: number, stun: number): void {
+    for (const e of w.enemies) {
+      if (!e.alive || e.remove || isBoss(e)) continue;
+      const dx = (e.x - p.x) * p.facing;
+      if (dx < -60 || dx > range) continue;
+      if (e.state !== 'windup' && e.state !== 'attack') continue;
+      e.attack = null; e.telegraph = 0; e.vx = 0;
+      e.setState('stunned', stun);
+      this.fx(w, 'disarm', e.cx, e.cy - 40, 1);
+    }
+    const P = w.ents.projectiles;
+    for (let i = P.count - 1; i >= 0; i--) {
+      const q = P.items[i];
+      if (q.team !== 'enemy') continue;
+      const dx = (q.x - p.x) * p.facing;
+      if (dx < -60 || dx > range || Math.abs(q.y - p.cy) > 220) continue;
+      this.puff(q.x, q.y);
+      this.fx(w, 'disarm', q.x, q.y - 20, 1);
+      P.releaseAt(i);
+    }
+  }
+
   private puff(x: number, y: number, kind = 1): void {
     if (this.nPuffs >= 16) return;
     const k = this.nPuffs++ * 3; this.puffs[k] = x; this.puffs[k + 1] = y; this.puffs[k + 2] = kind;

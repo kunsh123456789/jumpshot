@@ -139,12 +139,16 @@ export interface X2Spec {
   tipCrack?: boolean;
   /** Stun the victims for this many frames (sonic crack). */
   stun?: number;
+  /** whip Disarm Crack: at contact, every enemy mid-windup or mid-attack in front is interrupted and stunned, and enemy projectiles in range are swatted away */
+  disarm?: { range: number; stun: number };
   /** Whip lasso: the grabbed body orbits the hero during the hold, bowling everyone it touches. */
   orbit?: boolean;
   /** Staff: keeps spinning while the attack is held (after `min` frames, releasing plays `then`). */
   spin?: { min: number; then: string };
   /** Fists power cross: a shockwave puff of this radius at the victim. */
   puff?: number;
+  /** cosmetic smoke poof at the contact frame (the move still hits normally) */
+  poof?: boolean;
   /** Self-launch at contact (blast jump, pole rocket, dragon uppercut carry). */
   self?: { vx: number; vy: number; /** a real launch: no air stall at contact (the pole vault) */ free?: boolean };
 }

@@ -658,3 +658,31 @@ Variants never repeat twice in a row; repeated identical samples are what make h
 - **What a reset clears:** every `localStorage` key starting with `jumpshot` (`wipeAllAndReload()` in `core/settings.ts`), then the page reloads as a first launch, so the next FIGHT starts the tutorial. Keys belonging to anything else on the same origin are left alone.
 - **Layout:** the two buttons sit under the main buttons. On landscape phones (max height 560 px) they collided with the "tap or flick to start" prompt, so there they move to the empty top-left corner, mirroring the BEST plate.
 
+## Hammer, daggers, whip, shield, meteors, roadmap
+
+**Hammer.** The home-run smash (→ heavy) now carries the shockwave itself, so it fires on the contact frame whether or not the swing hits anything (`x2.wave`, forward only). Quake and Fault Line already did.
+
+**Daggers.** ↓ heavy is now **Vanishing Execute**: it poofs, reappears behind the target and then runs Execute (which detonates every bleed).
+- Execute could not simply gain `vanish`: a vanish resolves the move at contact and skips its hitbox. So it is a smoke move whose `then` is a `behind` copy of Execute.
+- With no enemy on screen it still poofs.
+- The air ↓ heavy (Falling Fangs) can't vanish without dropping the dive, so it gets a cosmetic smoke cloud (`x2.poof`). That is the one place "always" is cosmetic.
+
+**Whip.** Four new moves in slots that used to repeat another move (full table in `WHIP_MOVESET.md`):
+- **Disarm Crack** (ground ↗ heavy): interrupts telegraphed attacks and swats projectiles.
+- **Lash Flurry** (air ↗ heavy): six rapid cracks.
+- **Whip Yank** (air ↑ heavy): reels an enemy in.
+- **Rodeo Slam** (air ↘ / ↓ heavy): a grab and slam.
+
+Yank and Rodeo reuse the hook's tether moves; Disarm needed a new `x2.disarm`.
+
+**Shield enemies.** HP 95 to 70, and the guard now breaks on any heavy move or on the third blocked hit (`SHIELD`, `Fighter.blocks`). Shields only appear from wave 7, so the Classic fingerprint is expected to stay identical (verified by the fingerprint test).
+
+**Colossus meteors.** The old warning was a small flat ellipse. Now (`render/meteorWarn.ts`, drawn by both the colour and ink pipelines):
+- the zone on the floor is the real hit width (`meteorRadius + 20`), a blinking sign marks it, and dashed lines run up the sky;
+- a bar fills until impact, and the blink speeds up as it nears;
+- it is render-only (no sim RNG), and every boss that calls meteors uses it.
+
+**Roadmap.** Read as an in-game screen, not just a document: title screen button, built from the real tables (`data/roadmap.ts`) so it can't drift, and `ROADMAP.md` is generated from the same function.
+- It shows waves 1-40 (one boss cycle) and notes that the cycle then repeats.
+- It is not on the pause menu (the title screen is where you plan a run).
+

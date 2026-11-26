@@ -169,7 +169,7 @@ export class Game {
     this.menus.showTitle(save.highScore, () => this.openSettings(true),
       { rhythm: settings.rhythmMode, onToggle: (r) => { settings.rhythmMode = r; saveSettings(); } },
       { name: weaponById(save.weapon).name, open: () => this.openLoadout() }, () => this.startFromTitle(),
-      { tutorial: () => { audio.unlock(); this.startTutorial(); }, reset: () => wipeAllAndReload() });
+      { tutorial: () => { audio.unlock(); this.startTutorial(); }, roadmap: () => this.menus.showRoadmap(save.bestWave, () => {}), reset: () => wipeAllAndReload() });
     this.cam.targetX = this.world.player.x;
     this.cam.snap();
     audio.stopMusic();

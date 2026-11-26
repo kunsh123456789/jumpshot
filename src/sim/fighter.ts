@@ -104,6 +104,8 @@ export class Fighter {
   koLaunched = false;
   deadTimer = 0;
   guardBroken = 0;
+  /** Shield enemies: hits blocked since the guard last broke. */
+  blocks = 0;
   blockFlash = 0;
   dizzy = 0;
   /** One off-the-ground hit per knockdown; cleared on get-up. */

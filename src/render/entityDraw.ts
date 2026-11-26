@@ -1,22 +1,17 @@
 import type { World } from '../sim/world';
 import { WORLD } from '../data/tuning';
-import { BOSS, PROJECTILE } from '../data/enemies';
+import { PROJECTILE } from '../data/enemies';
 import { TAU } from '../core/math';
+import { drawMeteorWarnings } from './meteorWarn';
 
 /** Draw projectiles, ground waves, meteor warnings and pickups (world space). */
 export function drawEntities(ctx: CanvasRenderingContext2D, w: World, alpha: number, time: number): void {
   const E = w.ents;
-  // Meteor warnings + falling pillars.
+  // Meteor warnings (hit zone, sky column, countdown) + falling pillars.
+  drawMeteorWarnings(ctx, w, alpha, time, 1.6, { red: '#ff3030', ink: '#1a0a0a', pale: '#fff1c0' }, false);
   for (let i = 0; i < E.meteors.count; i++) {
     const m = E.meteors.items[i];
     const mt = m.t + alpha; // sub-tick time so the falling pillar is smooth at any refresh rate
-    const k = Math.min(1, mt / m.warn);
-    ctx.globalAlpha = 0.25 + 0.35 * Math.abs(Math.sin(time * 18));
-    ctx.fillStyle = '#ff3030';
-    ctx.beginPath();
-    ctx.ellipse(m.x, WORLD.groundY + 2, BOSS.meteorRadius * (0.4 + 0.6 * k), BOSS.meteorRadius * 0.22 * (0.4 + 0.6 * k), 0, 0, TAU);
-    ctx.fill();
-    ctx.globalAlpha = 1;
     if (mt > m.warn - 14 && mt < m.warn + 8) {
       const fall = Math.min(1, (mt - (m.warn - 14)) / 14);
       const y = WORLD.groundY - 700 + 700 * fall;

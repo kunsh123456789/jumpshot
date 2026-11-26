@@ -196,6 +196,13 @@ const S_JAB = vary(E_COMBO, { id: 'sJab', anim: 'ePunch', windup: 12, damage: 10
 const S_KICK = vary(E_KICK, { id: 'sKick', anim: 'eKick', windup: 14, damage: 13 });
 const S_LUNGE = vary(E_LUNGE, { id: 'sLunge', anim: 'eLunge', windup: 14, damage: 14, range: 540 });
 
+/** Shield enemies: weaker than they were, and the guard gives way (a heavy hit, or a few blocked hits). */
+export const SHIELD = {
+  hp: 70,
+  /** Blocked hits before the shield cracks open (any heavy move breaks it at once). */
+  blocksToBreak: 3,
+} as const;
+
 const base = {
   poise: 0, poiseRegenFrames: 120, scale: 1.06, thickness: 5.5, walkSpeed: 150, holdDist: 230,
   weight: 1, launchMult: 1, burstThreshold: 11, blocksFront: false, cooldown: 70, hpBar: false, scarf: false,
@@ -208,7 +215,7 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   brute: { ...base, kind: 'brute', name: 'Brute', hp: 180, poise: 26, scale: 1.32, thickness: 8.5, color: '#b276ff', accent: '#6c3fb0', walkSpeed: 95, holdDist: 200, attacks: [SLAM], weight: 0.62, launchMult: 0.8, burstThreshold: 8, score: 300, cost: 3, cooldown: 100 },
   kicker: { ...base, kind: 'kicker', name: 'Kicker', hp: 74, color: '#4dff9a', accent: '#28a862', walkSpeed: 190, holdDist: 210, attacks: [KICK], score: 150, cost: 1.5, cooldown: 60 },
   thrower: { ...base, kind: 'thrower', name: 'Thrower', hp: 58, color: '#3fe0ff', accent: '#1f8aa8', walkSpeed: 160, holdDist: 470, attacks: [THROW], score: 160, cost: 1.6, thickness: 4.5, cooldown: 110 },
-  shield: { ...base, kind: 'shield', name: 'Shield', hp: 95, color: '#6f9bff', accent: '#3a5ab8', walkSpeed: 120, holdDist: 170, attacks: [BASH], blocksFront: true, score: 220, cost: 2.2, thickness: 6, cooldown: 85 },
+  shield: { ...base, kind: 'shield', name: 'Shield', hp: SHIELD.hp, color: '#6f9bff', accent: '#3a5ab8', walkSpeed: 120, holdDist: 170, attacks: [BASH], blocksFront: true, score: 220, cost: 2.2, thickness: 6, cooldown: 85 },
   elite: { ...base, kind: 'elite', name: 'RONIN', hp: 340, poise: 18, poiseRegenFrames: 100, scale: 1.12, thickness: 6.5, color: '#ff4dd2', accent: '#ffd0f4', walkSpeed: 210, holdDist: 200, attacks: [E_COMBO, E_LUNGE, E_KICK], weight: 0.85, burstThreshold: 9, score: 1500, cost: 6, cooldown: 45, hpBar: true, scarf: true },
   boss: { ...base, kind: 'boss', name: 'THE COLOSSUS', boss: { title: 'THE COLOSSUS', sub: 'BOSS', meteors: 190, summon: { every: 540, kinds: ['grunt', 'rusher'] }, blink: null, dodge: 0, prop: 'horns' }, hp: 1000, poise: 70, poiseRegenFrames: 200, scale: 2.0, thickness: 12, color: '#ffd23f', accent: '#ff3b3b', walkSpeed: 90, holdDist: 230, attacks: [B_HAMMER, B_SWEEP, B_RUSH], weight: 0.38, launchMult: 0.7, burstThreshold: 7, score: 8000, cost: 20, cooldown: 40, hpBar: true, scarf: true },
   witch: { ...base, kind: 'witch', name: 'SCRIBBLA', hp: 800, poise: 30, poiseRegenFrames: 160, scale: 1.35, thickness: 6, color: '#3a3a5a', accent: '#e22424',

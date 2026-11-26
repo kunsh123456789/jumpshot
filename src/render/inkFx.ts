@@ -10,6 +10,7 @@ import { lightning } from './weaponFx';
 import { INK, inkColor, inkHooks, burst } from './ink';
 import { settings } from '../core/settings';
 import { weaponById } from '../data/weapons';
+import { drawMeteorWarnings } from './meteorWarn';
 
 /**
  * Hand-drawn FX for the ink look (revision pass 5, step 5), all pooled
@@ -459,14 +460,11 @@ export function drawEntitiesInk(ctx: CanvasRenderingContext2D, w: World, alpha: 
   const E = w.ents;
   const step = DRAW.stepped ? Math.floor(time * 60 / DRAW.stepTicks) : Math.floor(time * 30);
   ctx.lineCap = 'round';
+  drawMeteorWarnings(ctx, w, alpha, time, wpp, { red: INK.red, ink: INK.ink, pale: INK.paper }, true);
   for (let i = 0; i < E.meteors.count; i++) {
     const m = E.meteors.items[i];
     const k = Math.min(1, (m.t + alpha) / m.warn);
     seed = (m.x | 0) + step;
-    ctx.strokeStyle = INK.red; ctx.lineWidth = 2 * wpp;
-    ctx.beginPath();
-    for (let s = 0; s < 6; s++) { const x = m.x + (rnd() - 0.5) * 90; ctx.moveTo(x, WORLD.groundY - 2); ctx.lineTo(x + (rnd() - 0.5) * 16, WORLD.groundY - 6 - rnd() * 14); }
-    ctx.stroke();
     if (k > 0.55) {
       const y = WORLD.groundY - 700 * (1 - (k - 0.55) / 0.45);
       burst(ctx, m.x, y, 46, 12, step + i, INK.ink, 2 * wpp);

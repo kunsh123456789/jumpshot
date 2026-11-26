@@ -68,3 +68,13 @@ export function hpScale(wave: number): number {
 export function dmgScale(wave: number): number {
   return Math.min(WAVE_GEN.dmgScaleMax, 1 + Math.max(0, wave - 1) * WAVE_GEN.dmgScalePerWave);
 }
+
+/** Hand-authored composition of waves 1-10 (null later: those are generated from the budget). */
+export function authoredWave(wave: number): EnemyKind[] | null {
+  return wave >= 1 && wave <= AUTHORED.length ? AUTHORED[wave - 1].slice() : null;
+}
+
+/** Enemy kinds a generated wave can draw from, and the kind (if any) that first appears on this wave. */
+export function poolFor(wave: number): EnemyKind[] { return POOL.filter((p) => p.from <= wave).map((p) => p.kind); }
+export function introducedOn(wave: number): EnemyKind | null { return POOL.find((p) => p.from === wave)?.kind ?? null; }
+

@@ -5,7 +5,7 @@ import { ANIM, COMBO, DEATH, JUICE, PHYS, PLAYER, SCORE } from '../data/tuning';
 import { SPECIAL } from '../data/special';
 import { settings } from '../core/settings';
 import { simRng } from '../core/rng';
-import { isBoss, type EnemyAttack } from '../data/enemies';
+import { isBoss, SHIELD, type EnemyAttack } from '../data/enemies';
 import { dmgScale } from '../data/waves';
 
 function hitstopFrames(base: number): number {
@@ -52,7 +52,9 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   // ---- Shield block ----
   if (v.def?.blocksFront && v.guardBroken <= 0 && !finisher) {
     const fromFront = Math.sign(p.x - v.x) === v.facing || p.x === v.x;
-    const breaks = m.tags.includes('guardbreak') || !fromFront || v.inHitState;
+    // The guard gives way to a guardbreak or heavy move, a hit from behind, a stunned shield, or its Nth blocked hit.
+    let breaks = m.tags.includes('guardbreak') || m.tags.includes('heavy') || !fromFront || v.inHitState;
+    if (!breaks && ++v.blocks >= SHIELD.blocksToBreak) breaks = true;
     if (!breaks) {
       v.blockFlash = 8;
       v.vx = dirX * 160;
@@ -62,7 +64,7 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
       w.events.emit('block', { x: v.x - dirX * 20 * v.scale, y: v.cy, victim: v });
       return;
     }
-    v.guardBroken = 360;
+    v.guardBroken = 360; v.blocks = 0;
     w.events.emit('guardBreak', { x: v.x, y: v.cy, enemy: v });
   }
 

@@ -140,19 +140,29 @@ variant('wh_crack', 'wh2_sonic', { name: 'Sonic Crack', x2: { tipCrack: true, st
 add('whip', { id: 'wh2_lasso', name: 'Lasso Spin', tags: ['heavy'], startup: 48, active: 4, recovery: 20, damage: 14, hitstun: 40, kbX: 950, kbY: -520, hitstop: 8, shake: 12, zoom: 0.4, hitbox: { x: 60, y: 92, r: 50 }, reach: 64, maxTargets: 3, grab: { bowl: 1.4, respectPoise: true, hold: 40 }, cancelInto: CANCEL.heavy, sound: 'heavy', weight: 0.95, afterimage: true, trail: tr('#ffd23f', 12), x2: { orbit: true } }, 'spin');
 add('whip', { id: 'wh2_ring', name: "Tamer's Ring", tags: ['heavy', 'down'], startup: 12, active: 14, recovery: 20, damage: 7, hitstun: 32, kbX: 820, kbY: -300, knockdown: true, hitstop: 6, shake: 9, hitbox: { x: 0, y: 60, r: 0 }, aoe: 250, reach: 80, maxTargets: 10, multiHit: { interval: 6, count: 3 }, cancelInto: CANCEL.heavy, sound: 'slash', weight: 0.85, trail: tr('#ffd23f', 12), fx: { whirl: 230 } }, 'spin');
 variant('hk_aswing', 'wh2_swing', { name: 'Tarzan Swing' });
+// Whip, new unique moves (they fill the slots that used to repeat another move):
+//  DISARM CRACK (ground ↗ heavy): interrupts every telegraphed attack in front and swats projectiles.
+//  LASH FLURRY (air ↗ heavy): a hovering barrage of rapid cracks (tip hits crack for double).
+//  WHIP YANK (air ↑ heavy): lash out, reel the enemy to you, punch it.
+//  RODEO SLAM (air ↘ / ↓ heavy): wrap an enemy and slam it into the floor.
+add('whip', { id: 'wh2_disarm', name: 'Disarm Crack', tags: ['heavy'], startup: 7, active: 3, recovery: 22, damage: 7, hitstun: 30, kbX: 260, kbY: -60, hitstop: 5, shake: 7, hitbox: { x: 40, y: 96, r: 1 }, reach: 280, ranged: 460, dash: false, aimCone: 50, maxTargets: 5, beam: { len: 460, width: 40, pierce: true, color: '#1b1a17', style: 'whip' }, cancelInto: CANCEL.heavy, sound: 'slash', weight: 0.7, trail: tr('#ffd23f', 12), x2: { tipCrack: true, disarm: { range: 480, stun: 70 } } }, 'throw');
+add('whip', { id: 'wh2_flurry', name: 'Lash Flurry', tags: ['air', 'heavy'], startup: 6, active: 24, recovery: 14, damage: 4, hitstun: 20, kbX: 120, kbY: -60, hitstop: 2, shake: 3, hitbox: { x: 40, y: 96, r: 1 }, reach: 260, ranged: 400, dash: false, aimCone: 70, maxTargets: 4, multiHit: { interval: 4, count: 6 }, beam: { len: 400, width: 30, pierce: true, color: '#1b1a17', style: 'whip' }, selfVY: -120, cancelInto: CANCEL.air, sound: 'slash', weight: 0.4, trail: tr('#9fd8ff', 10), x2: { tipCrack: true } }, 'airShoot');
+variant('hk_apull', 'wh2_yank', { name: 'Whip Yank', tags: ['air', 'heavy'] });
+variant('hk_aslam', 'wh2_rodeo', { name: 'Rodeo Slam', tags: ['air', 'down', 'heavy'] });
 const whip2: WeaponV2 = {
-  desc: 'Tamer: crack with the TIP for double damage; lasso an enemy and spin it as a weapon.',
-  ground: { side: { light: whLash, heavy: 'wh2_sonic' }, upDiag: { light: 'wh_twirl', heavy: 'wh_twirl' }, up: { light: 'wh_wrap', heavy: 'wh2_lasso' }, downDiag: { light: 'wh_trip', heavy: 'wh_tripH' }, down: { light: 'wh_snap', heavy: 'wh2_ring' } },
-  air: { side: { light: 'wh2_swing', heavy: 'wh_alash' }, upDiag: { light: 'wh_awrap', heavy: 'wh_awrap' }, up: { light: 'wh_awrap', heavy: 'wh_awrap' }, downDiag: { light: 'wh_aspike', heavy: 'wh_aspike' }, down: { light: 'wh_aspike', heavy: 'wh_aspike' } },
+  desc: 'Tamer: crack with the TIP for double damage, DISARM telegraphed attacks, lasso an enemy and spin it as a weapon.',
+  ground: { side: { light: whLash, heavy: 'wh2_sonic' }, upDiag: { light: 'wh_twirl', heavy: 'wh2_disarm' }, up: { light: 'wh_wrap', heavy: 'wh2_lasso' }, downDiag: { light: 'wh_trip', heavy: 'wh_tripH' }, down: { light: 'wh_snap', heavy: 'wh2_ring' } },
+  air: { side: { light: 'wh2_swing', heavy: 'wh_alash' }, upDiag: { light: 'wh_awrap', heavy: 'wh2_flurry' }, up: { light: 'wh_awrap', heavy: 'wh2_yank' }, downDiag: { light: 'wh_aspike', heavy: 'wh2_rodeo' }, down: { light: 'wh_aspike', heavy: 'wh2_rodeo' } },
   dodge: { distance: PLAYER.dodgeDistance, frames: PLAYER.dodgeFrames + 2, rope: false, kind: 'backflip' },
-  tips: ['→ lash: the TIP cracks for double · heavy: SONIC CRACK (stuns the line)', '↑ wrap & hoist · heavy: LASSO SPIN', "↘ ankle lash · ↓ floor snap · heavy: TAMER'S RING", 'Air → TARZAN SWING · Dodge = backflip'],
+  tips: ['→ lash: the TIP cracks for double · heavy: SONIC CRACK (stuns the line)', '↗ whirl · heavy: DISARM CRACK (cancels enemy attacks, swats shots)', '↑ wrap & hoist · heavy: LASSO SPIN', "↘ ankle lash · ↓ floor snap · heavy: TAMER'S RING", 'Air → TARZAN SWING · air ↗ heavy: LASH FLURRY · air ↑ heavy: WHIP YANK · air ↘ heavy: RODEO SLAM'],
   anims: [],
 };
 
 // ====================================================================== HAMMER: Earthshaker
 // Floor shockwaves on every slam (jump them!); swings can't be interrupted.
 variant('hm_swing', 'hm2_swing', { x2: { armor: true } });
-variant('hm_smash', 'hm2_smash', { x2: { armor: true } });
+// The home-run smash always sends a shockwave along the floor, even when the swing hits nothing.
+variant('hm_smash', 'hm2_smash', { x2: { armor: true, wave: { dmg: 7, range: 640, speed: 1000, launch: -700, forward: true } } });
 variant('hm_spin', 'hm2_spin', { x2: { armor: true } });
 variant('hm_pound', 'hm2_pound', { x2: { armor: true, wave: { dmg: 6, range: 560, speed: 950, launch: -720 } } });
 variant('hm_slam', 'hm2_quake', { name: 'Quake', x2: { wave: { dmg: 8, range: 700, speed: 1050, launch: -780 } } });
@@ -163,7 +173,7 @@ const hammer2: WeaponV2 = {
   ground: { side: { light: 'hm2_swing', heavy: 'hm2_smash' }, upDiag: { light: 'hm2_spin', heavy: 'hm2_spin' }, up: { light: 'hm_upper', heavy: 'hm2_pound' }, downDiag: { light: 'hm_sweep', heavy: 'hm_sweep' }, down: { light: 'hm2_quake', heavy: 'hm2_fault' } },
   air: { side: { light: 'hm_aswing', heavy: 'hm_aswing' }, upDiag: { light: 'hm_aup', heavy: 'hm_aup' }, up: { light: 'hm_aup', heavy: 'hm_aup' }, downDiag: { light: 'hm2_meteor', heavy: 'hm2_meteor' }, down: { light: 'hm2_meteor', heavy: 'hm2_meteor' } },
   dodge: { distance: 220, frames: PLAYER.dodgeFrames + 4, rope: false, kind: 'vault' },
-  tips: ['→ swing · heavy: home-run smash (SUPER ARMOR)', '↑ skyward swing · heavy: GROUND POUND + shockwaves', '↓ QUAKE: shockwaves both ways · heavy: FAULT LINE', 'Air ↓ meteor hammer (huge shockwaves) · Dodge = hammer hop'],
+  tips: ['→ swing · heavy: home-run smash (SUPER ARMOR + a floor shockwave, even on a miss)', '↑ skyward swing · heavy: GROUND POUND + shockwaves', '↓ QUAKE: shockwaves both ways · heavy: FAULT LINE', 'Air ↓ meteor hammer (huge shockwaves) · Dodge = hammer hop'],
   anims: [],
 };
 
@@ -173,13 +183,18 @@ add('daggers', { id: 'dg2_shadow', name: 'Shadow Dash', tags: ['heavy'], startup
 add('daggers', { id: 'dg2_smoke', name: 'Smoke Bomb', tags: ['light', 'down'], startup: 4, active: 1, recovery: 18, damage: 0, hitstun: 0, kbX: 0, kbY: 0, hitbox: { x: 0, y: 60, r: 1 }, reach: 0, dash: false, cancelInto: ['dodge', 'special'], sound: 'slash', weight: 0.3, trail: tr('#6a6a78', 6), x2: { vanish: 22 }, then: 'dg2_backstab' }, 'stomp');
 add('daggers', { id: 'dg2_backstab', name: 'Backstab', tags: ['light'], startup: 4, active: 3, recovery: 16, damage: 16, hitstun: 38, kbX: 620, kbY: -220, hitstop: 8, shake: 9, zoom: 0.35, hitbox: { x: 60, y: 92, r: 48 }, reach: 64, behind: true, status: { kind: 'bleed', frames: 220 }, cancelInto: CANCEL.light, sound: 'slash', weight: 0.85, afterimage: true, trail: tr('#e22424', 14), fx: { crescent: true } }, 'slash');
 add('daggers', { id: 'dg2_execute', name: 'Execute', tags: ['heavy', 'down'], startup: 14, active: 2, recovery: 20, damage: 4, hitstun: 20, kbX: 100, kbY: 0, hitbox: { x: 40, y: 80, r: 40 }, reach: 60, dash: false, cancelInto: CANCEL.heavy, sound: 'slash', weight: 0.9, trail: tr('#e22424', 16), x2: { detonate: 0.13 } }, 'twirl');
+// Every down-heavy poofs: ground ↓ heavy = smoke, reappear behind them, EXECUTE every bleed. The air
+// down-heavy (Falling Fangs) pops a cosmetic smoke cloud as it starts (a vanish there would drop the dive).
+variant('dg2_execute', 'dg2_execute2', { name: 'Execute', behind: true, dash: true, startup: 5, reach: 60 });
+add('daggers', { id: 'dg2_vanishX', name: 'Vanishing Execute', tags: ['heavy', 'down'], startup: 4, active: 1, recovery: 18, damage: 0, hitstun: 0, kbX: 0, kbY: 0, hitbox: { x: 0, y: 60, r: 1 }, reach: 0, dash: false, cancelInto: ['dodge', 'special'], sound: 'slash', weight: 0.4, trail: tr('#6a6a78', 6), x2: { vanish: 22 }, then: 'dg2_execute2' }, 'stomp');
+variant('dg_dive', 'dg2_dive', { name: 'Smoke Dive', x2: { poof: true } });
 const daggers2: WeaponV2 = {
   desc: 'Assassin: BACKSTABS always crit; vanish in smoke and reappear behind them; EXECUTE every bleed.',
-  ground: { side: { light: 'dg_cut1', heavy: 'dg2_shadow' }, upDiag: { light: 'dg_fan', heavy: 'dg_fan' }, up: { light: 'dg_rise', heavy: 'dg_rise' }, downDiag: { light: 'dg_low', heavy: 'dg2_shadow' }, down: { light: 'dg2_smoke', heavy: 'dg2_execute' } },
-  air: { side: { light: 'dg_acut', heavy: 'dg_acut' }, upDiag: { light: 'dg_arise', heavy: 'dg_arise' }, up: { light: 'dg_arise', heavy: 'dg_arise' }, downDiag: { light: 'dg_dive', heavy: 'dg_dive' }, down: { light: 'dg_dive', heavy: 'dg_dive' } },
+  ground: { side: { light: 'dg_cut1', heavy: 'dg2_shadow' }, upDiag: { light: 'dg_fan', heavy: 'dg_fan' }, up: { light: 'dg_rise', heavy: 'dg_rise' }, downDiag: { light: 'dg_low', heavy: 'dg2_shadow' }, down: { light: 'dg2_smoke', heavy: 'dg2_vanishX' } },
+  air: { side: { light: 'dg_acut', heavy: 'dg_acut' }, upDiag: { light: 'dg_arise', heavy: 'dg_arise' }, up: { light: 'dg_arise', heavy: 'dg_arise' }, downDiag: { light: 'dg_dive', heavy: 'dg2_dive' }, down: { light: 'dg_dive', heavy: 'dg2_dive' } },
   dodge: { distance: 210, frames: PLAYER.dodgeFrames - 2, rope: false, blink: true, kind: 'smoke' },
   passive: { backstab: true },
-  tips: ['→ 3-cut string (bleeds) · heavy: SHADOW DASH (the cuts land after you)', '↓ SMOKE BOMB: vanish, then BACKSTAB · heavy: EXECUTE all bleeds', '↗ knife fan · ↑ rising fangs · ↘ hamstring', 'Hits from behind always CRIT · Dodge = smoke teleport'],
+  tips: ['→ 3-cut string (bleeds) · heavy: SHADOW DASH (the cuts land after you)', '↓ SMOKE BOMB: vanish, then BACKSTAB · heavy ↓: ALWAYS POOFS, then EXECUTES every bleed from behind', '↗ knife fan · ↑ rising fangs · ↘ hamstring', 'Hits from behind always CRIT · Dodge = smoke teleport'],
   anims: [],
 };
 
