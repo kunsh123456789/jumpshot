@@ -438,3 +438,21 @@ Weapon moves are ordinary `MoveDef`s (`addMove`) with these generic hooks, all r
 **Templates:** the third batch draws every move from `author.ts` `tplAnim(id, move, template, patch)` (jab, slash, overhead, upper, low, spin, twirl, throw, shoot, shootUp, shootDown, slam, stomp, dash, air, airDown, airUp, airShoot), so the contact drawing still lands exactly on the first active frame. **DodgeSpec** also takes `blink` (teleport) and `parry` (a block that stands its ground).
 
 **Authoring drawings:** `author.ts` `strikeAnim(id, move, { antic, hit, hit2?, follow, smear, inbetweens, ones })` spreads the drawings over the move's frame data so the contact drawing starts exactly on the first active frame. Weapon animations are listed per weapon in the Animation Lab (`weapon: <name>`), with the held weapon drawn.
+
+
+## New movesets (`V2` in data/weapons/tuning.ts)
+
+| Key | What it does |
+|---|---|
+| tipFrac, tipMult | Whip: hits past this fraction of the lash's length crack for tipMult damage |
+| furyPerHit, furyFrames, furyDmg, furyKb | Fists Fury: fill per hit, how long it burns, damage and knockback while it burns |
+| reapDelay, reapDmg | Scythe: delay after the third doom mark, and the reap's damage |
+| soulHeal, deathsDoor, lifesteal | Scythe: heal per soul; below deathsDoor HP, hits heal lifesteal x damage |
+| executeBase | Daggers Execute: base damage (plus `x2.detonate` per remaining bleed frame) |
+| tieRange, tieLen, tieShare | Hook Tether: partner range, rope length, share of a hit passed down the rope |
+| orbitDmg | Whip Lasso Spin: damage to each enemy the swung body hits |
+| slideShatterSpeed, slideShatterDmg, wallFreeze | Ice: sliding faster than this on ice shatters into the next enemy; freeze from a rising wall |
+| iceFriction, skateMult | Ice: friction on ice patches (normal floor 0.82) and the hero's run speed on ice |
+| slipCounter | Fists: the move thrown after a slipped or parried attack |
+
+Per-move numbers (damage, frames, shockwave range/speed, ice radius/frames, vanish frames, delays) live in `data/weapons/movesets2.ts`.

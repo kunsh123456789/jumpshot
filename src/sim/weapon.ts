@@ -100,8 +100,19 @@ export class WeaponSim {
   tick(w: World, p: Fighter, m: MoveDef): void {
     const fr = p.moveFrame, S = p.effStartup;
     // Grab: catch the target once the dash has arrived.
-    if (m.grab && !this.held && fr < S && fr >= p.dashFrames && p.target) this.tryGrab(w, p, m, p.target);
-    if (this.held) this.holdAt(p, m, fr, S);
+    if (m.grab && !this.held && fr < S && fr >= p.dashFrames && p.target) { this.tryGrab(w, p, m, p.target); if (this.held && m.x2?.orbit) w.v2.orbitReset(); }
+    if (this.held) {
+      this.holdAt(p, m, fr, S);
+      // Whip lasso (new moveset): the caught body orbits overhead, bowling everyone it touches.
+      if (m.x2?.orbit) {
+        const t = this.held, k = (fr - p.dashFrames) / Math.max(1, S - p.dashFrames);
+        const a = k * Math.PI * 4 * p.facing, R = 120 * p.scale;
+        t.x = clamp(p.x + Math.cos(a) * R, WORLD.wallMargin, WORLD.arenaW - WORLD.wallMargin);
+        t.y = Math.min(WORLD.groundY, p.y - 150 * p.scale + Math.sin(a) * R * 0.5);
+        t.spinAngle = a;
+        w.v2.orbitTick(w, t);
+      }
+    }
     // Zip: the rope is out for the whole dash.
     if (m.tether?.mode === 'zip' && p.target && fr < S && p.dashFrames > 0) {
       this.tetherMode = 'zip'; this.tied = p.target; this.anchorX = p.target.cx; this.anchorY = p.target.cy; this.hookOut = 1;
@@ -202,6 +213,7 @@ export class WeaponSim {
       const e = hitBuf[i];
       if (!multi) p.markHit(e.id);
       p.moveHit = true;
+      w.v2.beamFrac = hitDist[i] / Math.max(1, b.len);
       playerHit(w, m, e, multi || i > 0);
     }
     for (let i = 0; i < n; i++) hitBuf[i] = null as unknown as Fighter;
@@ -220,6 +232,8 @@ export class WeaponSim {
     if (this.heat >= 1 && this.overheat <= 0) {
       this.overheat = Math.round(H.overheatSec * 60);
       w.events.emit('overheat', { x: w.player.x, y: w.player.cy });
+      // Laser (new moveset): overheating vents a steam burst that shoves everyone close away.
+      if (w.weapon.passive?.vent) { shockwave(w, w.player.x, w.player.y, 230, 5, null, '#ffffff'); w.events.emit('v2fx', { kind: 'vent', x: w.player.x, y: w.player.cy, a: 1 }); }
     }
   }
 

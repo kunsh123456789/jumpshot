@@ -94,6 +94,9 @@ export class Fighter {
   thrown = 0;
   /** Weapon statuses (frames left): bleed, frozen in ice, floating in a bubble, snared in ink. */
   bleed = 0; frozen = 0; bubble = 0; snare = 0;
+  /** New movesets (sim/moveset2.ts): scythe doom marks + the reaping countdown, grave hands (frames),
+   *  the hero's vanish (daggers smoke bomb) and phase (scythe dodge) frames. */
+  doom = 0; doomT = 0; grave = 0; vanish = 0; phase = 0;
   bowlCount = 0;
   lastHitBy = 0;
   koLaunched = false;

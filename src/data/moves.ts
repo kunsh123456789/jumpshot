@@ -103,6 +103,50 @@ export interface MoveDef {
   /** Move started automatically when this one ends (tether follow-ups). */
   then?: string;
   poses?: { antic: Float32Array; strike: Float32Array; follow: Float32Array; strikeAlt?: Float32Array };
+  /** New-moveset mechanics (sim/moveset2.ts). Only the reworked movesets use these. */
+  x2?: X2Spec;
+  /** Play another move's drawings (variants of an existing move reuse its animation). */
+  anim?: string;
+}
+
+/** Signature mechanics of the reworked movesets (sim/moveset2.ts). All act on the contact frame unless noted. */
+export interface X2Spec {
+  /** Hammer: the move can't be interrupted (hits taken do half damage and no flinch). */
+  armor?: boolean;
+  /** Hammer: shockwaves run along the floor from the contact point (both ways unless `forward`). */
+  wave?: { dmg: number; range: number; speed: number; launch: number; forward?: boolean };
+  /** Hammer: the same shockwaves when the hero lands after this (air) move. */
+  landWave?: { dmg: number; range: number; speed: number; launch: number };
+  /** Ice: an ice patch on the floor (radius, frames); `trail` lays patches along the move's travel. */
+  ice?: { r: number; frames: number; trail?: boolean };
+  /** Ice: a wall of ice in front of the hero (frames); enemies can't pass it and touching it freezes. */
+  iceWall?: { frames: number; dist: number };
+  /** Laser: the point-blank variant used when the target is this close and in front. */
+  close?: { move: string; range: number };
+  /** Daggers: vanish in smoke for `frames` (invisible, untouchable); the move's `then` reappears. */
+  vanish?: number;
+  /** Daggers: victims the dash passes take the hit this many frames later (cuts appear after you). */
+  delayed?: number;
+  /** Daggers: detonate every bleed on screen (damage per remaining bleed frame). */
+  detonate?: number;
+  /** Scythe: each hit adds a doom mark; the third reaps. */
+  doom?: boolean;
+  /** Scythe: hands from the floor hold grounded enemies within `r` for `frames`. */
+  grave?: { r: number; frames: number };
+  /** Hook: tie the two enemies nearest the target together for `frames`. */
+  tie?: number;
+  /** Whip: hits at the tip (outer part of the beam) crack for double damage. */
+  tipCrack?: boolean;
+  /** Stun the victims for this many frames (sonic crack). */
+  stun?: number;
+  /** Whip lasso: the grabbed body orbits the hero during the hold, bowling everyone it touches. */
+  orbit?: boolean;
+  /** Staff: keeps spinning while the attack is held (after `min` frames, releasing plays `then`). */
+  spin?: { min: number; then: string };
+  /** Fists power cross: a shockwave puff of this radius at the victim. */
+  puff?: number;
+  /** Self-launch at contact (blast jump, pole rocket, dragon uppercut carry). */
+  self?: { vx: number; vy: number };
 }
 
 export interface BeamSpec { len: number; width: number; pierce: boolean; color: string; hits?: number; style?: 'laser' | 'whip' | 'lightning' | 'ice' | 'ink' | 'scythe' }

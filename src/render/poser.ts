@@ -59,7 +59,7 @@ export function poseFighter(f: Fighter, _time: number): void {
   // ---------------- Player attacks ----------------
   if (f.team === 'player' && f.state === 'move' && f.move) {
     const m = f.move;
-    const def = ANIMS[m.id] ?? ANIMS.jab1;
+    const def = ANIMS[m.anim ?? m.id] ?? ANIMS.jab1;
     const restart = a.moveSerial !== f.moveSerial;
     if (restart) a.moveSerial = f.moveSerial;
     // Rhythm Mode snapping re-times the startup; play the authored anticipation stretched/compressed over it.

@@ -95,6 +95,77 @@ export function drawCineFx(ctx: CanvasRenderingContext2D, w: World, _alpha: numb
     ctx.strokeStyle = paperCol; ctx.lineWidth = (4 * k + 1) * wpp;
     ctx.beginPath(); ctx.moveTo(s.x1 + (s.x2 - s.x1) * 0.1, s.y1 + (s.y2 - s.y1) * 0.1); ctx.lineTo(s.x2 - (s.x2 - s.x1) * 0.1, s.y2 - (s.y2 - s.y1) * 0.1); ctx.stroke();
   }
+  // ---- weapon Specials (pass 9) ----
+  if (v.crack) {
+    // the floor splitting both ways: a jagged rift with slabs lifting along it
+    const G = WORLD.groundY, cr = v.crack;
+    sd = 919 + step * 3;
+    ctx.strokeStyle = ink; ctx.lineWidth = 4 * wpp + 1;
+    for (const dir of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(cr.x, G);
+      let x = cr.x;
+      while ((x - cr.x) * dir < cr.len) { x += dir * (22 + rnd() * 26); ctx.lineTo(x, G + 2 + (rnd() - 0.5) * 12); }
+      ctx.stroke();
+      ctx.fillStyle = ink;
+      for (let d = 60; d < cr.len; d += 110) {
+        const sx = cr.x + dir * d, h = 18 + ((d * 7) % 23);
+        ctx.beginPath(); ctx.moveTo(sx - 24, G); ctx.lineTo(sx - 16, G - h); ctx.lineTo(sx + 18, G - h * 0.7); ctx.lineTo(sx + 26, G); ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+  if (v.freeze > 0) {
+    // the screen freezing over: an icy haze, and every caught enemy locked in a block of ice
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = `rgba(170, 228, 255, ${0.32 * v.freeze})`;
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.restore();
+    for (const e of c.group) {
+      if (e.state !== 'cine') continue;
+      const hw = 46 * e.scale, top = e.y - 200 * e.scale;
+      ctx.globalAlpha = 0.55 * v.freeze; ctx.fillStyle = '#cdf3ff';
+      ctx.fillRect(e.x - hw, top, hw * 2, e.y - top);
+      ctx.globalAlpha = v.freeze; ctx.strokeStyle = '#2a9be0'; ctx.lineWidth = 2.4 * wpp + 0.6;
+      ctx.strokeRect(e.x - hw, top, hw * 2, e.y - top);
+      ctx.strokeStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(e.x - hw * 0.6, top + 14); ctx.lineTo(e.x - hw * 0.2, top + 50); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+  if (v.scythe) {
+    // the giant shadow scythe: a black crescent blade with a purple edge, sweeping around its pivot
+    // A giant scythe: a crescent blade (thick in the middle, tapering to points) at the end of a long
+    // handle from the hero, its leading edge at angle a; purple cutting edge and motion streaks behind.
+    const s = v.scythe, back = Math.sign(Math.cos(s.a)) >= 0 ? -1 : 1, a0 = s.a + back * 0.55;
+    const N = 18, W = 120;
+    ctx.fillStyle = 'rgba(14, 6, 22, 0.9)';
+    ctx.beginPath();
+    for (let k = 0; k <= N; k++) { const t = k / N, a = a0 + (s.a - a0) * t; ctx.lineTo(s.x + Math.cos(a) * s.r, s.y + Math.sin(a) * s.r); }
+    for (let k = N; k >= 0; k--) { const t = k / N, a = a0 + (s.a - a0) * t, r = s.r - W * Math.sin(Math.PI * t) * (0.6 + 0.4 * t); ctx.lineTo(s.x + Math.cos(a) * r, s.y + Math.sin(a) * r); }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#9b5cff'; ctx.lineWidth = 5 * wpp + 1.5;
+    ctx.beginPath();
+    for (let k = 0; k <= N; k++) { const t = k / N, a = a0 + (s.a - a0) * t; ctx.lineTo(s.x + Math.cos(a) * s.r, s.y + Math.sin(a) * s.r); }
+    ctx.stroke();
+    // the handle: from the hero to the blade's heel
+    ctx.strokeStyle = 'rgba(14, 6, 22, 0.9)'; ctx.lineWidth = 12 * wpp + 3;
+    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + Math.cos(a0) * (s.r - 30), s.y + Math.sin(a0) * (s.r - 30)); ctx.stroke();
+    // motion streaks trailing the cutting edge
+    ctx.strokeStyle = 'rgba(155, 92, 255, 0.4)'; ctx.lineWidth = 2.4 * wpp + 0.6;
+    ctx.beginPath();
+    for (let k = 1; k <= 3; k++) { const r = s.r - k * 34, aa = s.a + back * 0.55; ctx.moveTo(s.x + Math.cos(s.a) * r, s.y + Math.sin(s.a) * r); ctx.arc(s.x, s.y, r, s.a, aa + back * 0.35 * k, back > 0); }
+    ctx.stroke();
+  }
+  if (v.marks.length) {
+    // Blade Storm: slashes hanging in stopped time
+    for (let i = 0; i + 2 < v.marks.length; i += 3) {
+      const x = v.marks[i], y = v.marks[i + 1], a = v.marks[i + 2], L = 70;
+      const dx = Math.cos(a) * L, dy = Math.sin(a) * L;
+      ctx.strokeStyle = '#e22424'; ctx.lineWidth = 6 * wpp + 1.5;
+      ctx.beginPath(); ctx.moveTo(x - dx, y - dy); ctx.lineTo(x + dx, y + dy); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2 * wpp + 0.5;
+      ctx.beginPath(); ctx.moveTo(x - dx * 0.8, y - dy * 0.8); ctx.lineTo(x + dx * 0.8, y + dy * 0.8); ctx.stroke();
+    }
+  }
   void WORLD;
   ctx.restore();
 }

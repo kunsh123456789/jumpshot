@@ -30,3 +30,25 @@ export const WEAPON_T = {
   /** Breather weapon-swap prompt and the first-time tooltip (ms). */
   tipMs: 6000,
 } as const;
+
+/** Reworked movesets (sim/moveset2.ts). Per-move numbers live in each weapon file. */
+export const V2 = {
+  /** Whip: hits past this fraction of the lash's length crack for tipMult damage. */
+  tipFrac: 0.68, tipMult: 2,
+  /** Fists fury: fill per hit (0..1), how long it burns (frames), damage and knockback while it burns. */
+  furyPerHit: 0.07, furyFrames: 360, furyDmg: 1.18, furyKb: 1.35,
+  /** Scythe: reaping delay after the third doom mark (frames) and its damage; soul heal; life steal below deathsDoor HP. */
+  reapDelay: 30, reapDmg: 22, soulHeal: 4, deathsDoor: 0.3, lifesteal: 0.25,
+  /** Daggers execute: base damage + damage per remaining bleed frame (set per move). */
+  executeBase: 6,
+  /** Hook tie: partner range at tie time, rope length, share of a hit passed down the rope. */
+  tieRange: 380, tieLen: 220, tieShare: 0.5,
+  /** Whip lasso: damage to each enemy the orbiting body hits. */
+  orbitDmg: 9,
+  /** Ice: sliding faster than this on ice shatters into the next enemy; freeze from a new wall. */
+  slideShatterSpeed: 380, slideShatterDmg: 10, wallFreeze: 70,
+  /** Ice: friction on ice (per frame; the normal floor is PHYS.groundFriction) and the hero's skate speed. */
+  iceFriction: 0.965, skateMult: 1.4,
+  /** Fists slip dodge: the automatic counter. */
+  slipCounter: 'fs2_counter',
+} as const;

@@ -69,7 +69,9 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   // ---- Damage ----
   let crit = false;
   if (p.critTimer > 0) { crit = true; p.critTimer = 0; }
-  let dmg = m.damage * combo.scale() * combo.repeatMult(m.family);
+  const x2 = m.x2 || w.weapon.passive ? w.v2.preHit(w, m, v, dirX) : null;
+  if (x2?.crit) crit = true;
+  let dmg = m.damage * combo.scale() * combo.repeatMult(m.family) * (x2 ? x2.mult : 1);
   dmg *= w.wpn.x.preHit(w, v); // frozen victims shatter, bubbled ones pop
   if (crit) dmg *= PLAYER.critMult;
   if (w.rhythm) dmg *= w.rhythm.damageMult(w);
@@ -199,8 +201,9 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   combo.registerHit(m.family, dmg, {
     air, multi, bounce: false, finisher, launcher: m.launch !== 0, bowl: false, ko: v.hp <= 0,
   });
-  emitHit(w, p, v, m, dmg, crit, kind, dirX, v.hitDirY, m.weight);
+  emitHit(w, p, v, m, dmg, crit, kind, dirX, v.hitDirY, w.v2.furyT > 0 && w.weapon.passive?.fury ? Math.min(1, m.weight + 0.3) : m.weight);
   if (m.status || m.chain) w.wpn.x.postHit(w, m, v, dmg);
+  if (x2) w.v2.afterHit(w, m, v, dmg);
 
   if (v.hp <= 0) ko(w, v, dirX);
 }
@@ -306,6 +309,7 @@ export function shockwave(w: World, x: number, y: number, radius: number, damage
 
 /** KO: dramatic launch, then dissolve on landing. */
 export function ko(w: World, v: Fighter, dirX: number): void {
+  w.v2.onKo(w, v);
   if (!v.alive) return;
   const wasAirborne = !v.grounded;
   v.alive = false;
@@ -352,7 +356,11 @@ export function enemyStrike(w: World, e: Fighter, atk: EnemyAttack): boolean {
       return true;
     }
   }
-  if (p.invuln > 0) return false;
+  if (p.invuln > 0) {
+    // Slip dodge (fists, new moveset): an attack slipped during the dodge is answered with a counter.
+    if (p.state === 'dodge' && w.weapon.dodge.kind === 'slip' && overlaps(hx, hy, r + 30, p)) w.v2.slipTarget = e;
+    return false;
+  }
   if (!overlaps(hx, hy, r, p)) return false;
   hurtPlayer(w, atk.damage, e.facing, atk.kbX, atk.kbY, e);
   return true;
@@ -378,6 +386,7 @@ export function parry(w: World, e: Fighter | null, projectile: boolean): void {
     if (e.poise > 0) e.poise = Math.max(0, e.poise - e.maxPoise * 0.6);
     p.facing = Math.sign(e.x - p.x) || p.facing;
   }
+  if (e && w.weapon.dodge.kind === 'slip') w.v2.slipTarget = e; // slip -> parry -> counter
   if (w.rhythm) w.rhythm.onParry(w);
   w.events.emit('parry', { x: e ? (e.x + p.x) / 2 : p.x + p.facing * 30, y: p.cy, projectile });
 }
@@ -387,6 +396,14 @@ export function hurtPlayer(w: World, dmg: number, dirX: number, kbX: number, kbY
   if (p.invuln > 0 || !p.alive) return;
   if (settings.cheatGod) return; // cheat: never take damage
   dmg *= dmgScale(w.wave);
+  // Super armor (hammer swings): the hit hurts (half) but doesn't interrupt the swing.
+  if (p.state === 'move' && p.move?.x2?.armor) {
+    p.hp -= dmg * 0.5; p.flash = 4; p.invuln = 12;
+    w.events.emit('playerHurt', { damage: dmg * 0.5, x: p.x, y: p.cy, dirX });
+    w.events.emit('text', { text: 'ARMOR', x: p.x, y: p.y - 170 * p.scale, color: '#ffa040', size: 18 });
+    if (p.hp <= 0) { p.hp = 1; }
+    return;
+  }
   p.hp -= dmg;
   p.impact = ANIM.impactSnapFrames;
   p.hitSerial++;

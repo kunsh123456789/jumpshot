@@ -23,9 +23,9 @@ export const WEAPON_FAMILY: Record<string, Family> = {
 /** Special names per weapon (the family script with its own name). */
 export const SPECIAL_NAME: Record<string, string> = {
   fists: 'MEGA JUMPSHOT', hammer: 'EARTHSPLITTER',
-  staff: 'CYCLONE', daggers: 'BLADE STORM', scythe: 'REAPER WEB',
-  laser: 'OVERLOAD BEAM', ice: 'GLACIER BEAM', raygun: 'DEATH RAY',
-  hook: 'WEB TAKEDOWN', whip: 'WHIP WEB',
+  staff: 'CYCLONE', daggers: 'BLADE STORM', scythe: 'REAPER',
+  laser: 'OVERLOAD BEAM', ice: 'DEEP FREEZE', raygun: 'DEATH RAY',
+  hook: 'WEB TAKEDOWN', whip: 'LION TAMER',
 };
 
 const G = WORLD.groundY;
@@ -485,6 +485,156 @@ const spThrow: CineScript = {
 function swingT(c: CineCtx): number { return 36 + c.qte * 10 + (c.tier === 2 ? 16 : 0); }
 
 // ======================================================================= lookup
+
+// ======================================================================= WEAPON SPECIALS (pass 9)
+// Each of these weapons has its own Special (and trace path, ui/specialInput.ts), approved list.
+const grabAll = (c: CineCtx) => { for (const e of c.group) if (!c.w.cine.held.includes(e)) c.w.cine.grab(e); };
+const releaseAll = (c: CineCtx, vy = -500) => { for (const e of c.group) if (e.state === 'cine') strike(c, e, 0, { vy, release: true }); };
+
+/** Lion Tamer: lashes spin every enemy like a top, then one crack yanks them all into a pile and launches it. */
+const spWhip: CineScript = {
+  id: 'sp.whip', name: 'LION TAMER',
+  len: (c) => 20 + c.group.length * 9 + 44,
+  start: (c) => { place(c.p, c.p.x, G); grabAll(c); c.group.forEach((e, i) => { c.v['x' + i] = e.x; }); },
+  frame: (c) => {
+    const p = c.p, f = c.f, grp = c.group, n = grp.length, f0 = 20 + n * 9;
+    const hx = p.x + facing(c) * 30, hy = p.cy - 20;
+    c.vis.ropes = [];
+    if (f < 20) { hero(c, 'cine_charge', f % 6); if (f === 0) fx(c, 'whoosh', p.x, p.cy); }
+    grp.forEach((e, i) => {
+      const t0 = 20 + i * 9;
+      if (f >= t0 && f < f0) {
+        e.spinAngle += 0.55; pose(e, 'tumble', f);
+        if (f < t0 + 4) c.vis.ropes.push(hx, hy, e.cx, e.cy);
+        if (f === t0) { faceTo(p, e.x); strike(c, e, 5 + c.tier, { quiet: true }); fx(c, 'sparks', e.cx, e.cy, 0.6); }
+      }
+      if (f >= f0 && f < f0 + 16) {
+        const px = p.x + facing(c) * 130 + (i - (n - 1) / 2) * 14;
+        place(e, tween(c, f0, f0 + 14, c.v['x' + i], px), G - tween(c, f0, f0 + 14, 0, 40 + (i % 3) * 30));
+        e.spinAngle += 0.3; pose(e, 'tumble', f);
+        c.vis.ropes.push(hx, hy, e.cx, e.cy);
+      }
+    });
+    if (f >= 20 && f < f0) heroLoop(c, 'wh_lash', 20, 1.4);
+    if (f >= f0) heroHit(c, 'cine_hurl', f0 + 16);
+    if (f === f0 + 16) {
+      for (const e of grp) strike(c, e, 16 + c.tier * 4, { vx: facing(c) * 900, vy: -1100, release: true, kind: 'launch', weight: 1.1 });
+      fx(c, 'invert', p.x, p.cy); fx(c, 'shake', p.x, p.cy, 1.6); fx(c, 'bigCrack', p.x + facing(c) * 130, G, 1.4);
+    }
+  },
+  end: (c) => { c.vis.ropes = []; releaseAll(c, -700); },
+};
+
+/** Earthsplitter: leap, slam, and the floor splits both ways, slabs launching everyone it reaches. */
+const spHammer: CineScript = {
+  id: 'sp.hammer', name: 'EARTHSPLITTER',
+  len: () => 96,
+  start: (c) => { c.v.x0 = c.p.x; grabAll(c); },
+  frame: (c) => {
+    const p = c.p, f = c.f;
+    if (f < 18) { hero(c, 'cine_axeWind', f); place(p, c.v.x0, G - tween(c, 0, 16, 0, 320)); }
+    else if (f < 26) { heroHit(c, 'cine_axeHit', 25); place(p, c.v.x0, G - tween(c, 18, 25, 320, 0)); }
+    else hero(c, 'cine_axeHit', 20);
+    if (f === 25) { fx(c, 'bigCrack', p.x, G, 2.4); fx(c, 'invert', p.x, p.cy); fx(c, 'shake', p.x, p.cy, 2); c.vis.crack = { x: p.x, len: 0 }; }
+    if (f >= 25 && c.vis.crack) c.vis.crack.len = tween(c, 25, 62, 0, 1000);
+    for (const e of c.group) {
+      const k = 'h' + e.id;
+      if (!c.v[k] && c.vis.crack && Math.abs(e.x - c.v.x0) < c.vis.crack.len) { c.v[k] = f; fx(c, 'crack', e.x, G, 1); strike(c, e, 10 + c.tier * 3, { quiet: true }); }
+      if (c.v[k]) {
+        const t = f - c.v[k];
+        place(e, e.x, G - Math.sin(Math.min(1, t / 40) * Math.PI) * (260 + c.tier * 40));
+        pose(e, 'launched', t); e.spinAngle = t * 0.12;
+      }
+    }
+    if (f === 80) { for (const e of c.group) strike(c, e, 10 + c.tier * 3, { vy: -700, release: true, kind: 'launch', weight: 1 }); fx(c, 'shake', p.x, p.cy, 1.2); }
+    if (f >= 84) c.vis.crack = null;
+  },
+  end: (c) => { c.vis.crack = null; releaseAll(c, -600); },
+};
+
+/** Blade Storm: time stops; blink behind every enemy leaving slashes in the air, then every slash lands at once. */
+const spDaggers: CineScript = {
+  id: 'sp.daggers', name: 'BLADE STORM',
+  len: (c) => 14 + c.group.length * 7 + 34,
+  start: (c) => { c.v.x0 = c.p.x; grabAll(c); c.vis.marks = []; },
+  frame: (c) => {
+    const p = c.p, f = c.f, grp = c.group, n = grp.length, f0 = 14 + n * 7;
+    c.vis.dark = f < f0 + 12 ? Math.min(0.55, f / 14) : Math.max(0, 0.55 - (f - f0 - 12) / 10);
+    if (f < 14) hero(c, 'cine_charge', f % 6);
+    grp.forEach((e, i) => {
+      pose(e, 'hurtHeavy', 0);
+      const t0 = 14 + i * 7;
+      if (f === t0) {
+        const side = e.x > c.v.x0 ? 1 : -1;
+        place(p, e.x + side * 64, G, e.x);
+        fx(c, 'whoosh', p.x, p.cy);
+        c.vis.marks.push(e.cx, e.cy - 10, (i % 2 ? 1 : -1) * 0.8, e.cx, e.cy + 6, (i % 2 ? -1 : 1) * 0.6);
+      }
+      if (f >= t0 && f < t0 + 7) heroHit(c, 'cine_xslash', t0 + 3);
+    });
+    if (f === f0) { place(p, c.v.x0, G); hero(c, 'cine_charge', 0); }
+    if (f === f0 + 10) {
+      fx(c, 'invert', p.x, p.cy); fx(c, 'shake', p.x, p.cy, 1.8);
+      for (const e of grp) strike(c, e, 18 + c.tier * 5, { vx: (Math.sign(e.x - p.x) || 1) * 700, vy: -800, release: true, kind: 'launch', weight: 1.1 });
+      c.vis.marks = [];
+    }
+  },
+  end: (c) => { c.vis.marks = []; c.vis.dark = 0; releaseAll(c, -600); },
+};
+
+/** Deep Freeze: the whole screen freezes solid, enemies become ice statues, one punch shatters everything. */
+const spIce: CineScript = {
+  id: 'sp.ice', name: 'DEEP FREEZE',
+  len: () => 78,
+  start: (c) => { grabAll(c); },
+  frame: (c) => {
+    const p = c.p, f = c.f;
+    c.vis.freeze = f < 44 ? tween(c, 0, 18, 0, 1) : tween(c, 44, 62, 1, 0);
+    for (const e of c.group) { pose(e, 'hurtHeavy', 0); if (f < 44) { e.frozen = 2; } }
+    if (f === 10) fx(c, 'stars', p.x, p.cy - 40, 0.6);
+    if (f < 30) hero(c, 'cine_charge', f % 6); else heroHit(c, 'cine_axeHit', 44);
+    if (f === 44) {
+      fx(c, 'invert', p.x, p.cy); fx(c, 'shake', p.x, p.cy, 2); fx(c, 'boom', p.x, p.cy);
+      for (const e of c.group) { c.w.events.emit('shatter', { x: e.cx, y: e.cy }); strike(c, e, 20 + c.tier * 5, { vx: (Math.sign(e.x - p.x) || 1) * 800, vy: -900, release: true, kind: 'launch', weight: 1.1 }); }
+    }
+  },
+  end: (c) => { c.vis.freeze = 0; releaseAll(c, -600); },
+};
+
+/** Reaper: the world drains to black and white; a giant shadow scythe sweeps the screen and their souls heal you. */
+const spScythe: CineScript = {
+  id: 'sp.scythe', name: 'REAPER',
+  len: () => 80,
+  start: (c) => { grabAll(c); },
+  frame: (c) => {
+    const p = c.p, f = c.f, d = facing(c);
+    c.vis.bw = f < 56 ? tween(c, 0, 12, 0, 1) : tween(c, 56, 70, 1, 0);
+    if (f < 14) hero(c, 'cine_charge', f % 6); else heroLoop(c, 'cine_spin', 14);
+    // the swing: from high behind the hero, over the top, down through everything in front (mirrored when facing left)
+    const px = p.x, py = p.cy - 30;
+    if (f >= 14 && f < 50) {
+      const ar = tween(c, 14, 44, -Math.PI * 0.85, Math.PI * 0.12);
+      c.vis.scythe = { x: px, y: py, a: d > 0 ? ar : Math.PI - ar, r: 430 };
+      for (const e of c.group) {
+        const k = 'h' + e.id;
+        const ang = Math.atan2(e.cy - py, (e.x - px) * d);
+        if (!c.v[k] && ar >= ang) { c.v[k] = 1; strike(c, e, 16 + c.tier * 5, { weight: 1 }); pose(e, 'tumble', 0); }
+        if (c.v[k]) { e.spinAngle += 0.2; }
+        else pose(e, 'hurtHeavy', 0);
+      }
+    } else c.vis.scythe = null;
+    if (f === 50) {
+      fx(c, 'invert', p.x, p.cy); fx(c, 'shake', p.x, p.cy, 1.4);
+      for (const e of c.group) { c.w.v2.spawnSoul(e.cx, e.cy); strike(c, e, 6, { vx: (Math.sign(e.x - p.x) || 1) * 500, vy: -900, release: true, kind: 'launch', weight: 1 }); }
+    }
+  },
+  end: (c) => { c.vis.bw = 0; c.vis.scythe = null; releaseAll(c, -600); },
+};
+const SP2: Record<string, CineScript> = { whip: spWhip, hammer: spHammer, daggers: spDaggers, ice: spIce, scythe: spScythe };
+/** What a weapon's Special is: its own (SP2) or its family's. Also picks the trace path. */
+export type SpecialKind = Family | 'whip' | 'hammer' | 'daggers' | 'ice' | 'scythe';
+export function specialKind(weapon: string): SpecialKind { return SP2[weapon] ? (weapon as SpecialKind) : familyOf(weapon); }
+
 const AIR: Record<Family, CineScript> = { fists: airFists, staff: airStaff, laser: airLaser, hook: airHook, throw: airThrow };
 const KO: Record<Family, CineScript> = { fists: koFists, staff: koStaff, laser: koLaser, hook: koHook, throw: koThrow };
 const SP: Record<Family, CineScript> = { fists: spFists, staff: spStaff, laser: spLaser, hook: spHook, throw: spThrow };
@@ -498,6 +648,8 @@ export function koFinisher(weapon: string, victim: Fighter): CineScript {
   return KO[fam];
 }
 export function specialScript(weapon: string): CineScript {
+  const own = SP2[weapon];
+  if (own) return own;
   const s = SP[familyOf(weapon)];
   return { ...s, name: SPECIAL_NAME[weapon] ?? s.name };
 }

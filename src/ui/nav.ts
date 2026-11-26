@@ -176,6 +176,7 @@ export class UiNav {
       this.padActive = sx !== 0 || sy !== 0;
       const dir = Math.hypot(sx, sy) > 0.4 ? classifyDir(sx, sy) : -1;
       const t = performance.now();
+      this.attackHeld = btn(2) || btn(3);
       if (pressed(2)) this.pad.inject('swipe', dir < 0 ? this.forward() : dir, false, t);
       if (pressed(3)) this.pad.inject('swipe', dir < 0 ? this.forward() : dir, true, t);
       if (pressed(0)) this.pad.inject('jump', 2, false, t);
@@ -184,6 +185,8 @@ export class UiNav {
     }
     this.prevButtons = gp.buttons.map((b) => b.pressed || b.value > 0.5);
   }
+  /** Gamepad X / Y held (staff momentum spin). */
+  attackHeld = false;
   /** Facing direction for a neutral-stick attack (set by the game each frame). */
   facing = 1;
   private forward(): number { return this.facing > 0 ? 0 : 4; }

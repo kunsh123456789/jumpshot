@@ -56,6 +56,13 @@ export interface CineVisual {
   slash: { x1: number; y1: number; x2: number; y2: number; t: number }[];
   bubble: { x: number; y: number; r: number } | null;
   dark: number;             // 0..1 special-mode dark vignette
+  /** Weapon Specials (pass 9): a floor crack racing both ways, the screen freezing to ice (0..1),
+   *  black-and-white (0..1), a giant shadow scythe, and slash marks left hanging in the air (x, y, angle). */
+  crack: { x: number; len: number } | null;
+  freeze: number;
+  bw: number;
+  scythe: { x: number; y: number; a: number; r: number } | null;
+  marks: number[];
 }
 
 export interface CineScript {
@@ -69,7 +76,7 @@ export interface CineScript {
   end: (c: CineCtx) => void;
 }
 
-const emptyVis = (): CineVisual => ({ beam: null, ropes: [], tornado: null, slash: [], bubble: null, dark: 0 });
+const emptyVis = (): CineVisual => ({ beam: null, ropes: [], tornado: null, slash: [], bubble: null, dark: 0, crack: null, freeze: 0, bw: 0, scythe: null, marks: [] });
 
 export class CinePlayer {
   script: CineScript | null = null;

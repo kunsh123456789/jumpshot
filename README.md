@@ -146,6 +146,22 @@ You carry **one weapon** at a time. All 9 are unlocked from the start. Pick one 
 - Each weapon has a slow-motion moment: the hook yank, the charged beam, the staff vault apex.
 - The biggest hits get a white-crescent impact frame; Nova and Crater Yank call down lightning; the helicopter spins a whirlwind.
 
+### New movesets (default)
+
+Every weapon has a reworked **signature moveset**. **Settings → Weapons → Movesets** switches between **New** and **Original** at any time; the table above is the Original set. The loadout preview and move list always show the active set.
+
+| Weapon | Signature | New moves | Dodge | Special |
+|---|---|---|---|---|
+| **Fists** (Brawler) | **Fury**: hits fill it; while it burns, punches hit harder and boom louder | Jab, jab, **Power Cross** (shockwave puff) · heavy **Haymaker** · ↑ heavy **Dragon Uppercut** · air ↓ **Meteor Elbow** | **Slip**: dodge or parry an attack and you counter-punch automatically | MEGA JUMPSHOT |
+| **Grappling Hook** (Spider) | **Tether** two enemies: hitting one drags and hurts the other | ↗ heavy **Tether** · ↘ **Trip Line** · air ↓ **Grapple Dive** (lands with a shockwave) | **Zip up** to the ceiling | WEB TAKEDOWN |
+| **Staff** (Spin Master) | **Momentum spin**: keep holding after ↗ and the staff keeps spinning (deflects shots); let go to fling | ↑ heavy **Pole Rocket** · ↘ **Low Spin** · ↓ heavy **Pole Kick** · air → **Windmill** · air ↓ **Drill Dive** | **Vault** over the enemy | CYCLONE |
+| **Laser** (Gunslinger) | **Range matters**: up close every shot is a **Point-Blank Blast**; overheating vents a knockback steam burst | → close **Point-Blank Blast** · ↗ **Blast Jump** · ↓ close **Muzzle Slam** | **Recoil dash** (shoots behind you) | OVERLOAD BEAM |
+| **Whip** (Tamer) | **Sweet-spot crack**: tip hits do double damage | → heavy **Sonic Crack** (stuns the line) · ↑ heavy **Lasso Spin** (swing an enemy as a weapon) · ↓ heavy **Tamer's Ring** · air → **Tarzan Swing** | **Backflip** | **LION TAMER**: figure-8 path; lashes spin everyone, then one crack yanks them into a pile and launches it |
+| **Hammer** (Earthshaker) | **Floor shockwaves** on every slam (jump over them!); swings have **super armor** | ↓ **Quake** (waves both ways) · ↓ heavy **Fault Line** (rock spikes + a forward wave) · ↑ heavy Ground Pound + waves · air ↓ Meteor Hammer + huge waves | **Hammer hop** over the enemy | **EARTHSPLITTER**: down-then-V path; leap, slam, the floor splits both ways and slabs launch everyone |
+| **Daggers** (Assassin) | **Backstab**: hits from behind (and any move that lands behind) always crit; cuts **bleed** | → heavy **Shadow Dash** (the cuts land after you pass) · ↓ **Smoke Bomb** (vanish, reappear behind them with a Backstab) · ↓ heavy **Execute** (detonates every bleed) | **Smoke teleport** | **BLADE STORM**: star path; time stops, you blink behind each enemy leaving slashes, then every slash lands at once |
+| **Ice** (Frost) | **Slippery floor**: ice patches make enemies slide (and **shatter** into each other); you skate faster on ice | ↘ **Ice Slide** (leaves a trail) · ↓ **Frost Floor** · ↓ heavy **Glacier Wall** (blocks and freezes) · air ↓ **Icicle Drop** | **Skate** (long slide that leaves ice) | **DEEP FREEZE**: X path; the screen freezes, enemies become ice statues, one punch shatters them |
+| **Scythe** (Reaper) | **Doom**: hits put skull marks on enemies, 3 = **REAPED** · KOs drop **souls** that heal · below 30% HP hits **steal life** | Doom on the reap string, Death Spiral, Reaping Pull and Harvest · ↓ **Grave Rise** (dead hands hold enemies) | **Phase** (turn ghostly, pass through) | **REAPER**: crescent path; the world goes black and white and a giant shadow scythe sweeps through everyone; their souls heal you |
+
 ## Sound
 
 Every sound in the game is a CC0 recording from Freesound (credits in `SOUND_CREDITS.md`, 83 clips, about 345 KB, bundled with the build). That covers hits, effects, UI, voice, and every drum and instrument in the built-in music.

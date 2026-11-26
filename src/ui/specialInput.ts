@@ -3,7 +3,7 @@ import { settings } from '../core/settings';
 import { audio } from '../core/audio';
 import { WORLD } from '../data/tuning';
 import { SPECIAL } from '../data/special';
-import type { Family } from '../data/cines';
+import type { SpecialKind } from '../data/cines';
 import type { World } from '../sim/world';
 import type { SpecialResult } from '../sim/special';
 import type { Camera } from '../core/camera';
@@ -11,7 +11,7 @@ import type { DrawPad } from './pad';
 import type { Keyboard } from '../core/keyboard';
 import type { RhythmDirector } from '../rhythm/director';
 import { getUiScale } from './arcadeHud';
-import { specialScript, familyOf } from '../data/cines';
+import { specialScript, specialKind } from '../data/cines';
 import { WEAPONS, availableWeapons } from '../data/weapons';
 import { ICON } from './icons';
 
@@ -41,7 +41,7 @@ const DIR_GLYPH = ['→', '↗', '↑', '↖', '←', '↙', '↓', '↘'];
 
 export class SpecialInput {
   phase: Phase = 'off';
-  private fam: Family = 'fists';
+  private fam: SpecialKind = 'fists';
   private w: World | null = null;
   // ---- trace ----
   private path: Float32Array = new Float32Array(0);
@@ -103,10 +103,10 @@ export class SpecialInput {
     this.pickSel = i;
     this.weaponId = this.pickIds[i];
     audio.ui('select');
-    this.startTrace(familyOf(this.weaponId));
+    this.startTrace(specialKind(this.weaponId));
   }
 
-  private startTrace(fam: Family): void {
+  private startTrace(fam: SpecialKind): void {
     const w = this.w!;
     this.fam = fam;
     this.facing = w.player.facing || 1;
@@ -173,6 +173,36 @@ export class SpecialInput {
         // one full circle (then a free flick aims the hurl)
         const r = m * 0.42;
         for (let i = 0; i <= 48; i++) { const a = Math.PI / 2 - f * (i / 48) * Math.PI * 2; push(cx + Math.cos(a) * r * 1.2, cy + Math.sin(a) * r); }
+        break;
+      }
+      case 'whip': {
+        // figure-8 (lemniscate)
+        for (let i = 0; i <= 64; i++) { const t = (i / 64) * Math.PI * 2; push(cx + f * Math.sin(t) * bw * 0.4, cy + Math.sin(t) * Math.cos(t) * bh * 0.8); }
+        break;
+      }
+      case 'hammer': {
+        // straight down (the slam), then up the far side of a V (the crack)
+        for (let i = 0; i <= 10; i++) push(X(0.18), by + bh * (0.04 + i * 0.09));
+        for (let i = 1; i <= 10; i++) push(X(0.18 + i * 0.07), by + bh * (0.94 - i * 0.085));
+        break;
+      }
+      case 'daggers': {
+        // five-point star in one stroke
+        const R = m * 0.46;
+        for (let i = 0; i <= 5; i++) { const a = -Math.PI / 2 + ((i * 2) % 5) * (Math.PI * 2 / 5); push(cx + f * Math.cos(a) * R * 1.25, cy + Math.sin(a) * R); }
+        break;
+      }
+      case 'ice': {
+        // the X as one stroke: top-left -> bottom-right -> bottom-left -> top-right
+        const x0 = cx - bw * 0.3, x1 = cx + bw * 0.3, y0 = by + bh * 0.06, y1 = by + bh * 0.94;
+        push(f > 0 ? x0 : x1, y0); push(f > 0 ? x1 : x0, y1); push(f > 0 ? x0 : x1, y1); push(f > 0 ? x1 : x0, y0);
+        break;
+      }
+      case 'scythe': {
+        // a crescent: the outer arc, then back along the inner arc
+        const R = m * 0.46;
+        for (let i = 0; i <= 24; i++) { const a = -Math.PI / 2 - f * (i / 24) * Math.PI; push(cx + Math.cos(a) * R * 1.2, cy + Math.sin(a) * R); }
+        for (let i = 0; i <= 18; i++) { const a = Math.PI / 2 + f * (i / 18) * Math.PI; push(cx - f * R * 0.35 + Math.cos(a) * R * 0.75, cy + Math.sin(a) * R * 0.8); }
         break;
       }
       case 'hook': {
@@ -437,7 +467,7 @@ export class SpecialInput {
       ctx.fillStyle = 'rgba(11,16,38,0.85)'; ctx.fill();
       ctx.strokeStyle = left < 0.3 ? '#ff3b3b' : gold; ctx.beginPath(); ctx.arc(fx, fy, FR, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
       this.text(ctx, (this.limit - this.elapsed).toFixed(1), fx, fy + 1, 18 * u, '#fff', 'Russo One');
-      const hint = this.fam === 'hook' ? 'CONNECT THE DOTS!' : this.fam === 'throw' ? 'TRACE THE CIRCLE, THEN FLICK!' : 'TRACE THE PATH!';
+      const hint = this.fam === 'hook' ? 'CONNECT THE DOTS!' : this.fam === 'throw' ? 'TRACE THE CIRCLE, THEN FLICK!' : this.fam === 'whip' ? 'TRACE THE FIGURE-8!' : this.fam === 'daggers' ? 'TRACE THE STAR!' : this.fam === 'ice' ? 'TRACE THE X!' : this.fam === 'scythe' ? 'TRACE THE CRESCENT!' : this.fam === 'hammer' ? 'SLAM DOWN, THEN UP!' : 'TRACE THE PATH!';
       this.text(ctx, hint, fx, fy + FR + 24 * u, 18 * u, '#fff', 'Oswald', true);
       const kb = this.keys.map((d, i) => (i < this.keyIdx ? '·' : DIR_GLYPH[d])).join(' ');
       this.text(ctx, 'KEYS  ' + kb, fx, fy + FR + 48 * u, 13 * u, cyan, 'Oswald', true);

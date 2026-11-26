@@ -14,6 +14,7 @@ import { BOSS, ENEMIES, PROJECTILE, isBoss, type EnemyAttack, type EnemyKind } f
 import { simRng } from '../core/rng';
 import type { RhythmSim } from '../rhythm/simHooks';
 import { WeaponSim } from './weapon';
+import { Moveset2 } from './moveset2';
 import { ko } from './combat';
 import { WEAPONS, weaponById, type WeaponDef } from '../data/weapons';
 import { SpecialSystem } from './special';
@@ -37,6 +38,8 @@ export class World {
   /** The equipped weapon and its sim state (hooks, heat, ropes, held bodies). */
   weapon: WeaponDef = WEAPONS.fists;
   readonly wpn = new WeaponSim();
+  /** Reworked movesets' mechanics (Settings -> Movesets: New). */
+  readonly v2 = new Moveset2();
   gameOver = false;
   /** Tutorial: whether the training dummy attacks. */
   dummyAttacks = false;
@@ -50,6 +53,8 @@ export class World {
   tapJump = false;
   /** Horizontal movement input this tick (-1..1), from the pad stick or keyboard. */
   moveAxis = 0;
+  /** An attack input is being held (finger down after a flick, attack key / gamepad X held): the staff keeps spinning. */
+  attackHeld = false;
   /** Jump height input (0..1): the pad's upward drag after a drag jump, or W / ↑ held. */
   jumpCharge = 0;
   /** Low stance input (pad dragged down while idle / S or ↓ held). Presentation only. */
@@ -89,6 +94,7 @@ export class World {
     this.ents.clear();
     this.ctrl.reset();
     this.wpn.reset();
+    this.v2.reset();
     this.special.reset();
     this.cine.reset();
     this.pendingKO = null;
@@ -115,6 +121,7 @@ export class World {
   setWeapon(id: string): void {
     this.weapon = weaponById(id);
     this.wpn.reset();
+    this.v2.reset();
     this.player.weapon = this.weapon.id;
     this.player.weaponOut = false;
     this.events.emit('weaponSwap', { id: this.weapon.id });
@@ -143,6 +150,7 @@ export class World {
     else if (p.alive) this.ctrl.update(this);
     else this.deadPlayerPhysics();
     this.wpn.update(this);
+    this.v2.update(this);
     const frozen = this.frozen;
 
     // S-rank regen.

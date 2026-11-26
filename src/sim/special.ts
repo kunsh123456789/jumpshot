@@ -3,7 +3,7 @@ import type { Fighter } from './fighter';
 import type { SwipeEvent } from '../ui/pad';
 import { SPECIAL } from '../data/special';
 import { WORLD } from '../data/tuning';
-import { familyOf, specialScript } from '../data/cines';
+import { familyOf, specialKind, specialScript } from '../data/cines';
 
 /** What the input phases (ui/specialInput.ts) hand back to the sim. */
 export interface SpecialResult {
@@ -134,7 +134,10 @@ export class SpecialSystem {
     const live = (e: Fighter) => e.alive && e.state !== 'ko' && e.state !== 'dead' && e.kind !== 'dummy';
     let main: Fighter | null = null;
     let group: Fighter[] = [];
-    if (fam === 'fists' || fam === 'staff') {
+    const own = specialKind(wid) !== fam;   // a weapon with its own Special (pass 9): everyone on screen
+    if (own) {
+      group = w.enemies.filter((e) => live(e) && e.x > w.camLeft - 60 && e.x < w.camRight + 60).slice(0, 10);
+    } else if (fam === 'fists' || fam === 'staff') {
       const R = fam === 'fists' ? SPECIAL.rangeFists : SPECIAL.rangeStaff;
       group = w.enemies.filter((e) => live(e) && Math.abs(e.x - p.x) < R);
     } else if (fam === 'hook') {
@@ -145,7 +148,7 @@ export class SpecialSystem {
       for (const e of w.enemies) if (live(e) && Math.abs(e.x - p.x) < SPECIAL.rangeThrow && e.maxHp > best) { best = e.maxHp; main = e; }
       if (!main) main = nearest(w, p, live);
     }
-    if (!p.grounded && (fam === 'fists' || fam === 'staff' || fam === 'throw')) { p.y = Math.min(WORLD.groundY, p.y); }
+    if (!p.grounded && (own || fam === 'fists' || fam === 'staff' || fam === 'throw')) { p.y = Math.min(WORLD.groundY, p.y); }
     this.freeze = false;
     this.bubble = null;
     this.phase = 'cine';

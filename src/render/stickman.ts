@@ -129,6 +129,7 @@ function body(ctx: CanvasRenderingContext2D, j: Float32Array): void {
 
 /** Draw a fighter: reflection, scarf, smears, then the figure in one color with round caps. */
 export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: number, time: number, dt: number): void {
+  if (f.team === 'player' && (f.vanish > 0 || (f.phase > 0 && Math.floor(time * 20) % 2))) return;
   interpJoints(f, alpha, time);
   const a = f.anim;
   if (a.trailActive) a.pushTrail(jt[a.trailJoint * 2], jt[a.trailJoint * 2 + 1], time);

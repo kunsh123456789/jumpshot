@@ -1,11 +1,13 @@
 import type { World } from './world';
+import { closeVariant } from './moveset2';
+import { V2 } from '../data/weapons/tuning';
 import type { Fighter } from './fighter';
 import { DIR_VX, DIR_VY, MOVES, dirClass, dirSignX, type MoveDef, type MoveTag } from '../data/moves';
 import { CINE, INPUT, MOVE, PHYS, PLAYER, WORLD } from '../data/tuning';
 import { airFinisher } from '../data/cines';
 import type { SwipeEvent } from '../ui/pad';
 import { clamp, ease } from '../core/math';
-import { overlaps, playerHit } from './combat';
+import { overlaps, playerHit, sideHit } from './combat';
 import { airGravity } from './physics';
 import { WEAPON_T } from '../data/weapons/tuning';
 
@@ -80,6 +82,12 @@ export class PlayerController {
     if (p.hitstop > 0) { p.hitstop--; return; }
     if (p.invuln > 0) p.invuln--;
     if (p.parryWindow > 0) p.parryWindow--;
+    // Slip counter (fists, new moveset): once free after a slipped / parried attack, punch back at once.
+    const st = w.v2.slipTarget;
+    if (st && p.state !== 'dodge' && p.state !== 'move' && p.state !== 'hurt' && p.alive) {
+      w.v2.slipTarget = null;
+      if (st.alive && MOVES[V2.slipCounter] && Math.abs(st.x - p.x) < 300) this.startMove(w, MOVES[V2.slipCounter], st, st.x > p.x ? 0 : 4, false, -1);
+    }
     if (p.flash > 0) p.flash--;
 
     // Age the buffer only while the player could act: never during hit-stop (above)
@@ -232,7 +240,8 @@ export class PlayerController {
     // Auto-strings: repeating the same input advances the string.
     const last = this.lastMove;
     if (last && last.next && MOVES[id].family === last.family && w.frame - this.lastMoveFrame < 48) id = last.next;
-    const move = MOVES[id];
+    // Laser (new moveset): a target this close gets the point-blank variant.
+    const move = closeVariant(p, MOVES[id], target);
 
     // Shield cross-up: swiping away from a guarding shield vaults behind it.
     let crossUp = false;
@@ -275,8 +284,11 @@ export class PlayerController {
   }
 
   // ---------------------------------------------------------------------
+  /** The new-moveset contact hook resolved this move (no hitbox afterwards). */
+  private x2Done = false;
   startMove(w: World, m: MoveDef, target: Fighter | null, dir: number, crossUp: boolean, strokeId: number): void {
     const p = w.player;
+    this.x2Done = false;
     const prev = p.move;
     if (prev) w.wpn.endMove(p);
     // Starting anything else calls a thrown weapon back to the hand (except the throw itself).
@@ -428,13 +440,21 @@ export class PlayerController {
     }
 
     if (fr === S) {
+      this.x2Done = !!m.x2 && w.v2.onContact(w, p, m);
       w.events.emit('whoosh', { x: p.x, y: p.cy, weight: m.weight, fighter: p });
       if (!p.grounded) { p.vy = Math.min(p.vy, 0); p.stall = Math.max(p.stall, m.active + 3); }
       if (m.afterimage) w.events.emit('afterimage', { fighter: p });
     }
 
+    // Staff momentum spin (new moveset): keeps going while the attack is held; letting go flings.
+    if (m.x2?.spin && fr >= S + m.x2.spin.min && fr < S + m.active && !w.attackHeld) {
+      const t = p.target;
+      w.wpn.endMove(p);
+      this.startMove(w, MOVES[m.x2.spin.then], t && t.alive ? t : null, p.facing > 0 ? 0 : 4, false, -1);
+      return;
+    }
     // Active frames.
-    if (fr >= S && fr < S + m.active) {
+    if (fr >= S && fr < S + m.active && !this.x2Done) {
       if (m.travel > 0) {
         p.x += (p.facing * m.travel) / m.active;
         if ((fr & 1) === 0) w.events.emit('afterimage', { fighter: p });
@@ -467,8 +487,9 @@ export class PlayerController {
       p.move = null;
       p.setState(p.grounded ? 'idle' : 'fall');
       if (m.then) {
-        const t = p.target;
-        this.startMove(w, MOVES[m.then], t && t.alive ? t : null, p.facing > 0 ? 0 : 4, false, -1);
+        const t = p.target && p.target.alive ? p.target : null;
+        const next = MOVES[m.then];
+        this.startMove(w, next, t, p.facing > 0 ? 0 : 4, !!next.behind && !!t, -1);
       }
     }
   }
@@ -493,6 +514,7 @@ export class PlayerController {
       if (!inRange) continue;
       p.markHit(e.id);
       p.moveHit = true;
+      if (m.x2?.delayed) { w.v2.queue(e, m, m.x2.delayed); continue; }
       playerHit(w, m, e, multi || p.hitCount > 0);
       if (m.aoe > 0 && e.alive) {
         // stomp pushes away from the player
@@ -575,8 +597,43 @@ export class PlayerController {
     if (D.rope) w.wpn.dodgeRope(p, p.dodgeToX);
     if (!p.grounded) { p.vy = Math.min(p.vy, -120); p.stall = 10; p.jumpKind = 'hop'; p.airFrames = 0; }
     p.vx = 0;
+    this.dodgeKind(w, p, D.kind, threat, away);
     w.events.emit('dodge', { x: p.x, y: p.cy });
     w.events.emit('afterimage', { fighter: p });
+  }
+
+  /** New-moveset dodges: each weapon's own escape. */
+  private dodgeKind(w: World, p: Fighter, kind: string | undefined, threat: Fighter | null, away: number): void {
+    if (!kind) return;
+    const clampX = (x: number) => clamp(x, WORLD.wallMargin, WORLD.arenaW - WORLD.wallMargin);
+    switch (kind) {
+      case 'slip': // duck in place: an attack slipped here is countered automatically
+        p.dodgeToX = clampX(p.x + away * 30); w.v2.slipTarget = null; break;
+      case 'zipUp': // hook a point overhead and get yanked up
+        p.dodgeToX = p.x; p.grounded = false; p.vy = -1050; p.stall = 0; p.jumpKind = 'hop'; p.airFrames = 0; w.wpn.dodgeRope(p, p.x); break;
+      case 'vault': case 'backflip': {
+        // vault: hop OVER the threat; backflip: arc away from it
+        const dir = kind === 'vault' && threat && Math.abs(threat.x - p.x) < 320 ? -away : away;
+        const dist = kind === 'vault' && threat ? Math.abs(threat.x - p.x) + 120 : w.weapon.dodge.distance;
+        p.dodgeToX = clampX(p.x + dir * dist); p.grounded = false; p.vy = kind === 'vault' ? -820 : -620; p.stall = 0; p.jumpKind = 'hop'; p.airFrames = 0;
+        if (kind === 'vault') p.facing = -dir;
+        break;
+      }
+      case 'recoil': // fire behind you: the blast pushes you away and hits the threat
+        if (threat && Math.abs(threat.x - p.x) < 300 && threat.canBeHit) sideHit(w, threat, 6, -away, -280, 'shock', 520);
+        w.events.emit('beam', { x1: p.x, y1: p.cy - 10, x2: p.x - away * 240, y2: p.cy - 10, width: 18, heavy: false, color: '#ff2a1f', hit: !!threat });
+        break;
+      case 'smoke': // poof: daggers already blink; leave a smoke cloud where you stood
+        w.events.emit('v2fx', { kind: 'smoke', x: p.dodgeFromX, y: p.cy, a: 1 }); break;
+      case 'skate': // a long slide that leaves ice behind
+        p.dodgeToX = clampX(p.x + away * w.weapon.dodge.distance * 1.25);
+        if (MOVES.ic2_skate?.x2) w.v2.onContact(w, p, MOVES.ic2_skate);
+        break;
+      case 'phase': // turn ghostly and slip through
+        p.phase = w.weapon.dodge.frames + 8; p.invuln = Math.max(p.invuln, w.weapon.dodge.frames + 8);
+        p.dodgeToX = clampX(p.x - away * (threat ? Math.abs(threat.x - p.x) + 110 : 160));
+        break;
+    }
   }
 
   private updateDodge(w: World): void {
@@ -584,7 +641,9 @@ export class PlayerController {
     const t = ease.outCubic(Math.min(1, p.stateFrame / (p.dodgeLen - 2)));
     p.x = p.dodgeFromX + (p.dodgeToX - p.dodgeFromX) * t;
     if ((p.stateFrame & 1) === 0 && p.stateFrame < 8) w.events.emit('afterimage', { fighter: p });
-    if (--p.timer <= 0) { p.hitCount = 0; p.setState(p.grounded ? 'idle' : 'fall'); }
+    if (--p.timer <= 0) {
+      p.hitCount = 0; p.setState(p.grounded ? 'idle' : 'fall');
+    }
   }
 
   /**
@@ -597,7 +656,7 @@ export class PlayerController {
     const axis = w.moveAxis;
     const free = p.state === 'idle' || p.state === 'walk' || p.state === 'land';
     if (p.grounded && free) {
-      let target = axis * MOVE.runSpeed;
+      let target = axis * MOVE.runSpeed * (w.weapon.passive?.skate && w.v2.onIce(p.x) ? V2.skateMult : 1);
       if (target !== 0) {
         // Soft clamp: slow down near the walls instead of hitting them.
         const dist = target > 0 ? WORLD.arenaW - WORLD.wallMargin - p.x : p.x - WORLD.wallMargin;
@@ -640,6 +699,7 @@ export class PlayerController {
         p.y = WORLD.groundY;
         p.grounded = true;
         p.landVy = p.vy;
+        if (p.state === 'move' && p.move?.x2?.landWave) w.v2.playerLanded(w, p, p.move);
         if (p.vy >= PLAYER.hardLandVy || (p.move !== null && p.move.tags.includes('air') && p.move.tags.includes('down'))) { p.cue = 'hardLand'; p.cueSerial++; w.events.emit('groundImpact', { x: p.x, y: p.y, power: 0.6, fighter: p, bounce: false }); }
         p.vy = 0;
         p.stallCount = 0;

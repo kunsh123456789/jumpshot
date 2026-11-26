@@ -31,6 +31,8 @@ export interface Settings {
   fistAnims: 'v2' | 'legacy';
   /** Sound effects: recorded samples (CC0, Freesound) or the original synthesized set. */
   sfxStyle: 'recorded' | 'synth';
+  /** Weapon movesets: the reworked signature sets (default) or the original ones. */
+  movesets: 'new' | 'original';
   /** What a tap / Space does: jump (double-tap or Shift+Space / F = dodge & parry), or the original dodge & parry. */
   tapAction: 'jump' | 'dodge';
   /** Cheats (all off by default; runs with any cheat on don't set high scores). */
@@ -80,6 +82,7 @@ export const settings: Settings = {
   attackSmooth: 'low',
   fistAnims: 'v2',
   sfxStyle: 'recorded',
+  movesets: 'new',
   tapAction: 'jump',
   cheatGod: false,
   cheatRayGun: false,

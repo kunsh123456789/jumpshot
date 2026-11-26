@@ -2,6 +2,7 @@ import { layout } from '../core/layout';
 import { drawWeaponFx, drawRefFx } from './weaponFx';
 import { drawExtraFx } from './weaponFx2';
 import { drawCineFx } from './cineFx';
+import { drawMoveset2Fx } from './moveset2Fx';
 import type { Camera } from '../core/camera';
 import { ANIM, WORLD } from '../data/tuning';
 import { settings } from '../core/settings';
@@ -62,7 +63,11 @@ export class Renderer {
   private fast: HTMLCanvasElement | null = null;
   private fastCtx: CanvasRenderingContext2D | null = null;
 
+  private bwShown = 0;
   render(world: World, cam: Camera, alpha: number, time: number, dt: number): void {
+    // The Reaper Special drains the world to black and white (a real grayscale filter, only while it plays).
+    const bw = Math.round((world.cine.ctx?.vis.bw ?? 0) * 20) / 20;
+    if (bw !== this.bwShown) { this.bwShown = bw; this.canvas.style.filter = bw > 0 ? `grayscale(${bw}) contrast(${1 + bw * 0.25})` : ''; }
     if (DRAW.ink) { this.renderInk(world, cam, alpha, time, dt); return; }
     const ctx = this.ctx;
     this.cssTransform();
@@ -99,6 +104,7 @@ export class Renderer {
     effects.drawGhosts(ctx);
     for (const f of order) drawFighter(ctx, f, alpha, time, dt);
     drawWeaponFx(ctx, world, alpha, time, 1.6);
+    drawMoveset2Fx(ctx, world, time, 1.6);
     drawExtraFx(ctx, world, alpha, time, 1.6);
     drawCineFx(ctx, world, alpha, time, 1.6);
     drawRefFx(ctx, world, alpha, time, 1.6, effects.invert > 0 && !settings.reduceFlashes);
@@ -202,6 +208,7 @@ export class Renderer {
 
     for (const f of order) drawInkFighter(g, f, alpha, time, wpp);
     drawWeaponFx(g, world, alpha, time, wpp);
+    drawMoveset2Fx(g, world, time, wpp);
     drawExtraFx(g, world, alpha, time, wpp);
     drawCineFx(g, world, alpha, time, wpp);
     drawRefFx(g, world, alpha, time, wpp, effects.invert > 0 && !settings.reduceFlashes);

@@ -136,6 +136,8 @@ export class Game {
     inkFx.bind(this.world);
     // Pages bake handwriting into their doodles: re-bake once the bundled fonts are ready.
     document.fonts?.ready.then(() => paper.invalidate());
+    // Settings -> Movesets: re-equip so the new / original moveset takes effect at once.
+    window.addEventListener('jumpshot-moveset', () => { this.world.setWeapon(this.world.weapon.id); });
     window.addEventListener('jumpshot-look', () => { paper.invalidate(); if (this.state === 'title') paper.setPage(this.pageFor(1)); });
     this.rhythm.onJudge = (j, broke) => this.rhud.judged(j, broke, this.rhythm.now);
     window.addEventListener('jumpshot-mode', () => { this.rhythm.clock.inputOffsetMs = settings.rhythmOffset; });
@@ -541,6 +543,7 @@ export class Game {
     const axis = acceptInput ? clamp(this.pad.moveX + this.keyboard.moveAxis + this.nav.moveX, -1, 1) : 0;
     this.world.jumpCharge = acceptInput ? Math.max(this.pad.jumpCharge, this.keyboard.jumpCharge(nowMs)) : 0;
     this.world.crouch = acceptInput && (this.pad.crouching || this.keyboard.crouching);
+    this.world.attackHeld = this.pad.touching || this.keyboard.attackHeld || this.nav.attackHeld;
     this.world.step(this.inputs, axis);
     if (this.world.rhythm) this.rhythm.afterStep(this.world);
     this.pops.log = this.debug.visible;

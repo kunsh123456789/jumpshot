@@ -14,6 +14,8 @@ import { classifyDir, type DrawPad } from '../ui/pad';
  */
 export class Keyboard {
   private held = { up: false, down: false, left: false, right: false };
+  /** Any attack key (I / J / K / L) is held down. */
+  get attackHeld(): boolean { return this.held.up || this.held.down || this.held.left || this.held.right; }
   private move = { left: false, right: false };
   private pendingSince = -1;
   private shift = false;

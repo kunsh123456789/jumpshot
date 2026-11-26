@@ -61,6 +61,8 @@ export interface SimEvents {
   text: { text: string; x: number; y: number; color: string; size: number };
   // ---- weapons (revision pass 7) ----
   beam: { x1: number; y1: number; x2: number; y2: number; width: number; heavy: boolean; color: string; hit: boolean };
+  /** New-moveset effect cues (sim/moveset2.ts) for sound and particles. */
+  v2fx: { kind: string; x: number; y: number; a: number };
   overheat: { x: number; y: number };
   grab: { x: number; y: number; victim: Fighter };
   throw: { x: number; y: number; victim: Fighter; heavy: boolean };

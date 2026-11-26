@@ -1,4 +1,5 @@
 import type { World } from './world';
+import { V2 } from '../data/weapons/tuning';
 import type { Fighter } from './fighter';
 import { ANIM, DEATH, PHYS, WORLD } from '../data/tuning';
 import { WEAPON_T } from '../data/weapons/tuning';
@@ -127,7 +128,7 @@ export function enemyPhysics(w: World, e: Fighter): void {
     e.y = WORLD.groundY;
     if (e.state === 'hitstun' || e.state === 'burst' || e.state === 'stunned' || e.state === 'guardbreak' || e.state === 'knockdown' || e.state === 'dead') {
       e.x += e.vx / 60;
-      e.vx *= PHYS.groundFriction;
+      e.vx *= w.v2.onIce(e.x) ? V2.iceFriction : PHYS.groundFriction;
       if (Math.abs(e.vx) < 4) e.vx = 0;
     }
     if (e.x < WALL_L) { e.x = WALL_L; if (e.vx < -300 && e.state === 'hitstun' && w.combo.canWallBounce()) wallPop(w, e, 1); else e.vx = 0; }

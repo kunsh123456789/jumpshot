@@ -63,7 +63,7 @@ export class MovePreview {
   setWeapon(w: WeaponDef): void {
     this.hero.weapon = w.id;
     const ids: string[] = [];
-    const add = (id: string) => { if (ANIMS[id] && !ids.includes(id)) ids.push(id); };
+    const add = (id: string) => { if (ANIMS[MOVES[id]?.anim ?? id] && !ids.includes(id)) ids.push(id); };
     for (const k of ['up', 'side', 'upDiag', 'downDiag', 'down'] as const) { add(w.ground[k].light); add(w.ground[k].heavy); }
     this.list = ids;
     this.idx = 0; this.t = 0; this.pause = 0;
@@ -93,7 +93,7 @@ export class MovePreview {
   private frame(dt: number): void {
     syncDrawStyle();
     const id = this.list[this.idx];
-    const def = id ? ANIMS[id] : ANIMS.idle;
+    const def = id ? ANIMS[MOVES[id]?.anim ?? id] : ANIMS.idle;
     this.time += dt;
     if (this.pause > 0) this.pause -= dt;
     else {

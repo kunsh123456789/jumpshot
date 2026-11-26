@@ -1,6 +1,6 @@
 import { settings, saveSettings } from '../core/settings';
 import { audio } from '../core/audio';
-import { WEAPONS, availableWeapons, type WeaponDef, type WeaponId } from '../data/weapons';
+import { WEAPONS, activeDef, availableWeapons, type WeaponDef, type WeaponId } from '../data/weapons';
 import { MOVES } from '../data/moves';
 import { MovePreview } from './preview';
 import { anyUnlocked, isUnlocked, enterCode } from './cheats';
@@ -218,6 +218,8 @@ export class Menus {
 
     sec('PERFORMANCE');
     check('Mobile performance (less lag on phones)', 'mobilePerf', () => { applyPerfClass(); window.dispatchEvent(new Event('resize')); });
+    sec('WEAPONS');
+    select('Movesets', 'set-movesets', [['new', 'New (signature moves)'], ['original', 'Original']], () => settings.movesets, (v) => { settings.movesets = v as 'new' | 'original'; window.dispatchEvent(new Event('jumpshot-moveset')); });
     sec('CONTROLS');
     select('Tap / Space', 'set-tapAction', [['jump', 'Jump (double-tap = dodge)'], ['dodge', 'Dodge & parry (original)']], () => settings.tapAction, (v) => { settings.tapAction = v as 'jump' | 'dodge'; });
     slider('Flick sensitivity', 'sensitivity', 0.5, 1.6, 0.05);
@@ -293,7 +295,7 @@ export class Menus {
     const pick = (id: WeaponId) => {
       sel = id;
       for (const c of tiles.querySelectorAll<HTMLElement>('.tile')) { const on = c.dataset.id === id; c.classList.toggle('sel', on); c.setAttribute('aria-selected', String(on)); }
-      const w = WEAPONS[id];
+      const w = activeDef(WEAPONS[id]);
       (det.querySelector('[data-k=name]') as HTMLElement).innerHTML = `${icon(id)} ${w.name.toUpperCase()}`;
       desc.textContent = w.desc;
       preview.setWeapon(w);
@@ -301,7 +303,7 @@ export class Menus {
       onPick(id);
     };
     availableWeapons().forEach((id, i) => {
-      const w = WEAPONS[id];
+      const w = activeDef(WEAPONS[id]);
       const c = document.createElement('button');
       c.type = 'button';
       c.className = 'tile';
@@ -340,7 +342,7 @@ export class Menus {
     const bar = document.createElement('div');
     bar.className = 'swap-tiles';
     availableWeapons().forEach((id, i) => {
-      const w = WEAPONS[id];
+      const w = activeDef(WEAPONS[id]);
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'tile swap-btn' + (id === current ? ' sel' : '');

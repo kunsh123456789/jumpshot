@@ -32,6 +32,29 @@ export interface DodgeSpec {
   blink?: boolean;
   /** Parry window override (frames): a block that stands its ground (shield: distance 0). */
   parry?: number;
+  /** New movesets: the dodge's own behaviour (sim/player.ts startDodge). */
+  kind?: 'slip' | 'zipUp' | 'vault' | 'recoil' | 'backflip' | 'smoke' | 'skate' | 'phase';
+}
+
+/** Passive traits of a reworked moveset (sim/moveset2.ts). */
+export interface Passive {
+  fury?: boolean;      // fists: hits build Fury; while it burns, punches hit harder and boom louder
+  backstab?: boolean;  // daggers: hits from behind always crit
+  souls?: boolean;     // scythe: KOs release souls that heal; at low HP hits steal life
+  skate?: boolean;     // ice: faster on ice patches
+  vent?: boolean;      // laser: overheating vents a knockback steam burst
+}
+
+/** A reworked moveset that replaces the original when Settings -> Movesets is New. */
+export interface WeaponV2 {
+  desc: string;
+  ground: MoveSet;
+  air: MoveSet;
+  dodge: DodgeSpec;
+  tips: string[];
+  passive?: Passive;
+  anims: AnimDef[];
+  smears?: Record<string, Partial<SmearCfg>>;
 }
 
 export interface HeatSpec {
@@ -62,6 +85,9 @@ export interface WeaponDef {
   heat?: HeatSpec;
   /** Animations owned by the weapon (registered for both animation styles; listed per weapon in the Lab). */
   anims: AnimDef[];
+  /** The reworked moveset (Settings -> Movesets: New), and its passive traits (only on the active copy). */
+  v2?: WeaponV2;
+  passive?: Passive;
   /** Per-animation smear configs (merged into SMEAR_BY_ANIM). */
   smears: Record<string, Partial<SmearCfg>>;
   /** First-time tooltip: the directional moves in short form. */

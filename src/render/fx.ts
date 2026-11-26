@@ -150,6 +150,27 @@ export class FxDirector {
       this.popup(e.projectile ? 'REFLECT!' : 'PERFECT PARRY', 'next hit is CRITICAL', '#ffe14a', false);
     });
     ev.on('dodge', () => { audio.dodge(); });
+    // New movesets (sim/moveset2.ts): sound, particles and pop-up words per mechanic.
+    ev.on('v2fx', (e) => {
+      switch (e.kind) {
+        case 'wave': audio.spike(Math.min(1, e.a)); this.cam.shake(7 * e.a * settings.shake, 0, 1, 0.3); effects.dust(e.x, e.y, 0.7); break;
+        case 'smoke': audio.dodge(); effects.dust(e.x, e.y + 60, 0.6); break;
+        case 'backstab': effects.text('BACKSTAB!', e.x, e.y - 100, '#e22424', 22, 0.7); break;
+        case 'crack': effects.text('CRACK!', e.x, e.y - 90, '#ffd23f', 24, 0.6); audio.weapon('deflect'); break;
+        case 'fury': effects.text('FURY!', e.x, e.y - 130, '#ff3b1f', 30, 1); audio.ready(); this.cam.shake(6, 0, 1, 0.2); break;
+        case 'doom': effects.text('DOOMED', e.x, e.y, '#7a2aa8', 20, 0.8); break;
+        case 'reap': effects.text('REAPED!', e.x, e.y - 90, '#7a2aa8', 24, 0.8); effects.embers(e.x, e.y, 16, '#9b5cff'); audio.spike(0.5); break;
+        case 'soul': effects.text('+HP', e.x, e.y - 110, '#9b5cff', 16, 0.6); audio.pickup('orb'); break;
+        case 'grave': audio.spike(0.6); effects.dust(e.x, e.y, 0.9); break;
+        case 'tie': audio.weapon('hookHit'); effects.text('TIED!', e.x, e.y - 60, '#ffd23f', 18, 0.6); break;
+        case 'execute': effects.text('EXECUTE!', e.x, e.y - 100, '#e22424', 24, 0.8); effects.embers(e.x, e.y, 18, '#e22424'); audio.hit(0.9, 1, 'slash'); break;
+        case 'cut': audio.hit(0.5, 1.2, 'slash'); break;
+        case 'shatter': effects.embers(e.x, e.y, 14, '#3fb8ff'); effects.text('SHATTER!', e.x, e.y - 80, '#2a9be0', 20, 0.7); audio.weapon('deflect'); this.cam.shake(6, 0, 0, 0.2); break;
+        case 'iceWall': case 'iceBreak': audio.weapon('deflect'); effects.embers(e.x, e.y, 10, '#bfeeff'); break;
+        case 'vent': audio.weapon('overheat'); effects.dust(e.x, e.y + 60, 0.8); break;
+        case 'puff': effects.embers(e.x, e.y, 10, '#ff4040'); break;
+      }
+    });
     ev.on('telegraph', () => { audio.telegraph(); });
     // ---- Weapons (revision pass 7) ----
     ev.on('beam', (e) => {

@@ -61,6 +61,8 @@ export class DrawPad {
   stickDX = 0; stickDY = 0;
 
   private pointerId = -1;
+  /** A finger is on the pad (the staff's momentum spin keeps going while it stays down). */
+  get touching(): boolean { return this.pointerId !== -1 && !this.rawSink; }
   private segId = 0;
   private startT = 0;
   private travel = 0;

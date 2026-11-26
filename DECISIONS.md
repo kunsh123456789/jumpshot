@@ -558,3 +558,48 @@ Variants never repeat twice in a row; repeated identical samples are what make h
 - **Kept, now unused:** the `throw` Special family's cinematics (HAMMER SWING), which remain available for a future weapon.
 - **Saved games:** a save with a removed weapon equipped falls back to Fists through `weaponById`.
 - **Verified:** every remaining weapon's moves resolve to registered animations.
+
+## Signature movesets and five unique Specials
+
+**Approved list, built as a layer.** Each weapon keeps its original moveset untouched and gains `WeaponDef.v2` (a `WeaponV2`: moveset, dodge, passive, tips, description). `activeDef()` in `data/weapons/index.ts` returns the v2 copy when Settings → Weapons → Movesets is New (the default), so the sim, loadout preview and move list just read the active weapon. Switching the setting re-equips at once. The Classic fingerprint test pins Original and still matches exactly.
+
+**Moves (`data/weapons/movesets2.ts`).** A move is either:
+- **a variant:** an existing move copied under a new ID, with its numbers and drawings reused through the new `MoveDef.anim` field, plus an `x2` mechanic or a tweak. `chain()` variants a whole auto-string and relinks `next`.
+- **new:** drawn from the shared attack templates.
+
+**Mechanics (`sim/moveset2.ts`, all pooled, deterministic, only active for `x2` moves or a passive).**
+- **Hammer:**
+  - Floor shockwaves travel both ways at about 1000 u/s and bounce every grounded enemy once; jumping clears them. Landing after Meteor Hammer sends them too.
+  - Super armor halves damage and ignores flinch during swings.
+- **Ice:** patches on the floor lower enemy friction (0.965 vs 0.82). A body sliding faster than 380 u/s on ice shatters into the next enemy. Walls block one side and freeze whoever's caught as they rise. The hero runs 1.4× faster on ice.
+- **Daggers:**
+  - The smoke bomb hides the hero (invisible and untouchable) for 22 frames; its `then` reappears behind the target. `then` moves now honour `behind`.
+  - Shadow Dash queues its hits 18 frames later.
+  - Execute detonates every bleed for 6 damage plus 0.13 per remaining bleed frame.
+  - Backstab crits on enemies facing away, and on any move that lands behind.
+- **Scythe:**
+  - Doom marks: the third reaps 30 frames later for 22.
+  - KOs drop souls that fly to the hero and heal 4.
+  - Below 30% HP, hits heal 25% of their damage.
+  - Grave hands re-pin a held enemy whenever it recovers from a hit.
+- **Hook:** Tether ties the two closest enemies for 7 s; a hit on one passes half its damage to the other and drags them together.
+- **Whip:** the beam reports where along the lash a hit landed; past 68% of its length is the tip, for double damage and a CRACK. The lasso's caught body orbits the hero and bowls whoever it touches.
+- **Staff:** the momentum spin keeps going while an attack input is held (finger on the pad, an attack key, or gamepad X / Y, reported by the game as `World.attackHeld`); releasing after 20 frames flings.
+- **Laser:** `closeVariant()` swaps in the point-blank move when the target is within 150 units. Overheating vents a 230-radius shockwave.
+- **Fists:**
+  - Fury fills 7% per hit and burns for 6 s at ×1.18 damage and ×1.35 knockback, with heavier hit sounds.
+  - Slip: an attack evaded during the slip, or parried, marks its attacker, and the controller throws the counter as soon as the hero is free.
+
+**Dodges.** New `DodgeSpec.kind` values: slip, zipUp, vault, recoil, backflip, smoke, skate, phase.
+
+**Unique Specials (`data/cines.ts` SP2).** Whip, Hammer, Daggers, Ice and Scythe now have their own cinematics, names and trace paths. All other weapons keep their family's.
+- **Trace paths:** figure-8, down-then-V, star, X (as one stroke), crescent. `specialKind()` picks the script and the path.
+- **Targets:** everyone on screen, up to 10.
+- **Visuals:** a floor crack with slabs, a freeze haze with ice blocks, a real CSS grayscale filter on the game canvas while the Reaper plays, a crescent scythe drawn as a tapering blade on a handle, and Blade Storm slash marks.
+- The Reaper's blade reach was cut from 820 to 430 after screenshots showed it sweeping off-screen.
+
+**Verified.**
+- Per-mechanic tests in manual mode cover fury, puff, slip counter, shockwaves on both sides, vanish, backstab reappear, execute, delayed cuts, ice patches, the ice wall, doom 1 → 2 → reap, souls healing, grave hold, point-blank swap, vent, tether, tip crack, and the held spin and fling.
+- Input fuzz on all 10 weapons and a 10-weapon soak with Specials both came out clean.
+- Each new Special was captured at fixed cinematic frames.
+- **Balance is a first pass;** the numbers are in `V2` (`data/weapons/tuning.ts`) and in `movesets2.ts`.
