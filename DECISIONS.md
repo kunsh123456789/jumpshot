@@ -549,3 +549,12 @@ Variants never repeat twice in a row; repeated identical samples are what make h
 - Stale comments about the removed QTE were corrected.
 
 **Measured but left alone.** The one heavy `drawImage` is the Pixel Look's single upscale of the low-res world layer, about 1 ms per frame at 1× in a GPU-less headless browser. On real phones that canvas copy runs on the GPU. Desktop holds 60 fps (p99 22 ms) and the JS heap stays flat over a 25 s stress run.
+
+## Weapon roster cut to 9
+
+**At the user's request**, Throw, Shield, Brush, Yo-Yo, Bubble Gun, Paper Planes, Rocket Gloves and Lightning Fist were removed.
+- **Removed:** their definition files, loadout order entries, ID type members, grip and victory-pose entries, Special family and name entries, and beam tones.
+- **Kept:** the generic engine hooks they used (projectiles, bubble / snare statuses, thrown-object drawing, beam styles), since new movesets can reuse them.
+- **Kept, now unused:** the `throw` Special family's cinematics (HAMMER SWING), which remain available for a future weapon.
+- **Saved games:** a save with a removed weapon equipped falls back to Fists through `weaponById`.
+- **Verified:** every remaining weapon's moves resolve to registered animations.

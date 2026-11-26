@@ -45,52 +45,29 @@ const BLADES: GripSet = {
   crouch: { aU: 1.0, aL: 2.4, bU: 1.6, bL: 2.1 },
   w: 1, runW: 0.7,
 };
-const SHIELD: GripSet = {
-  idle: { aU: 1.5, aL: 1.25, bU: 0.2, bL: 1.8 },
-  run: { aU: 1.35, aL: 1.4, bU: -0.3, bL: 1.5 },
-  air: { aU: 1.3, aL: 1.3, bU: 0.6, bL: 1.6 },
-  crouch: { aU: 1.65, aL: 1.1, bU: 0.4, bL: 1.9 },
-  w: 1, runW: 1,
-};
 const ROPE: GripSet = {
   idle: { aU: 0.45, aL: 1.4, bU: 1.0, bL: 1.8 },
   run: { aU: 0.2, aL: 1.6 },
   air: { aU: 2.2, aL: 0.9 },
   w: 0.8, runW: 0.5,
 };
-const PEN: GripSet = {
-  idle: { aU: 2.15, aL: 1.7, bU: 0.6, bL: 2.0 },
-  run: { aU: 1.6, aL: 1.9 },
-  air: { aU: 2.5, aL: 1.2 },
-  w: 0.9, runW: 0.6,
-};
-const RAISED: GripSet = {
-  idle: { aU: 2.45, aL: 1.85, bU: 0.6, bL: 2.0 },
-  run: { aU: 2.2, aL: 1.7 },
-  air: { aU: 2.7, aL: 1.0 },
-  w: 0.9, runW: 0.6,
-};
-
 /** Grip set per weapon (fists-type weapons have none: the body's own arms are the weapon). */
 export const WEAPON_GRIP: Record<string, GripSet | null> = {
-  fists: null, throw: null, rocket: null, thunder: null,
+  fists: null,
   staff: POLE, ice: POLE, scythe: POLE,
-  laser: PISTOL, bubble: PISTOL, raygun: PISTOL,
+  laser: PISTOL, raygun: PISTOL,
   hammer: HEAVY,
   daggers: BLADES,
-  shield: SHIELD,
-  hook: ROPE, whip: ROPE, yoyo: ROPE,
-  brush: PEN,
-  planes: RAISED,
+  hook: ROPE, whip: ROPE,
 };
 
 /** Wave-clear victory drawing per weapon (data/anims/heroSet.ts). */
 export const WEAPON_VICTORY: Record<string, string> = {
-  fists: 'victory_pump', throw: 'victory_flex', rocket: 'victory_pump', thunder: 'victory_aim',
+  fists: 'victory_pump',
   staff: 'victory_twirl', ice: 'victory_twirl', scythe: 'victory_shoulder',
-  laser: 'victory_aim', bubble: 'victory_aim', raygun: 'victory_aim',
-  hammer: 'victory_shoulder', daggers: 'victory_twirl', shield: 'victory_bow',
-  hook: 'victory_twirl', whip: 'victory_pump', yoyo: 'victory_twirl', brush: 'victory_bow', planes: 'victory_aim',
+  laser: 'victory_aim', raygun: 'victory_aim',
+  hammer: 'victory_shoulder', daggers: 'victory_twirl',
+  hook: 'victory_twirl', whip: 'victory_pump',
 };
 
 // Compiled channel arrays (NaN = not overridden), built once.

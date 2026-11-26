@@ -11,8 +11,8 @@ import type { Fighter } from '../../sim/fighter';
  * MoveDef (ranged, aimCone, beam, grab, tether, plant, deflect, heat). Add a
  * weapon by adding a file here and listing it in index.ts.
  */
-export type WeaponId = 'fists' | 'hook' | 'throw' | 'staff' | 'laser' | 'raygun'
-  | 'whip' | 'hammer' | 'daggers' | 'shield' | 'brush' | 'yoyo' | 'bubble' | 'rocket' | 'ice' | 'planes' | 'thunder' | 'scythe';
+export type WeaponId = 'fists' | 'hook' | 'staff' | 'laser' | 'raygun'
+  | 'whip' | 'hammer' | 'daggers' | 'ice' | 'scythe';
 
 export interface MovePair { light: string; heavy: string }
 /**

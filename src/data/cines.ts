@@ -15,19 +15,17 @@ import { fx, hero, place, pose, strike, tween, type CineCtx, type CineScript } f
  */
 export type Family = 'fists' | 'staff' | 'laser' | 'hook' | 'throw';
 export const WEAPON_FAMILY: Record<string, Family> = {
-  fists: 'fists', rocket: 'fists', hammer: 'fists', thunder: 'laser',
-  staff: 'staff', daggers: 'staff', bubble: 'staff', scythe: 'hook',
-  laser: 'laser', ice: 'laser', brush: 'laser', raygun: 'laser',
-  hook: 'hook', whip: 'hook', yoyo: 'hook', planes: 'hook',
-  throw: 'throw', shield: 'throw',
+  fists: 'fists', hammer: 'fists',
+  staff: 'staff', daggers: 'staff', scythe: 'hook',
+  laser: 'laser', ice: 'laser', raygun: 'laser',
+  hook: 'hook', whip: 'hook',
 };
 /** Special names per weapon (the family script with its own name). */
 export const SPECIAL_NAME: Record<string, string> = {
-  fists: 'MEGA JUMPSHOT', rocket: 'ROCKET BARRAGE', hammer: 'EARTHSPLITTER', thunder: 'THUNDER GOD',
-  staff: 'CYCLONE', daggers: 'BLADE STORM', bubble: 'BUBBLE STORM', scythe: 'REAPER WEB',
-  laser: 'OVERLOAD BEAM', ice: 'GLACIER BEAM', brush: 'INK TSUNAMI', raygun: 'DEATH RAY',
-  hook: 'WEB TAKEDOWN', whip: 'WHIP WEB', yoyo: 'STRING STORM', planes: 'PAPER WEB',
-  throw: 'HAMMER SWING', shield: 'SHIELD BOWL',
+  fists: 'MEGA JUMPSHOT', hammer: 'EARTHSPLITTER',
+  staff: 'CYCLONE', daggers: 'BLADE STORM', scythe: 'REAPER WEB',
+  laser: 'OVERLOAD BEAM', ice: 'GLACIER BEAM', raygun: 'DEATH RAY',
+  hook: 'WEB TAKEDOWN', whip: 'WHIP WEB',
 };
 
 const G = WORLD.groundY;
@@ -365,7 +363,7 @@ function spinT(c: CineCtx): number { return 50 + c.qte * 12 + (c.tier === 2 ? 20
  * it and hit repeatedly, then launched when it collapses. PERFECT fires it longer and wider.
  */
 const CHARGE = 40;
-const BEAM_TONE: Record<string, string> = { ice: '#3fd8ff', raygun: '#3dff7a', brush: '#1b1a17', thunder: '#ffd23f' };
+const BEAM_TONE: Record<string, string> = { ice: '#3fd8ff', raygun: '#3dff7a' };
 const spLaser: CineScript = {
   id: 'sp.laser', name: 'OVERLOAD BEAM',
   len: (c) => CHARGE + 8 + sweepT(c) + 26,
