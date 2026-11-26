@@ -125,6 +125,8 @@ The interface is a bold arcade-fighter design: navy plates, a cyan / magenta / g
 
 **Menus** (title, loadout, settings, pause, results, song picker, calibration) work with touch, mouse, keyboard and gamepad.
 
+**Tutorial and Reset.** The title screen has a **TUTORIAL** button (replay the training at any time) and a **RESET GAME** button (both are also under Settings → Other). Reset asks first, then deletes everything the game saved in this browser and restarts it as a first launch: high score, best combo and wave, tutorial progress, unlocked codes, weapon choice and every setting. On short landscape screens the two buttons sit in the top-left corner.
+
 ## Weapons
 
 You carry **one weapon** at a time. All 9 are unlocked from the start. Pick one on the **loadout** screen (the WEAPON button on the title screen; keys 1–9 pick them, Q / E or ←/→ step through them). It shows a looping preview of the moves and a swipe cheat-sheet, and remembers your choice. Between waves you can swap instantly from the small strip (tap an icon, press 1–9 / 0, or step with Q / E). The first time you equip a weapon, a tooltip lists its moves. Every weapon works with the pad and the keyboard, combos, juggles, parry/dodge, the Super Meter finishers (JUMPSHOT and FLURRY), the style rank and both game modes.

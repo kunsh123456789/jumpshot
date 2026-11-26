@@ -650,3 +650,11 @@ Variants never repeat twice in a row; repeated identical samples are what make h
 - That launch fires the frame **after** contact. Otherwise the hit's own air-stall and hit-stop ate it, and the first build rose only 9 units.
 - The old Spinning Sweep stays in the Original set.
 
+## Reset and Tutorial buttons
+
+**Asked:** "a button to completely reset the game and a button for tutorial".
+- **Tutorial** was already in Settings, but only when Settings was opened from the title. It is now a title-screen button too.
+- **Reset Game** sits on the title screen and in Settings → Other. It always asks first, with a list of what will be lost, because it can't be undone.
+- **What a reset clears:** every `localStorage` key starting with `jumpshot` (`wipeAllAndReload()` in `core/settings.ts`), then the page reloads as a first launch, so the next FIGHT starts the tutorial. Keys belonging to anything else on the same origin are left alone.
+- **Layout:** the two buttons sit under the main buttons. On landscape phones (max height 560 px) they collided with the "tap or flick to start" prompt, so there they move to the empty top-left corner, mirroring the BEST plate.
+

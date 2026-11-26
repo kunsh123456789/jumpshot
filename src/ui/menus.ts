@@ -93,7 +93,8 @@ export class Menus {
 
   // ---------------- Title ----------------
   showTitle(high: number, onSettings: () => void, mode: { rhythm: boolean; onToggle: (rhythm: boolean) => void } | null = null,
-    loadout: { name: string; open: () => void } | null = null, onStart: (() => void) | null = null): void {
+    loadout: { name: string; open: () => void } | null = null, onStart: (() => void) | null = null,
+    extra: { tutorial: () => void; reset: () => void } | null = null): void {
     const el = this.layer('title', 'layer passthrough ttl');
     el.innerHTML = `<div class="ttl-scrim"></div><h1 class="ttl-logo">JUMPSHOT</h1><div class="ttl-sub">SWIPE · LAUNCH · JUGGLE · SPIKE</div>`;
     // Easter egg: tap the logo 5 times for a cheat-code box (touch devices; keyboards can just type).
@@ -133,6 +134,13 @@ export class Menus {
     this.btn(row, 'SETTINGS', onSettings, 'btn', 'gear').id = 'title-settings';
     acts.appendChild(row);
     el.appendChild(acts);
+    if (extra) {
+      const row3 = document.createElement('div');
+      row3.className = 'row2 ttl-extra';
+      this.btn(row3, 'TUTORIAL', extra.tutorial, 'btn small', 'target').id = 'title-tutorial';
+      this.btn(row3, 'RESET GAME', () => this.confirmReset(extra.reset), 'btn small danger', 'retry').id = 'title-reset';
+      el.appendChild(row3);
+    }
     if (high > 0) {
       const hs = document.createElement('div');
       hs.className = 'plate ttl-best';
@@ -169,7 +177,7 @@ export class Menus {
   }
 
   // ---------------- Settings ----------------
-  showSettings(onClose: () => void, onTutorial: (() => void) | null, onCalibrate: (() => void) | null = null): void {
+  showSettings(onClose: () => void, onTutorial: (() => void) | null, onCalibrate: (() => void) | null = null, onReset: (() => void) | null = null): void {
     const el = this.layer('settings', 'layer dim');
     const p = document.createElement('div');
     p.className = 'panel';
@@ -259,7 +267,12 @@ export class Menus {
     }
     sec('OTHER');
     check('Debug overlay', 'debug', () => window.dispatchEvent(new Event('jumpshot-debug')));
-    if (onTutorial) { const b = document.createElement('div'); b.className = 'pad'; this.btn(b, 'REPLAY TUTORIAL', () => { this.close('settings'); onTutorial(); }, 'btn small', 'retry'); p.appendChild(b); }
+    if (onTutorial || onReset) {
+      const b = document.createElement('div'); b.className = 'pad';
+      if (onTutorial) this.btn(b, 'REPLAY TUTORIAL', () => { this.close('settings'); onTutorial(); }, 'btn small', 'target').id = 'set-tutorial';
+      if (onReset) this.btn(b, 'RESET GAME', () => this.confirmReset(onReset), 'btn small danger', 'retry').id = 'set-reset';
+      p.appendChild(b);
+    }
     const foot = document.createElement('div');
     foot.className = 'sticky-foot';
     this.btn(foot, 'DONE', () => { this.close('settings'); onClose(); }, 'btn primary', 'check', true);
@@ -379,6 +392,21 @@ export class Menus {
   }
 
   /** Secret code box (from 5 taps on the title logo). */
+  /** "Are you sure?" before wiping everything (the reset can't be undone). */
+  confirmReset(onYes: () => void): void {
+    const el = this.layer('reset', 'layer dim');
+    const p = document.createElement('div');
+    p.className = 'panel';
+    p.style.maxWidth = 'min(94vw, calc(var(--u) * 520px))';
+    p.innerHTML = `<h2>${icon('retry')} RESET THE GAME?</h2><div class="hint" style="padding:0 var(--s4) var(--s3)">This deletes your high score, best combo and wave, tutorial progress, unlocked codes, weapon choice and every setting, then restarts the game as if it were the first time. It can't be undone.</div>`;
+    const row = document.createElement('div');
+    row.className = 'sticky-foot';
+    this.btn(row, 'RESET EVERYTHING', () => { this.close('reset'); onYes(); }, 'btn small danger', 'retry').id = 'reset-yes';
+    this.btn(row, 'CANCEL', () => this.close('reset'), 'btn primary small', 'close', true).id = 'reset-no';
+    p.appendChild(row);
+    el.appendChild(p);
+  }
+
   codePrompt(): void {
     const el = this.layer('code', 'layer dim');
     const p = document.createElement('div');

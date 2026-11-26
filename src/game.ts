@@ -1,7 +1,7 @@
 import { layout } from './core/layout';
 import { Camera } from './core/camera';
 import { TimeControl } from './core/time';
-import { save, saveSettings, settings, writeSave } from './core/settings';
+import { save, saveSettings, settings, wipeAllAndReload, writeSave } from './core/settings';
 import { audio } from './core/audio';
 import { World } from './sim/world';
 import { Renderer } from './render/renderer';
@@ -168,7 +168,8 @@ export class Game {
     this.hud.visible = false;
     this.menus.showTitle(save.highScore, () => this.openSettings(true),
       { rhythm: settings.rhythmMode, onToggle: (r) => { settings.rhythmMode = r; saveSettings(); } },
-      { name: weaponById(save.weapon).name, open: () => this.openLoadout() }, () => this.startFromTitle());
+      { name: weaponById(save.weapon).name, open: () => this.openLoadout() }, () => this.startFromTitle(),
+      { tutorial: () => { audio.unlock(); this.startTutorial(); }, reset: () => wipeAllAndReload() });
     this.cam.targetX = this.world.player.x;
     this.cam.snap();
     audio.stopMusic();
@@ -218,7 +219,7 @@ export class Game {
 
   /** Settings panel; Rhythm calibration entry point. */
   private openSettings(fromTitle: boolean): void {
-    this.menus.showSettings(() => {}, fromTitle ? () => this.startTutorial() : null, () => this.startCalibration(() => this.openSettings(fromTitle)));
+    this.menus.showSettings(() => {}, fromTitle ? () => this.startTutorial() : null, () => this.startCalibration(() => this.openSettings(fromTitle)), () => wipeAllAndReload());
   }
 
   /** Dev/tests: force a mode (null = Classic) and skip the song picker. */

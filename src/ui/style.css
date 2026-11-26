@@ -61,6 +61,8 @@ canvas#game { position: absolute; inset: 0; display: block; touch-action: none; 
 .btn.primary:hover, .btn.primary:focus-visible, .btn.primary.focus { box-shadow: var(--glow-m), 0 0 0 calc(var(--u) * 3px) var(--cyan); }
 .btn:disabled, .btn.disabled { opacity: .38; filter: grayscale(1); pointer-events: none; }
 .btn.small { min-width: 0; min-height: max(36px, calc(var(--u) * 38px)); padding: 0 var(--s3); font-size: var(--fs-s); }
+.btn.danger { color: #ffd0d0; border-color: var(--red); background: linear-gradient(180deg, #5a1a26, #3a0f1a); }
+.btn.danger:hover, .btn.danger:focus-visible, .btn.danger.focus { background: linear-gradient(180deg, #ff5a5a, var(--red) 52%, #a01020); color: #fff; }
 .btn.ghost { background: rgba(11, 16, 38, .55); border-color: var(--steel3); }
 .icon-btn {
   position: absolute; top: max(calc(var(--u) * 14px), env(safe-area-inset-top)); width: max(40px, calc(var(--u) * 50px)); height: max(40px, calc(var(--u) * 50px));
@@ -131,6 +133,11 @@ select:focus-visible { outline: none; border-color: var(--cyan); box-shadow: var
 .seg2 .btn[aria-pressed="true"] { background: linear-gradient(180deg, #ff5ca6, var(--magenta) 52%, #b8105c); border-color: #fff; box-shadow: var(--glow-m); }
 .ttl-actions { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--s2); margin-top: var(--s4); }
 .ttl-actions .row2 { display: flex; flex-wrap: wrap; justify-content: center; }
+/* Tutorial / Reset: under the title buttons; on short landscape screens, up in the free top-left corner. */
+.ttl-extra { position: relative; margin-top: var(--s2); }
+@media (max-height: 560px) and (min-aspect-ratio: 4/5) {
+  .ttl-extra { position: absolute; margin: 0; left: max(calc(var(--u) * 24px), env(safe-area-inset-left)); top: max(calc(var(--u) * 18px), env(safe-area-inset-top)); }
+}
 .ttl-fight { min-width: calc(var(--u) * 340px) !important; min-height: calc(var(--u) * 62px) !important; font-size: var(--fs-xl) !important; }
 .plate { position: absolute; transform: skewX(var(--skew)); background: linear-gradient(180deg, var(--navy2), var(--navy)); border: var(--line) solid transparent; border-image: linear-gradient(180deg, var(--steel1), var(--steel2) 45%, var(--steel3)) 1; box-shadow: 0 calc(var(--u) * 6px) 0 rgba(0, 0, 0, .3); }
 .plate > .in { transform: skewX(calc(var(--skew) * -1)); }

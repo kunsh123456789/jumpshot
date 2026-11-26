@@ -133,6 +133,18 @@ export function loadSave(): void {
     if (raw) Object.assign(save, JSON.parse(raw));
   } catch { /* ignore */ }
 }
+/**
+ * Reset the whole game: delete everything it ever stored in this browser (settings, high score,
+ * tutorial progress, unlocked codes, weapon choice), then reload as a first launch.
+ */
+export function wipeAllAndReload(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('jumpshot')) keys.push(k); }
+    for (const k of keys) localStorage.removeItem(k);
+  } catch { /* storage blocked: nothing was saved anyway */ }
+  location.reload();
+}
 export function writeSave(): void {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* ignore */ }
 }
