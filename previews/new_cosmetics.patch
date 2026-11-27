@@ -1,0 +1,199 @@
+diff --git a/src/data/hero.ts b/src/data/hero.ts
+index e90f9a5..6b2cf1a 100644
+--- a/src/data/hero.ts
++++ b/src/data/hero.ts
+@@ -5,13 +5,13 @@
+  * trait is equipped, so a run without traits plays frame for frame as it always did.
+  */
+ export type BandId = 'red' | 'blue' | 'black' | 'flower' | 'none';
+-export type GearId = 'none' | 'cap' | 'tophat' | 'crown' | 'halo' | 'ears' | 'goggles';
++export type GearId = 'none' | 'cap' | 'tophat' | 'crown' | 'halo' | 'ears' | 'goggles' | 'horns';
+ export type HandsId = 'none' | 'wraps' | 'mitts' | 'fingerless' | 'spiked' | 'glowband' | 'brass' | 'flaming';
+ export type BodyId = 'male' | 'female';
+ /** The female hero's hair (the player's picks from the options page). */
+-export type HairId = 'ponytail' | 'wavy' | 'buns';
+-export type BackId = 'none' | 'scarf' | 'ninja' | 'cape' | 'tattered' | 'page' | 'ribbon' | 'backpack' | 'wings';
+-export type FeetId = 'none' | 'sneakers' | 'boots' | 'bandaged' | 'rocket' | 'flipflops';
++export type HairId = 'ponytail' | 'wavy' | 'buns' | 'messybun' | 'bangs';
++export type BackId = 'none' | 'scarf' | 'ninja' | 'cape' | 'tattered' | 'page' | 'ribbon' | 'backpack' | 'wings' | 'butterfly' | 'devil';
++export type FeetId = 'none' | 'sneakers' | 'boots' | 'bandaged' | 'rocket' | 'flipflops' | 'warmers' | 'socks';
+ export type BadgeId = 'none' | 'belt' | 'sheriff' | 'rank';
+ /** Weapons with skins, and each one's skin ids ('default' = the weapon's own drawing). */
+ export type SkinWeapon = 'staff' | 'laser' | 'hook' | 'fists';
+@@ -28,21 +28,21 @@ export const BANDS: { id: BandId; name: string }[] = [
+ ];
+ export const GEAR: { id: GearId; name: string }[] = [
+   { id: 'none', name: 'None' }, { id: 'cap', name: 'Cap' }, { id: 'tophat', name: 'Top hat' }, { id: 'crown', name: 'Crown' },
+-  { id: 'halo', name: 'Halo' }, { id: 'ears', name: 'Cat ears' }, { id: 'goggles', name: 'Goggles' },
++  { id: 'halo', name: 'Halo' }, { id: 'ears', name: 'Cat ears' }, { id: 'goggles', name: 'Goggles' }, { id: 'horns', name: 'Devil horns' },
+ ];
+ export const HANDS: { id: HandsId; name: string }[] = [
+   { id: 'none', name: 'Bare' }, { id: 'wraps', name: 'Tape wraps' }, { id: 'mitts', name: 'Mitts' }, { id: 'fingerless', name: 'Fingerless' },
+   { id: 'spiked', name: 'Spiked gauntlets' }, { id: 'glowband', name: 'Glow band' }, { id: 'brass', name: 'Brass knuckles' }, { id: 'flaming', name: 'Flaming fists' },
+ ];
+ export const BODIES: { id: BodyId; name: string }[] = [{ id: 'male', name: 'Male' }, { id: 'female', name: 'Female' }];
+-export const HAIRS: { id: HairId; name: string }[] = [{ id: 'ponytail', name: 'Ponytail' }, { id: 'wavy', name: 'Long wavy' }, { id: 'buns', name: 'Space buns' }];
++export const HAIRS: { id: HairId; name: string }[] = [{ id: 'ponytail', name: 'Ponytail' }, { id: 'wavy', name: 'Long wavy' }, { id: 'buns', name: 'Space buns' }, { id: 'messybun', name: 'Messy bun' }, { id: 'bangs', name: 'Long + bangs' }];
+ export const BACKS: { id: BackId; name: string }[] = [
+   { id: 'none', name: 'None' }, { id: 'scarf', name: 'Red scarf' }, { id: 'ninja', name: 'Ninja scarf' }, { id: 'cape', name: 'Cape' },
+-  { id: 'tattered', name: 'Tattered cape' }, { id: 'page', name: 'Notebook cape' }, { id: 'ribbon', name: 'Ribbon' }, { id: 'backpack', name: 'Backpack' }, { id: 'wings', name: 'Wings' },
++  { id: 'tattered', name: 'Tattered cape' }, { id: 'page', name: 'Notebook cape' }, { id: 'ribbon', name: 'Ribbon' }, { id: 'backpack', name: 'Backpack' }, { id: 'wings', name: 'Wings' }, { id: 'butterfly', name: 'Butterfly wings' }, { id: 'devil', name: 'Devil tail' },
+ ];
+ export const FEET: { id: FeetId; name: string }[] = [
+   { id: 'none', name: 'Bare' }, { id: 'sneakers', name: 'Sneakers' }, { id: 'boots', name: 'Boots' }, { id: 'bandaged', name: 'Bandaged' },
+-  { id: 'rocket', name: 'Rocket shoes' }, { id: 'flipflops', name: 'Flip-flops' },
++  { id: 'rocket', name: 'Rocket shoes' }, { id: 'flipflops', name: 'Flip-flops' }, { id: 'warmers', name: 'Leg warmers' }, { id: 'socks', name: 'Knee-high socks' },
+ ];
+ export const BADGES: { id: BadgeId; name: string }[] = [
+   { id: 'none', name: 'None' }, { id: 'belt', name: 'Champion belt' }, { id: 'sheriff', name: 'Sheriff star' }, { id: 'rank', name: 'Rank pin' },
+diff --git a/src/render/heroCos.ts b/src/render/heroCos.ts
+index 4d397d8..022e293 100644
+--- a/src/render/heroCos.ts
++++ b/src/render/heroCos.ts
+@@ -159,6 +159,39 @@ export function drawHeroBack(ctx: CanvasRenderingContext2D, f: Fighter, j: Float
+       }
+       break;
+     }
++    case 'butterfly': {
++      // two lobed wings off the upper back (big upper, small lower), red spots; they flutter when airborne
++      const rx = (nx + cx) / 2 + w.back * 3 * s, ry = (ny + cy) / 2 + 2 * s;
++      const flap = f.grounded ? 0 : Math.sin(w.step * 2.2) * 0.35;
++      ctx.fillStyle = pal.paper; ctx.lineWidth = 1.8 * wpp + 0.4;
++            for (const [ang, L, wd] of [[0.85 + flap, 50, 0.36], [-0.75 - flap * 0.5, 32, 0.4]] as [number, number, number][]) {
++        const tx = rx + w.back * Math.cos(ang) * L * s, ty = ry - Math.sin(ang) * L * s;
++        const mx = (rx + tx) / 2, my = (ry + ty) / 2, ux = (tx - rx) / (L * s), uy = (ty - ry) / (L * s), px = -uy * L * s * wd, py = ux * L * s * wd;
++        // a teardrop that is fattest near its outer end, like a butterfly's wing
++        ctx.beginPath(); ctx.moveTo(rx, ry);
++        ctx.bezierCurveTo(mx + px * 0.6, my + py * 0.6, tx + px * 1.1, ty + py * 1.1, tx, ty);
++        ctx.bezierCurveTo(tx - px * 1.1, ty - py * 1.1, mx - px * 0.6, my - py * 0.6, rx, ry);
++        ctx.closePath(); ctx.fill(); ctx.stroke();
++        ctx.fillStyle = pal.red; ctx.beginPath(); ctx.arc(rx + (tx - rx) * 0.72, ry + (ty - ry) * 0.72, L * s * 0.11, 0, TAU); ctx.fill(); ctx.fillStyle = pal.paper;
++      }
++      break;
++    }
++    case 'devil': {
++      // a thin S-curved tail from the hips with a red spade tip; it sways
++      const sw = wob(w.step, 4) * 4 * s, k = w.back;
++      const ex = hx + k * (30 + 14 * w.sp) * s, ey = hy - (6 + 10 * w.sp) * s + sw;
++      ctx.lineWidth = 1.8 * wpp + 0.4; ctx.beginPath(); ctx.moveTo(hx + k * 3 * s, hy);
++      ctx.bezierCurveTo(hx + k * 14 * s, hy + 18 * s, hx + k * 22 * s, hy - 18 * s + sw, ex, ey);
++      ctx.stroke();
++      const a = Math.atan2(ey - (hy - 18 * s + sw), ex - (hx + k * 22 * s));
++      ctx.fillStyle = pal.red; ctx.beginPath();
++      ctx.moveTo(ex + Math.cos(a) * 9 * s, ey + Math.sin(a) * 9 * s);
++      ctx.lineTo(ex + Math.cos(a + 2.2) * 6 * s, ey + Math.sin(a + 2.2) * 6 * s);
++      ctx.lineTo(ex - Math.cos(a) * 1.5 * s, ey - Math.sin(a) * 1.5 * s);
++      ctx.lineTo(ex + Math.cos(a - 2.2) * 6 * s, ey + Math.sin(a - 2.2) * 6 * s);
++      ctx.closePath(); ctx.fill();
++      break;
++    }
+   }
+   ctx.restore();
+ }
+@@ -171,6 +204,29 @@ function drawHair(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
+     for (const ox of [-0.75, 0.75]) { ctx.beginPath(); ctx.arc(x + ox * r, y - 0.95 * r, r * 0.52, 0, TAU); ctx.fill(); }
+     return;
+   }
++  if (HERO_LOOK.hair === 'messybun') {
++    // a lumpy bun high at the back with loose strands poking out and a wisp at the nape
++    const bx = x + bk * r * 0.55, by = y - r * 1.05;
++    for (const [ox, oy, rr] of [[0, 0, 0.5], [bk * 0.3, 0.12, 0.36], [-bk * 0.2, -0.2, 0.34], [bk * 0.1, -0.3, 0.3]]) { ctx.beginPath(); ctx.arc(bx + ox * r, by + oy * r, rr * r, 0, TAU); ctx.fill(); }
++    ctx.strokeStyle = pal.ink; ctx.lineWidth = Math.max(1, r * 0.1); ctx.beginPath();
++    ctx.moveTo(bx + bk * r * 0.3, by - r * 0.3); ctx.quadraticCurveTo(bx + bk * r * 0.8, by - r * 0.7, bx + bk * r * 0.9, by - r * 0.35);
++    ctx.moveTo(bx - bk * r * 0.1, by - r * 0.45); ctx.quadraticCurveTo(bx, by - r * 0.95, bx + bk * r * 0.25, by - r * 0.9);
++    ctx.moveTo(x + bk * r * 0.85, y + r * 0.3); ctx.quadraticCurveTo(x + bk * r * 1.1, y + r * 0.8 + wob(w.step, 3) * r * 0.1, x + bk * r * 0.85, y + r * 1.1);
++    ctx.stroke();
++    return;
++  }
++  if (HERO_LOOK.hair === 'bangs') {
++    // long straight hair down the back (the blunt fringe is drawn in front of the head)
++    const L = r * (3.0 - w.sp * 1.2 - w.lift * 0.8), ex = x + bk * r * (1.1 + w.sp * 2.2), ey = y + L;
++    ctx.beginPath();
++    ctx.moveTo(x - bk * r * 0.3, y - r * 1.2);
++    ctx.quadraticCurveTo(x + bk * r * 1.7, y - r * 1.1, x + bk * r * 1.4, y + r * 0.4);
++    ctx.lineTo(ex + bk * r * 0.2, ey);
++    ctx.lineTo(ex - bk * r * 0.7, ey - r * 0.1);
++    ctx.quadraticCurveTo(x + bk * r * 0.5, y + r * 0.8, x + bk * r * 0.1, y);
++    ctx.closePath(); ctx.fill();
++    return;
++  }
+   // long wavy hair to mid-back: a wavy outer edge that streams back in a run and lifts in the air
+   const L = r * (3.1 - w.sp * 1.2 - w.lift * 0.8), ex = x + bk * r * (1.0 + w.sp * 2.2), ey = y + L;
+   ctx.beginPath();
+@@ -201,6 +257,13 @@ export function drawHeadFlower(ctx: CanvasRenderingContext2D, x0: number, y0: nu
+ function drawFemaleFront(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, wpp: number, pal: CosPal): void {
+   const s = f.scale, face = f.anim.dFace || f.facing || 1;
+   const r = f.anim.rig.headR * s * INKLOOK.headScale, x0 = X(j, J.head), y0 = Y(j, J.head);
++  if (HERO_LOOK.hair === 'bangs') {
++    // a blunt-cut fringe straight across the forehead
++    ctx.fillStyle = pal.ink; ctx.beginPath();
++    ctx.arc(x0, y0, r * 1.02, Math.PI * 1.2, Math.PI * 1.8);
++    ctx.lineTo(x0 + r * 0.62, y0 - r * 0.55); ctx.lineTo(x0 - r * 0.62, y0 - r * 0.55);
++    ctx.closePath(); ctx.fill();
++  }
+   if (HERO_LOOK.hair === 'wavy') {
+     ctx.fillStyle = pal.ink; ctx.beginPath();
+     ctx.moveTo(x0 - face * r * 0.35, y0 - r * 0.95);
+@@ -221,6 +284,20 @@ function drawFemaleFront(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Ar
+   ctx.stroke();
+ }
+ 
++/** Devil horns: two small red horns curving up and out of the top of the head. */
++function drawHorns(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, wpp: number, pal: CosPal): void {
++  const r = f.anim.rig.headR * f.scale * INKLOOK.headScale, x0 = X(j, J.head), y0 = Y(j, J.head);
++  ctx.fillStyle = pal.red; ctx.strokeStyle = pal.ink; ctx.lineWidth = 1.2 * wpp + 0.3; ctx.lineJoin = 'round';
++  for (const sd of [-1, 1]) {
++    const bx = x0 + sd * r * 0.5, by = y0 - r * 0.82;
++    ctx.beginPath();
++    ctx.moveTo(bx - sd * r * 0.28, by + r * 0.1);
++    ctx.quadraticCurveTo(bx + sd * r * 0.1, by - r * 0.35, bx + sd * r * 0.45, by - r * 0.85);
++    ctx.quadraticCurveTo(bx + sd * r * 0.45, by - r * 0.2, bx + sd * r * 0.3, by + r * 0.15);
++    ctx.closePath(); ctx.fill(); ctx.stroke();
++  }
++}
++
+ /** A five-point star. */
+ function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+   ctx.beginPath();
+@@ -232,6 +309,7 @@ export function drawHeroFront(ctx: CanvasRenderingContext2D, f: Fighter, j: Floa
+   const L = HERO_LOOK, s = f.scale, w = wind(f, time), face = f.anim.dFace || f.facing || 1;
+   const fistSkin = f.weapon === 'fists' ? L.skins.fists : 'default';
+   if (L.body === 'female' && f.kind === 'player') { ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; drawFemaleFront(ctx, f, j, wpp, pal); ctx.restore(); }
++  if (L.headgear === 'horns' && f.kind === 'player') { ctx.save(); drawHorns(ctx, f, j, wpp, pal); ctx.restore(); }
+   if (L.hands === 'none' && L.feet === 'none' && L.badge === 'none' && fistSkin === 'default') return;
+   ctx.save();
+   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+@@ -346,6 +424,33 @@ export function drawHeroFront(ctx: CanvasRenderingContext2D, f: Fighter, j: Floa
+           }
+           break;
+         }
++        case 'warmers': case 'socks': {
++          // a thick paper sleeve on the lower leg: ribbed and bunched (warmers) or a straight knee-high sock with red stripes
++          const k0 = L.feet === 'socks' ? 0.12 : 0.3, k1 = L.feet === 'socks' ? 1.0 : 0.92;
++          const ax = kx + dx * k0, ay = ky + dy * k0, bx = kx + dx * k1, by = ky + dy * k1;
++          const ln = Math.hypot(dx, dy) || 1, px = -dy / ln, py = dx / ln, wd = (L.feet === 'socks' ? 3.6 : 4.8) * s;
++          ctx.fillStyle = pal.paper; ctx.lineWidth = 1.6 * wpp + 0.4; ctx.beginPath();
++          if (L.feet === 'warmers') {
++            // bunched: a wavy outline
++            for (let i = 0; i <= 4; i++) { const t = i / 4, bul = wd * (1 + (i % 2) * 0.25); ctx.lineTo(ax + (bx - ax) * t + px * bul, ay + (by - ay) * t + py * bul); }
++            for (let i = 4; i >= 0; i--) { const t = i / 4, bul = wd * (1 + (i % 2) * 0.25); ctx.lineTo(ax + (bx - ax) * t - px * bul, ay + (by - ay) * t - py * bul); }
++          } else {
++            ctx.moveTo(ax + px * wd, ay + py * wd); ctx.lineTo(bx + px * wd, by + py * wd); ctx.lineTo(bx - px * wd, by - py * wd); ctx.lineTo(ax - px * wd, ay - py * wd);
++          }
++          ctx.closePath(); ctx.fill(); ctx.stroke();
++          ctx.beginPath();
++          if (L.feet === 'warmers') {
++            ctx.lineWidth = 1 * wpp + 0.2;
++            for (let t = 0.2; t < 0.95; t += 0.2) { const mx = ax + (bx - ax) * t, my = ay + (by - ay) * t; ctx.moveTo(mx + px * wd, my + py * wd); ctx.lineTo(mx - px * wd, my - py * wd); }
++            ctx.stroke();
++          } else {
++            ctx.strokeStyle = pal.red; ctx.lineWidth = 1.8 * wpp + 0.3;
++            for (const t of [0.08, 0.2]) { const mx = ax + (bx - ax) * t, my = ay + (by - ay) * t; ctx.moveTo(mx + px * wd, my + py * wd); ctx.lineTo(mx - px * wd, my - py * wd); }
++            ctx.stroke(); ctx.strokeStyle = pal.ink;
++          }
++          ctx.lineWidth = lw;
++          break;
++        }
+         case 'boots': {
+           ctx.lineWidth = 5.5 * wpp + 1; ctx.beginPath(); ctx.moveTo(x - dx * 0.4, y - dy * 0.4); ctx.lineTo(x, y); ctx.stroke();
+           ctx.beginPath(); ctx.moveTo(x - face * 3 * s, y + 1 * s); ctx.lineTo(x + face * 8 * s, y + 1 * s); ctx.stroke();
