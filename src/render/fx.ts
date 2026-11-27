@@ -236,6 +236,7 @@ export class FxDirector {
       switch (e.kind) {
         case 'slowmo': this.time.slowmo(e.a, 0.5); break;
         case 'focus': this.cam.focus(e.a, 0.7); break;
+        case 'flick': if (flash) effects.invert = Math.max(effects.invert, ANIM.invertSec * 0.6); audio.hit(0.55, 1.2 + e.a * 0.04, 'slash'); this.cam.shake(4 * settings.shake, 0, 0, 0.1); break;
         case 'invert': if (flash) { effects.invert = Math.max(effects.invert, ANIM.invertSec * 2); crescentFlash(e.x, e.y, 1); } audio.boom(); break;
         case 'shake': this.cam.shake(10 * e.a * settings.shake, 0, 1, 0.4 * e.a); this.cam.punchZoom(0.05 * e.a); break;
         case 'whoosh': audio.launch(); break;

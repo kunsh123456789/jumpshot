@@ -548,9 +548,17 @@ const releaseAll = (c: CineCtx, vy = -500) => { for (const e of c.group) if (e.s
 /** Lion Tamer: lashes spin every enemy like a top, then one crack yanks them all into a pile and launches it. */
 const spWhip: CineScript = {
   id: 'sp.whip', name: 'LION TAMER',
-  len: (c) => 20 + c.group.length * 9 + 44,
-  start: (c) => { place(c.p, c.p.x, G); grabAll(c); c.group.forEach((e, i) => { c.v['x' + i] = e.x; }); },
+  len: (c) => (c.v.fin ? WHIP_FIN.len : 20 + c.group.length * 9 + 44),
+  start: (c) => {
+    place(c.p, c.p.x, G); grabAll(c); c.group.forEach((e, i) => { c.v['x' + i] = e.x; });
+    // Pixel look only (the player's sketch): when the Special will KO someone it plays as a finisher instead.
+    const dmg = (5 + c.tier + 16 + c.tier * 4) * c.dmg;
+    if (DRAW.ink && c.group.some((e) => !isBoss(e) && e.hp <= dmg * (e.kind === 'elite' ? CINE.eliteMult : 1))) {
+      c.v.fin = 1; fx(c, 'slowmo', c.p.x, c.p.cy, 0.3); fx(c, 'focus', c.p.x, c.p.cy, 0.5);
+    }
+  },
   frame: (c) => {
+    if (c.v.fin) { whipFinisher(c); return; }
     const p = c.p, f = c.f, grp = c.group, n = grp.length, f0 = 20 + n * 9;
     const hx = p.x + facing(c) * 30, hy = p.cy - 20;
     c.vis.ropes = [];
@@ -576,7 +584,7 @@ const spWhip: CineScript = {
       fx(c, 'invert', p.x, p.cy); fx(c, 'shake', p.x, p.cy, 1.6); fx(c, 'bigCrack', p.x + facing(c) * 130, G, 1.4);
     }
   },
-  end: (c) => { c.vis.ropes = []; releaseAll(c, -700); },
+  end: (c) => { c.vis.ropes = []; c.vis.lash = null; releaseAll(c, -700); },
 };
 
 /** Earthsplitter: leap, slam, and the floor splits both ways, slabs launching everyone it reaches. */
@@ -605,6 +613,39 @@ const spHammer: CineScript = {
   },
   end: (c) => { c.vis.crack = null; releaseAll(c, -600); },
 };
+
+/**
+ * Lion Tamer as a finisher (Pixel look, from the player's sketch): the camera zooms in on the enemies doubled
+ * over, and the hero fires lash after lash at them, each crack with its own one-frame impact flash, then one
+ * last big crack sends them flying.
+ */
+const WHIP_FIN = { len: 112, first: 14, every: 6, count: 10, final: 86 };
+function whipFinisher(c: CineCtx): void {
+  const p = c.p, f = c.f, grp = c.group, n = grp.length, d = facing(c), v = c.vis;
+  const hx = p.x + d * 34, hy = p.cy - 18;
+  for (const e of grp) if (e.state === 'cine') pose(e, 'cine_doubled', f);
+  if (f < WHIP_FIN.first) { hero(c, 'cine_charge', f % 6); if (f === 0) fx(c, 'whoosh', p.x, p.cy); }
+  else if (f < WHIP_FIN.final - 8) heroLoop(c, 'wh_lash', WHIP_FIN.first, 1.6);
+  else heroHit(c, 'wh_crack', WHIP_FIN.final);
+  // the rapid lashes: one every few frames, round-robin over the caught enemies
+  const k = (f - WHIP_FIN.first) / WHIP_FIN.every;
+  if (f >= WHIP_FIN.first && Number.isInteger(k) && k < WHIP_FIN.count && n) {
+    const e = grp[k % n];
+    faceTo(p, e.x);
+    v.lash = { x1: hx, y1: hy, x2: e.cx + (k % 2 ? 6 : -6), y2: e.cy - 18 + (k % 3) * 10, t: 0, big: false };
+    if (e.state === 'cine') strike(c, e, 2 + c.tier * 0.6, { quiet: true });
+    fx(c, 'flick', e.cx, e.cy, k);
+    e.flash = 2;
+  }
+  if (f === WHIP_FIN.final - 6) fx(c, 'focus', p.x, p.cy, 0.6);
+  if (f === WHIP_FIN.final && n) {
+    const e = grp[0];
+    v.lash = { x1: hx, y1: hy - 30, x2: e.cx, y2: e.cy, t: 0, big: true };
+    fx(c, 'invert', e.cx, e.cy); fx(c, 'shake', p.x, p.cy, 1.8); fx(c, 'boom', e.cx, e.cy);
+    for (const q of grp) if (q.state === 'cine') strike(c, q, 16 + c.tier * 4, { vx: d * 950, vy: -900, release: true, kind: 'launch', weight: 1.2 });
+  }
+  if (v.lash && ++v.lash.t > (v.lash.big ? 10 : 4)) v.lash = null;
+}
 
 /** Blade Storm: time stops; blink behind every enemy leaving slashes in the air, then every slash lands at once. */
 const spDaggers: CineScript = {

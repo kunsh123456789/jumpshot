@@ -192,7 +192,30 @@ export function drawCineFx(ctx: CanvasRenderingContext2D, w: World, _alpha: numb
     }
   }
   if (DRAW.ink) drawIceFinisher(ctx, v, step, wpp);
+  if (DRAW.ink && v.lash) drawLash(ctx, v.lash, step, wpp);
   void WORLD;
+  ctx.restore();
+}
+
+/**
+ * The whip finisher's lash (the player's sketch): a black cord rising from the hand and dropping onto the
+ * target in an arc, a crack burst at the tip; the last big crack is thicker with a longer burst.
+ */
+function drawLash(ctx: CanvasRenderingContext2D, l: NonNullable<NonNullable<World['cine']['ctx']>['vis']['lash']>, step: number, wpp: number): void {
+  const dx = l.x2 - l.x1, rise = 60 + Math.abs(dx) * 0.25;
+  const c1x = l.x1 + dx * 0.15, c1y = l.y1 - rise * 1.2, c2x = l.x1 + dx * 0.6, c2y = l.y1 - rise;
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = INK.ink; ctx.lineWidth = (l.big ? 3.6 : 2.4) * wpp + 0.6;
+  ctx.beginPath(); ctx.moveTo(l.x1, l.y1); ctx.bezierCurveTo(c1x, c1y, c2x, c2y, l.x2, l.y2); ctx.stroke();
+  if (l.t <= (l.big ? 4 : 1)) {
+    sd = 707 + step; ctx.lineWidth = (l.big ? 2.6 : 1.8) * wpp + 0.4; ctx.beginPath();
+    const n = l.big ? 12 : 7, R = l.big ? 46 : 24;
+    for (let i = 0; i < n; i++) { const a = (i / n) * TAU + rnd() * 0.4, r0 = 5 + rnd() * 4, r1 = R * (0.6 + rnd() * 0.5); ctx.moveTo(l.x2 + Math.cos(a) * r0, l.y2 + Math.sin(a) * r0); ctx.lineTo(l.x2 + Math.cos(a) * r1, l.y2 + Math.sin(a) * r1); }
+    ctx.stroke();
+    ctx.strokeStyle = INK.red; ctx.lineWidth = 1.4 * wpp + 0.3; ctx.beginPath();
+    for (let i = 0; i < 4; i++) { const a = rnd() * TAU, r1 = R * 0.7; ctx.moveTo(l.x2, l.y2); ctx.lineTo(l.x2 + Math.cos(a) * r1, l.y2 + Math.sin(a) * r1); }
+    ctx.stroke();
+  }
   ctx.restore();
 }
 

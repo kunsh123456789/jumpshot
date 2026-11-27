@@ -70,6 +70,8 @@ export interface CineVisual {
   encase: { x: number; y: number; s: number; k: number }[];
   impact: { x: number; y: number; t: number } | null;
   shards: number[];
+  /** Whip Special finisher (Pixel look): the lash in flight, hand to target, and frames since it cracked. */
+  lash: { x1: number; y1: number; x2: number; y2: number; t: number; big: boolean } | null;
 }
 
 export interface CineScript {
@@ -83,7 +85,7 @@ export interface CineScript {
   end: (c: CineCtx) => void;
 }
 
-const emptyVis = (): CineVisual => ({ beam: null, ropes: [], tornado: null, slash: [], bubble: null, dark: 0, crack: null, freeze: 0, bw: 0, scythe: null, marks: [], spear: null, encase: [], impact: null, shards: [] });
+const emptyVis = (): CineVisual => ({ beam: null, ropes: [], tornado: null, slash: [], bubble: null, dark: 0, crack: null, freeze: 0, bw: 0, scythe: null, marks: [], spear: null, encase: [], impact: null, shards: [], lash: null });
 
 export class CinePlayer {
   script: CineScript | null = null;
@@ -247,4 +249,4 @@ export function strike(c: CineCtx, e: Fighter, dmg: number, opt: { dirX?: number
 export function fx(c: CineCtx, kind: CineFxKind, x: number, y: number, a = 1): void {
   c.w.events.emit('cineFx', { kind, x, y, a });
 }
-export type CineFxKind = 'slowmo' | 'focus' | 'invert' | 'shake' | 'crack' | 'bigCrack' | 'scribble' | 'lightning' | 'whirl' | 'stars' | 'boom' | 'whoosh' | 'dust' | 'sparks' | 'tier' | 'laserCharge' | 'laserFire' | 'laserEnd';
+export type CineFxKind = 'slowmo' | 'focus' | 'invert' | 'shake' | 'crack' | 'bigCrack' | 'scribble' | 'lightning' | 'whirl' | 'stars' | 'boom' | 'whoosh' | 'dust' | 'sparks' | 'tier' | 'laserCharge' | 'laserFire' | 'laserEnd' | 'flick';

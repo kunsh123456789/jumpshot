@@ -134,5 +134,12 @@ export const icePoint = drawn({ id: 'cine_point', drawings: [
   { hold: 60, p: { rootY: -6, lean: -0.1, head: 0.1, aU: 1.0, aL: -0.05, bU: 0.25, bL: 0.5, footA: 26, footB: -24, flex: -2, stretch: 1.03 } },
 ] });
 
-const ALL: AnimDef[] = [axeWind, axeHit, hammerUp, hammerSlam, iceLunge, icePoint, roundhouse, xslash, spinGrab, hurl, pileDrive, erupt, charge, beamHold, activate, activateAir, plantSplit];
+/** Whip Special finisher (from the player's sketch): the victim doubled over, head down, arms hanging. */
+export const doubled = drawn({ id: 'cine_doubled', drawings: [
+  { hold: 4, p: { rootY: -18, lean: 0.75, head: -0.35, aU: 0.4, aL: 1.4, bU: 0.3, bL: 1.5, footA: 16, footB: -18, flex: -4 } },
+  { hold: 3, p: { rootY: -24, lean: 1.0, head: -0.55, aU: 0.15, aL: 1.7, bU: 0.1, bL: 1.8, footA: 18, footB: -20, flex: -6 } },
+  { hold: 4, p: { rootY: -20, lean: 0.9, head: -0.45, aU: 0.25, aL: 1.6, bU: 0.2, bL: 1.6, footA: 17, footB: -19, flex: -5 } },
+] });
+
+const ALL: AnimDef[] = [axeWind, axeHit, hammerUp, hammerSlam, iceLunge, icePoint, doubled, roundhouse, xslash, spinGrab, hurl, pileDrive, erupt, charge, beamHold, activate, activateAir, plantSplit];
 registerAnims(ALL, 'cineSet (pass 8)');

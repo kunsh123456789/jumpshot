@@ -879,3 +879,11 @@ All the effects live in `render/clip3Fx.ts`. They are Pixel look only and render
 - The player asked to remove all the new weapons. Cape, War Fan and Earth are gone: the weapon file, the registry, the families and Special names, the icons, and the Earth Dust Dome visual.
 - A save that had one of them equipped falls back to Fists (`weaponById`).
 - Everything else from clip 3 stays, including the Flame blade, which is a Staff skin.
+
+## Whip Special finisher (the player's sketch), Pixel look only
+- **When it plays:** when LION TAMER will K.O. a non-boss enemy, the Pixel look plays the sketch's version instead of the normal Special:
+  1. slow-mo and a zoom in;
+  2. the caught enemies doubled over (a new `cine_doubled` pose);
+  3. ten rapid lashes, one every 6 frames, round-robin over them, each a curved cord from the hand with a crack burst and a one-frame impact flash (cine fx `flick`, skipped with Reduce Flashes);
+  4. one big final crack that launches them.
+- **Same as the Ice finisher:** it's gated on `DRAW.ink` in `data/cines.ts`, so Classic and the neon look are unchanged.
