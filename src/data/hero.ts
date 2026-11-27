@@ -65,7 +65,7 @@ export const BADGES: { id: BadgeId; name: string }[] = [
   { id: 'none', name: 'None' }, { id: 'belt', name: 'Champion belt' }, { id: 'sheriff', name: 'Sheriff star' }, { id: 'rank', name: 'Rank pin' },
 ];
 export const SKINS: Record<SkinWeapon, { id: string; name: string }[]> = {
-  staff: [{ id: 'default', name: 'Staff' }, { id: 'bamboo', name: 'Bamboo' }, { id: 'bone', name: 'Bone' }, { id: 'candy', name: 'Candy cane' }, { id: 'glow', name: 'Glow staff' }, { id: 'brush', name: 'Paintbrush' }, { id: 'broom', name: 'Broom' }],
+  staff: [{ id: 'default', name: 'Staff' }, { id: 'bamboo', name: 'Bamboo' }, { id: 'bone', name: 'Bone' }, { id: 'candy', name: 'Candy cane' }, { id: 'glow', name: 'Glow staff' }, { id: 'brush', name: 'Paintbrush' }, { id: 'broom', name: 'Broom' }, { id: 'flame', name: 'Flame blade' }],
   laser: [{ id: 'default', name: 'Blaster' }, { id: 'toy', name: 'Toy ray gun' }, { id: 'banana', name: 'Banana' }, { id: 'cannon', name: 'Hand cannon' }, { id: 'scrB', name: 'Scribble blue' }, { id: 'scrR', name: 'Scribble red' }, { id: 'scrG', name: 'Scribble green' }],
   hook: [{ id: 'default', name: 'Hook' }, { id: 'pirate', name: 'Pirate hook' }, { id: 'chain', name: 'Chain' }, { id: 'rod', name: 'Fishing rod' }, { id: 'anchor', name: 'Rope + anchor' }],
   whip: [{ id: 'default', name: 'Chain whip' }, { id: 'leash', name: 'Leash' }],

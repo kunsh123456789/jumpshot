@@ -7,7 +7,7 @@ import { tint } from './heroCos';
 
 /** The main colour of each skin: the part the player's skin colour replaces. */
 const MAIN_SKIN: Record<string, 'ink' | 'paper' | 'red' | 'blue'> = {
-  bamboo: 'paper', bone: 'paper', candy: 'red', glow: 'blue', brush: 'red', broom: 'paper',
+  bamboo: 'paper', bone: 'paper', candy: 'red', glow: 'blue', brush: 'red', broom: 'paper', flame: 'red',
   toy: 'paper', banana: 'paper', cannon: 'ink', pirate: 'ink', chain: 'ink', rod: 'red', anchor: 'ink', leash: 'red',
 };
 
@@ -75,6 +75,22 @@ export function drawWeaponSkin(ctx: CanvasRenderingContext2D, f: Fighter, j: Flo
         for (let i = 0; i < 6; i++) { const k = rnd(), sd2 = rnd() < 0.5 ? 1 : -1, px = bx + dx * k, py = by + dy * k; ctx.moveTo(px + nx * sd2 * 6 * s, py + ny * sd2 * 6 * s); ctx.lineTo(px + nx * sd2 * 11 * s, py + ny * sd2 * 11 * s); }
         ctx.stroke();
         const gx = l6[0], gy = l6[1]; stick(ctx, gx - ux * 14 * s, gy - uy * 14 * s, gx + ux * 14 * s, gy + uy * 14 * s, W + 1, K.ink);
+        break;
+      }
+      case 'flame': {
+        // Flame blade (reference clip 3, frames 124-132): a black blade shaped like a flame, red outline, on a short grip
+        stick(ctx, bx, by, l6[0] + ux * 8 * s, l6[1] + uy * 8 * s, W * 0.8, K.ink);
+        const b0x = l6[0] + ux * 8 * s, b0y = l6[1] + uy * 8 * s, BL = Math.hypot(tx - b0x, ty - b0y) * 1.15;
+        ctx.fillStyle = K.ink; ctx.strokeStyle = K.red; ctx.lineWidth = 1.6 * wpp + 0.4;
+        const lick = Math.sin(step * 1.7) * 3 * s;
+        ctx.beginPath();
+        ctx.moveTo(b0x + nx * 5 * s, b0y + ny * 5 * s);
+        ctx.quadraticCurveTo(b0x + ux * BL * 0.45 + nx * 11 * s, b0y + uy * BL * 0.45 + ny * 11 * s, b0x + ux * BL * 0.6 + nx * 3 * s, b0y + uy * BL * 0.6 + ny * 3 * s);
+        ctx.quadraticCurveTo(b0x + ux * BL * 0.8 + nx * 9 * s, b0y + uy * BL * 0.8 + ny * 9 * s, b0x + ux * BL + nx * lick, b0y + uy * BL + ny * lick);
+        ctx.quadraticCurveTo(b0x + ux * BL * 0.7 - nx * 6 * s, b0y + uy * BL * 0.7 - ny * 6 * s, b0x + ux * BL * 0.55 - nx * 2 * s, b0y + uy * BL * 0.55 - ny * 2 * s);
+        ctx.quadraticCurveTo(b0x + ux * BL * 0.3 - nx * 9 * s, b0y + uy * BL * 0.3 - ny * 9 * s, b0x - nx * 5 * s, b0y - ny * 5 * s);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = K.ink; ctx.lineWidth = 3 * wpp + 0.6; ctx.beginPath(); ctx.moveTo(b0x + nx * 8 * s, b0y + ny * 8 * s); ctx.lineTo(b0x - nx * 8 * s, b0y - ny * 8 * s); ctx.stroke();
         break;
       }
       case 'brush': case 'broom': {
