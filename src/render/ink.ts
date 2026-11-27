@@ -213,7 +213,29 @@ export const inkHooks: InkHooks = { smear: null };
  * white figure with a black outline, telegraph as alternating red drawings
  * plus a red pixel burst, and a few props.
  */
+/**
+ * Scanline blur (reference clip 3, frames 86 / 270 / 276): while the hero dodges, or flickers back in at the
+ * end of the daggers' vanish, it is drawn as horizontal stripes, plus a stripe-shifted copy where it just was.
+ */
 export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: number, time: number, wpp: number): void {
+  const scan = f.team === 'player' && f.kind === 'player' && (f.state === 'dodge' || (f.vanish > 0 && f.vanish < 7));
+  if (!scan) { drawInkFighterInner(ctx, f, alpha, time, wpp); return; }
+  const s = f.scale, x = f.px + (f.x - f.px) * alpha, y = f.py + (f.y - f.py) * alpha;
+  const x0 = x - 80 * s, y0 = y - 230 * s, x1 = x + 80 * s, y1 = y + 12 * s, row = Math.max(wpp, 1e-3);
+  const stripes = (phase: number) => {
+    ctx.beginPath();
+    for (let yy = y0 + phase * row; yy < y1; yy += row * 2) ctx.rect(x0, yy, x1 - x0, row);
+    ctx.clip();
+  };
+  // the copy where it just was (a frame behind, stripes on the other rows)
+  const dx = (f.x - f.px) * 2.2;
+  if (Math.abs(dx) > 1) {
+    ctx.save(); ctx.translate(-dx, 0); stripes(1); drawInkFighterInner(ctx, f, alpha, time, wpp, true); ctx.restore();
+  }
+  ctx.save(); stripes(0); drawInkFighterInner(ctx, f, alpha, time, wpp, true); ctx.restore();
+}
+
+function drawInkFighterInner(ctx: CanvasRenderingContext2D, f: Fighter, alpha: number, time: number, wpp: number, scanning = false): void {
   if (f.sprite && drawTarget(ctx, f, alpha, time, wpp)) return;
   const j = femaleJoints(f, interpJoints(f, alpha, time));
   const a = f.anim;
@@ -222,9 +244,9 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
   const scribbled = f.state === 'dead' && f.deathStyle === 2;
   if (!scribbled && f.state === 'dead' && f.deadTimer > 14 && (step & 1)) return;
   if (f.state === 'dead' && f.deadTimer > 30) return;
-  if (f.team === 'player' && f.invuln > 0 && f.state !== 'dodge' && f.state !== 'move' && f.state !== 'cine' && (step & 1)) return;
+  if (!scanning && f.team === 'player' && f.invuln > 0 && f.state !== 'dodge' && f.state !== 'move' && f.state !== 'cine' && (step & 1)) return;
   // New movesets: the daggers' smoke-bomb vanish hides the hero; the scythe's phase flickers it.
-  if (f.team === 'player' && (f.vanish > 0 || (f.phase > 0 && (step & 1)))) return;
+  if (f.team === 'player' && ((f.vanish > 0 && !scanning) || (f.phase > 0 && (step & 1)))) return;
   let col = inkColor(f);
   const winding = f.team === 'enemy' && (f.state === 'windup' || f.telegraph > 0) && f.alive;
   if (winding && (step & 1)) col = col === INK.red ? INK.ink : INK.red;

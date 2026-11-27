@@ -2,6 +2,7 @@ import { layout } from '../core/layout';
 import { drawWeaponFx, drawRefFx } from './weaponFx';
 import { drawExtraFx } from './weaponFx2';
 import { drawCineFx } from './cineFx';
+import { clip3Fx } from './clip3Fx';
 import { drawMoveset2Fx } from './moveset2Fx';
 import { drawGrappleFx } from './grappleFx';
 import { drawPowerFx } from './powerFx';
@@ -179,7 +180,7 @@ export class Renderer {
       this.viewTransform();
       g.save();
     }
-    const z = cam.effectiveZoom();
+    const z = cam.effectiveZoom() * clip3Fx.zoomFactor();
     // World units per low-res pixel: line weights are authored in low-res pixels.
     const wpp = 1 / (res * z);
     g.translate(WORLD.viewW / 2 + cam.ox, cam.groundScreen + cam.oy);
@@ -217,6 +218,7 @@ export class Renderer {
     drawExtraFx(g, world, alpha, time, wpp);
     drawCineFx(g, world, alpha, time, wpp);
     drawRefFx(g, world, alpha, time, wpp, effects.invert > 0 && !settings.reduceFlashes);
+    clip3Fx.drawWorld(g, world, wpp);
     const pl = world.player;
     this.lastPlayerX = pl.px + (pl.x - pl.px) * alpha;
     this.lastPlayerY = pl.py + (pl.y - pl.py) * alpha;
@@ -224,6 +226,7 @@ export class Renderer {
     inkFx.drawFront(g, wpp);
     g.restore();
 
+    if (pixel) clip3Fx.drawScreen(g, lw, lh, world);
     if (pixel) {
       // The palette snap reads the layer back from the GPU every frame: the main cost on phones.
       if (!perf) quantize(g, lw, lh);

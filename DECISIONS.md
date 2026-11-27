@@ -820,3 +820,26 @@ The PNGs are gone. Hit detection stays on the dummy's rig; the art is visual onl
 - **More colours:** Pink, Purple, Green and Orange, plus **any colour** from a custom picker swatch, on every colourable slot.
   - The Pixel look normally snaps every pixel to its four inks. Each chosen colour now gets only its own 12-bit cell of the quantizer's lookup table redirected to it (`syncExtraInks` in `ink.ts`), so the rest of the game still snaps exactly as before.
   - Saves store a colour as a name or as `#rrggbb`.
+
+## Clip 3 batch ("add everything"), phase 1: render-only Pixel FX
+All the effects live in `render/clip3Fx.ts`. They are Pixel look only and render-only: they read the world, never write the sim, and never use `simRng`.
+- **Red tear impact frame:** shown on Staff, Daggers and Scythe finisher hits. It replaces the plain invert for those hits.
+- **Stipple flash:** shown on shockwaves, meteors and boss phase changes, replacing the white wash.
+- **Dither-to-black cut:** shown on wave clear.
+- **Dithered GAME OVER card:** plays before the results screen.
+- **VS card on boss waves:** the scene is redrawn as white silhouettes on black, with a red slashed VS, flickering red pixel corners, sweeping red crosshairs, and the names.
+- **Rule for flashes:** every full-screen effect respects Reduce Flashes. With it on, the VS card becomes a black band instead of the inverted scene.
+- **Other effects:**
+  - a dither pillar on launchers;
+  - dithered arc trails behind fast-flying bodies, and debris lines when they spike into the floor;
+  - pebbles when a KO'd body slides;
+  - a scribble dust ball on dodges;
+  - floor X-slashes from heavy blade hits;
+  - dust mounds that stay until the wave ends;
+  - a dotted ring and a glyph where a heavy beam hits;
+  - a tapered wedge at the end of laser beams;
+  - a hard camera punch-in on finishers and the last KO. It's skipped when Screen Shake is 0.
+- **Scanline blur:** the hero is drawn in horizontal stripes, plus a stripe-shifted copy, while dodging and while flickering back in from the daggers' vanish (`ink.ts`).
+- **Rain** falls on every fourth wave from wave 3, and is off with Mobile Performance. A **starfield** sky band with a rising planet appears on the SHADOW boss wave.
+- **Stipples** use a 1-px checker pattern, so they still read with Mobile Performance (no palette snap).
+- **Commits:** these were committed together as one module, not one commit per item, because they share one file. Each one can still be turned off on its own.

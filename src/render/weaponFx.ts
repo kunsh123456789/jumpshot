@@ -118,7 +118,16 @@ export function drawWeaponFx(ctx: CanvasRenderingContext2D, w: World, alpha: num
 
   // ---- Beam ----
   if (ws.beamT > 0 && ws.beamStyle !== 'laser') drawStyledBeam(ctx, w, ink, wpp, step);
-  else if (ws.beamT > 0) {
+  else if (ws.beamT > 0 && DRAW.ink && ws.beamT / ws.beamMax < 0.4) {
+    // Pixel look, the beam's end (reference clip 3, 206-214): a solid wedge tapering to a point, thinning to a line
+    const k = ws.beamT / ws.beamMax, x1 = ws.beamX1, y1 = ws.beamY1, x2 = ws.beamX2, y2 = ws.beamY2;
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+    const half = ws.beamW * 0.55 * (k / 0.4);
+    const bc = ws.beamColor === '#e22424' ? red : ws.beamColor;
+    ctx.fillStyle = bc;
+    ctx.beginPath(); ctx.moveTo(x1 + nx * half, y1 + ny * half); ctx.lineTo(x2, y2); ctx.lineTo(x1 - nx * half, y1 - ny * half); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = bc; ctx.lineWidth = 1.2 * wpp + 0.3; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  } else if (ws.beamT > 0) {
     const k = ws.beamT / ws.beamMax;
     const x1 = ws.beamX1, y1 = ws.beamY1, x2 = ws.beamX2, y2 = ws.beamY2;
     const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;

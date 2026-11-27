@@ -1,3 +1,4 @@
+import { clip3Fx } from './render/clip3Fx';
 import { hurtPlayer } from './sim/combat';
 import '@fontsource/patrick-hand/latin-400.css';
 import '@fontsource/permanent-marker/latin-400.css';
@@ -28,7 +29,7 @@ W.__jumpshot = game;
 W.__layout = layout;
 W.__inkFx = inkFx;
 // Dev / tests: the animation registry, weapons and moves (animation audit, Lab sheets).
-W.__anims = ANIMS; W.__weapons = WEAPONS; W.__moves = MOVES; W.__hurt = hurtPlayer;
+W.__anims = ANIMS; W.__weapons = WEAPONS; W.__moves = MOVES; W.__hurt = hurtPlayer; W.__clip3 = clip3Fx;
 
 const qs = new URLSearchParams(location.search);
 // Dev/testing: ?wave=N starts a run at wave N (skips the tutorial).

@@ -25,6 +25,7 @@ import { RhythmUI, type CalibView } from './rhythm/ui';
 import { DRAW, syncDrawStyle } from './render/drawStyle';
 import { INKLOOK } from './data/inkLook';
 import { inkFx, drawEntitiesInk } from './render/inkFx';
+import { clip3Fx } from './render/clip3Fx';
 import { paper } from './render/paper';
 import { ArcadeHud } from './ui/arcadeHud';
 import { PAGE_ORDER, type PageId } from './data/paper';
@@ -138,6 +139,7 @@ export class Game {
       }
     });
     inkFx.bind(this.world);
+    clip3Fx.bind(this.world);
     // Pages bake handwriting into their doodles: re-bake once the bundled fonts are ready.
     document.fonts?.ready.then(() => paper.invalidate());
     // Settings -> Movesets: re-equip so the new / original moveset takes effect at once.
@@ -613,6 +615,7 @@ export class Game {
     updateRefFx(dt);
     effects.paperText = DRAW.ink;
     inkFx.update(dt);
+    clip3Fx.update(realDt, this.world);
     paper.update(realDt);
     this.renderer.beatPulse = this.world.rhythm ? this.rhud.pulse : 0;
     this.fx.update(realDt);
@@ -682,6 +685,7 @@ export class Game {
         this.training.update(this.world);
         break;
       case 'gameover':
+        if (this.overTimer < 1.0 && this.overTimer + dt >= 1.0) clip3Fx.titleCard();
         this.overTimer += dt;
         if (this.overTimer > 1.6 && !this.menus.isOpen('results')) this.showResults();
         break;
