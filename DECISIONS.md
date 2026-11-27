@@ -853,3 +853,11 @@ All the effects live in `render/clip3Fx.ts`. They are Pixel look only and render
 - **Indoor page (render-only):** every fifth wave from wave 4 (not boss waves) has a ceiling and three hanging lamps that swing when hits land nearby, plus stairs with a landing and a railing, a table, and three crates that break into flying planks on heavy hits.
   - The stairs and landing are **background art only**: the game has one flat floor (spikes, ice walls, cinematics, reflections and AI all rely on it), so nobody walks up them.
 - **Planted swords:** a K.O. with the Staff, Daggers or Scythe leaves a sword standing in the floor until the wave ends.
+
+## Clip 3 phase 4: three new weapons (Pixel look only)
+- **Cape, War Fan, Earth** live in `data/weapons/clip3Weapons.ts`. They are built entirely from existing move parts: grabs, beams, projectiles, ground spikes, deflect, multi-hits and impact shockwaves.
+  - **Cape** (Special: MATADOR, using the throw family): swipe string; Wrap & Hurl grab; flourish; shoulder toss over your back; rising-cloak launcher; low sweep; Veronica pass-through that leaves you behind them; cloak drop; air swipe, air cloak and spike.
+  - **War Fan** (Special: TYPHOON, using the staff family): quick cut string; a Gust ink beam that knocks the whole line down; rising fan; cyclone; updraft launcher; low fan; an Open Fan that deflects darts; fan slam; air cut; Parasol Drift (pops you up to hang); spike.
+  - **Earth** (Special: LANDSLIDE, using the fists family): rock-fist string; Boulder Kick (a heavy rolling rock); pebble toss; Dust Dome (drawn as a dithered dome with orbiting boulders); rock-pillar launcher; rock spikes; a quake line of spikes; tremor stomp; air rock, rock uppercut, and a Meteor Drop with an impact shockwave.
+- **Pixel look only:** they're offered in the loadout only in the Pixel look. In the other looks, `weaponById` falls back to Fists, so the neon look and Classic are unchanged.
+- **Tests:** they are part of the fuzz test, which now reports the weapon actually equipped, and their Specials were run start to finish.

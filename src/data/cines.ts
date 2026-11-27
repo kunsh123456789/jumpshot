@@ -21,6 +21,7 @@ export const WEAPON_FAMILY: Record<string, Family> = {
   staff: 'staff', daggers: 'staff', scythe: 'hook',
   laser: 'laser', ice: 'laser', raygun: 'laser',
   hook: 'hook', whip: 'hook',
+  cape: 'throw', fan: 'staff', earth: 'fists',
 };
 /** Special names per weapon (the family script with its own name). */
 export const SPECIAL_NAME: Record<string, string> = {
@@ -28,6 +29,7 @@ export const SPECIAL_NAME: Record<string, string> = {
   staff: 'CYCLONE', daggers: 'BLADE STORM', scythe: 'REAPER',
   laser: 'OVERLOAD BEAM', ice: 'DEEP FREEZE', raygun: 'DEATH RAY',
   hook: 'WEB TAKEDOWN', whip: 'LION TAMER',
+  cape: 'MATADOR', fan: 'TYPHOON', earth: 'LANDSLIDE',
 };
 
 const G = WORLD.groundY;

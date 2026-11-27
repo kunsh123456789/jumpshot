@@ -27,6 +27,13 @@ The **Character** screen (title screen, or **Character** in the pause menu) lets
   - Hook: pirate hook, chain, fishing rod, rope and anchor.
   - Whip: leash.
 
+## Pixel look extras (reference clip 3)
+- **Weapons:** Cape, War Fan and Earth.
+- **Breakable walls:** two hard wall bounces smash a page edge open, and bodies knocked through it are rung out.
+- **Boss and elite fights:** the Colossus rolls a wrecking ball, and an elite's attack can lock blades with yours. Swing again during the lock to win the clash.
+- **Stages:** an indoor stage with lamps, stairs and breakable crates; rain waves; a starfield on the Shadow fight.
+- **Effects:** a VS card on boss waves, a red tear frame on blade finishers, and a scanline blur on dodges.
+
 ## Run it
 
 ```bash
