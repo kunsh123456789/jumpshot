@@ -5,13 +5,13 @@
  * trait is equipped, so a run without traits plays frame for frame as it always did.
  */
 export type BandId = 'red' | 'blue' | 'black' | 'flower' | 'none';
-export type GearId = 'none' | 'cap' | 'tophat' | 'crown' | 'halo' | 'ears' | 'goggles';
+export type GearId = 'none' | 'cap' | 'tophat' | 'crown' | 'halo' | 'ears' | 'goggles' | 'horns';
 export type HandsId = 'none' | 'wraps' | 'mitts' | 'fingerless' | 'spiked' | 'glowband' | 'brass' | 'flaming';
 export type BodyId = 'male' | 'female';
 /** The female hero's hair (the player's picks from the options page). */
-export type HairId = 'ponytail' | 'wavy' | 'buns';
-export type BackId = 'none' | 'scarf' | 'ninja' | 'cape' | 'tattered' | 'page' | 'ribbon' | 'backpack' | 'wings';
-export type FeetId = 'none' | 'sneakers' | 'boots' | 'bandaged' | 'rocket' | 'flipflops';
+export type HairId = 'ponytail' | 'wavy' | 'buns' | 'messybun' | 'bangs';
+export type BackId = 'none' | 'scarf' | 'ninja' | 'cape' | 'tattered' | 'page' | 'ribbon' | 'backpack' | 'wings' | 'butterfly' | 'devil';
+export type FeetId = 'none' | 'sneakers' | 'boots' | 'bandaged' | 'rocket' | 'flipflops' | 'warmers' | 'socks';
 export type BadgeId = 'none' | 'belt' | 'sheriff' | 'rank';
 /** Weapons with skins, and each one's skin ids ('default' = the weapon's own drawing). */
 export type SkinWeapon = 'staff' | 'laser' | 'hook' | 'fists';
@@ -28,21 +28,21 @@ export const BANDS: { id: BandId; name: string }[] = [
 ];
 export const GEAR: { id: GearId; name: string }[] = [
   { id: 'none', name: 'None' }, { id: 'cap', name: 'Cap' }, { id: 'tophat', name: 'Top hat' }, { id: 'crown', name: 'Crown' },
-  { id: 'halo', name: 'Halo' }, { id: 'ears', name: 'Cat ears' }, { id: 'goggles', name: 'Goggles' },
+  { id: 'halo', name: 'Halo' }, { id: 'ears', name: 'Cat ears' }, { id: 'goggles', name: 'Goggles' }, { id: 'horns', name: 'Devil horns' },
 ];
 export const HANDS: { id: HandsId; name: string }[] = [
   { id: 'none', name: 'Bare' }, { id: 'wraps', name: 'Tape wraps' }, { id: 'mitts', name: 'Mitts' }, { id: 'fingerless', name: 'Fingerless' },
   { id: 'spiked', name: 'Spiked gauntlets' }, { id: 'glowband', name: 'Glow band' }, { id: 'brass', name: 'Brass knuckles' }, { id: 'flaming', name: 'Flaming fists' },
 ];
 export const BODIES: { id: BodyId; name: string }[] = [{ id: 'male', name: 'Male' }, { id: 'female', name: 'Female' }];
-export const HAIRS: { id: HairId; name: string }[] = [{ id: 'ponytail', name: 'Ponytail' }, { id: 'wavy', name: 'Long wavy' }, { id: 'buns', name: 'Space buns' }];
+export const HAIRS: { id: HairId; name: string }[] = [{ id: 'ponytail', name: 'Ponytail' }, { id: 'wavy', name: 'Long wavy' }, { id: 'buns', name: 'Space buns' }, { id: 'messybun', name: 'Messy bun' }, { id: 'bangs', name: 'Long + bangs' }];
 export const BACKS: { id: BackId; name: string }[] = [
   { id: 'none', name: 'None' }, { id: 'scarf', name: 'Red scarf' }, { id: 'ninja', name: 'Ninja scarf' }, { id: 'cape', name: 'Cape' },
-  { id: 'tattered', name: 'Tattered cape' }, { id: 'page', name: 'Notebook cape' }, { id: 'ribbon', name: 'Ribbon' }, { id: 'backpack', name: 'Backpack' }, { id: 'wings', name: 'Wings' },
+  { id: 'tattered', name: 'Tattered cape' }, { id: 'page', name: 'Notebook cape' }, { id: 'ribbon', name: 'Ribbon' }, { id: 'backpack', name: 'Backpack' }, { id: 'wings', name: 'Wings' }, { id: 'butterfly', name: 'Butterfly wings' }, { id: 'devil', name: 'Devil tail' },
 ];
 export const FEET: { id: FeetId; name: string }[] = [
   { id: 'none', name: 'Bare' }, { id: 'sneakers', name: 'Sneakers' }, { id: 'boots', name: 'Boots' }, { id: 'bandaged', name: 'Bandaged' },
-  { id: 'rocket', name: 'Rocket shoes' }, { id: 'flipflops', name: 'Flip-flops' },
+  { id: 'rocket', name: 'Rocket shoes' }, { id: 'flipflops', name: 'Flip-flops' }, { id: 'warmers', name: 'Leg warmers' }, { id: 'socks', name: 'Knee-high socks' },
 ];
 export const BADGES: { id: BadgeId; name: string }[] = [
   { id: 'none', name: 'None' }, { id: 'belt', name: 'Champion belt' }, { id: 'sheriff', name: 'Sheriff star' }, { id: 'rank', name: 'Rank pin' },

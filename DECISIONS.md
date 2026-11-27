@@ -788,3 +788,10 @@ The PNGs are gone. Hit detection stays on the dummy's rig; the art is visual onl
   - **Female body:** the hips build plus the **hourglass outline** around the torso.
   - **A Flower headband option:** a red five-petal flower over the ear instead of the band's tail. It is Pixel look only; the neon look never drew the band.
   - The other options (bob, pigtails, skirts, dress, lashes, blush, bow) were dropped, along with the preview patch.
+
+- **Second batch, approved on its preview page:**
+  - two hair styles: messy bun, and long hair with bangs;
+  - devil horns (Headgear);
+  - devil tail and butterfly wings (Neck & back);
+  - leg warmers and knee-high socks (Feet).
+  - All are Pixel look only. The horns are drawn by `heroCos.ts` and not by the shared `heroGear.ts`, so the neon look is untouched.
