@@ -813,3 +813,6 @@ The PNGs are gone. Hit detection stays on the dummy's rig; the art is visual onl
   - male heroes start with no hair, because before v3 hair only showed on the Female body.
 - **Pixelated preview:** the Character preview draws into a low-res layer at the game's own pixel density, palette-snaps it, and scales it up with smoothing off, so it matches the game.
 - **Reset Character:** a two-tap button resets every cosmetic, colour, skin and both trait slots.
+- **Round 3 (approved):**
+  - Added: Afro (hair), a **Hair bow** row (it sits on any hair style and has its own colour), the **Leash** whip skin (strap, loop handle and clip; the lash and the tether turn into the strap), an **Arms** row with arm warmers (wearable with any gloves), and **Paws** (Hands).
+  - Held back: dreadlocks and the messy mod cut wait for the player's reference drawings. Cat stockings were cut because their cat ears didn't read at the game's pixel size; they need a redo.

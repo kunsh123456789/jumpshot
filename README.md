@@ -11,11 +11,12 @@ There are two modes, switched on the title screen or in Settings:
 ## Your hero (Character)
 The **Character** screen (title screen, or **Character** in the pause menu) lets you dress the hero, recolour any slot (black, red, blue or white) and reset everything with **Reset Character**. These cosmetics show in the Pixel look:
 - **Body:** Male or Female (narrower shoulders, wider hips and an hourglass outline).
-- **Hair (either body):** ponytail, long wavy hair, space buns, messy bun, or long hair with bangs.
+- **Hair (either body):** ponytail, long wavy hair, space buns, messy bun, long hair with bangs, or an afro, plus an optional hair bow.
 - **Headband:** red, blue, black, or none.
 - **Headgear:** cap, top hat, crown, halo, cat ears, goggles, devil horns, flower.
 - **Neck and back:** red scarf, ninja scarf, cape, tattered cape, notebook-page cape, ribbon, backpack, line-art wings, butterfly wings, devil tail.
-- **Hands:** tape wraps, mitts, fingerless gloves, spiked gauntlets, glow band, brass knuckles, flaming fists.
+- **Hands:** tape wraps, mitts, fingerless gloves, spiked gauntlets, glow band, brass knuckles, flaming fists, paws.
+- **Arms:** arm warmers (worn with any gloves).
 - **Leg-wear:** bandages, leg warmers, knee-high socks.
 - **Shoes:** sneakers, boots, rocket shoes, flip-flops (worn over the leg-wear).
 - **Belts and badges:** champion belt, sheriff star, and a Rank pin showing your best style rank.
@@ -24,6 +25,7 @@ The **Character** screen (title screen, or **Character** in the pause menu) lets
   - Staff: bamboo, bone, candy cane, glow staff, paintbrush, broom.
   - Laser: toy ray gun, banana, hand cannon, scribble blue, red or green.
   - Hook: pirate hook, chain, fishing rod, rope and anchor.
+  - Whip: leash.
 
 ## Run it
 

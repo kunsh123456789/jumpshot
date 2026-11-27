@@ -8,7 +8,7 @@ import { tint } from './heroCos';
 /** The main colour of each skin: the part the player's skin colour replaces. */
 const MAIN_SKIN: Record<string, 'ink' | 'paper' | 'red' | 'blue'> = {
   bamboo: 'paper', bone: 'paper', candy: 'red', glow: 'blue', brush: 'red', broom: 'paper',
-  toy: 'paper', banana: 'paper', cannon: 'ink', pirate: 'ink', chain: 'ink', rod: 'red', anchor: 'ink',
+  toy: 'paper', banana: 'paper', cannon: 'ink', pirate: 'ink', chain: 'ink', rod: 'red', anchor: 'ink', leash: 'red',
 };
 
 /**
@@ -29,7 +29,7 @@ function stick(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number
 
 export function drawWeaponSkin(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, wpp: number, time: number): boolean {
   const wid = f.weapon as SkinWeapon;
-  if (wid !== 'staff' && wid !== 'laser' && wid !== 'hook') return false;
+  if (wid !== 'staff' && wid !== 'laser' && wid !== 'hook' && wid !== 'whip') return false;
   const skin = HERO_LOOK.skins[wid];
   if (!skin || skin === 'default') return false;
   const main = MAIN_SKIN[skin];
@@ -97,6 +97,17 @@ export function drawWeaponSkin(ctx: CanvasRenderingContext2D, f: Fighter, j: Flo
         break;
       }
     }
+    ctx.restore(); return true;
+  }
+  if (wid === 'whip') {
+    // Leash: a loop handle round the hand, a strap hanging in a curve and a clip at its end
+    const hx = j[J.handA * 2], hy = j[J.handA * 2 + 1];
+    ctx.strokeStyle = K.ink; ctx.lineWidth = 1.6 * wpp + 0.4;
+    ctx.beginPath(); ctx.ellipse(hx, hy - 1 * s, 5 * s, 3.4 * s, 0.3, 0, TAU); ctx.stroke();
+    const ex = hx - 6 * s, ey = hy + 50 * s + Math.sin(step * 1.3) * 2 * s;
+    ctx.strokeStyle = K.red; ctx.lineWidth = 2.6 * wpp + 0.6;
+    ctx.beginPath(); ctx.moveTo(hx, hy + 2 * s); ctx.bezierCurveTo(hx + 16 * s, hy + 26 * s, hx - 16 * s, hy + 34 * s, ex, ey); ctx.stroke();
+    drawClip(ctx, ex, ey, Math.PI / 2, s, wpp);
     ctx.restore(); return true;
   }
   // laser and hook: held in the lead hand, along the forearm
@@ -182,4 +193,16 @@ export function drawWeaponSkin(ctx: CanvasRenderingContext2D, f: Fighter, j: Flo
   }
   ctx.restore();
   return true;
+}
+
+/** The leash's clip: a small ring and a snap hook, pointing along angle `a`. */
+export function drawClip(ctx: CanvasRenderingContext2D, x: number, y: number, a: number, s: number, wpp: number): void {
+  const ux = Math.cos(a), uy = Math.sin(a);
+  ctx.save();
+  ctx.strokeStyle = INK.ink; ctx.lineWidth = 1.5 * wpp + 0.4; ctx.fillStyle = INK.paper;
+  ctx.beginPath(); ctx.arc(x + ux * 2.5 * s, y + uy * 2.5 * s, 2.6 * s, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + ux * 5 * s, y + uy * 5 * s); ctx.lineTo(x + ux * 11 * s, y + uy * 11 * s);
+  ctx.arc(x + ux * 11 * s - uy * 2 * s, y + uy * 11 * s + ux * 2 * s, 2 * s, a - Math.PI / 2, a + Math.PI / 2);
+  ctx.stroke();
+  ctx.restore();
 }

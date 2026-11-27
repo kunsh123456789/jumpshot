@@ -3,7 +3,7 @@ import { audio } from '../core/audio';
 import { WEAPONS, activeDef, availableWeapons, type WeaponDef, type WeaponId } from '../data/weapons';
 import { MOVES } from '../data/moves';
 import { MovePreview, HeroPreview } from './preview';
-import { BACKS, BADGES, BANDS, BODIES, COLORS, HAIRS, LEGS, SHOES, type ColorSlot, GEAR, HANDS, SKINS, SKIN_WEAPONS, TRAITS, TRAIT_SLOTS, traitById, type HeroSave, type SkinWeapon } from '../data/hero';
+import { ARMS, BACKS, BADGES, BANDS, BODIES, BOWS, COLORS, HAIRS, LEGS, SHOES, type ColorSlot, GEAR, HANDS, SKINS, SKIN_WEAPONS, TRAITS, TRAIT_SLOTS, traitById, type HeroSave, type SkinWeapon } from '../data/hero';
 import { anyUnlocked, isUnlocked, enterCode } from './cheats';
 import { STYLE } from '../data/tuning';
 import { icon } from './icons';
@@ -392,7 +392,7 @@ export class Menus {
     renderTraits();
     // cosmetics
     const cos = document.createElement('div'); cos.className = 'hm-cos';
-    type CosKey = 'band' | 'headgear' | 'hands' | 'body' | 'hair' | 'back' | 'shoes' | 'legs' | 'badge';
+    type CosKey = 'band' | 'headgear' | 'hands' | 'body' | 'hair' | 'bow' | 'back' | 'arms' | 'shoes' | 'legs' | 'badge';
     /** One option row, with a row of colour swatches when the slot can be recoloured. */
     const row = (into: HTMLElement, label: string, key: CosKey | `skin-${SkinWeapon}`, opts: { id: string; name: string }[], color?: ColorSlot) => {
       const sw = key.startsWith('skin-') ? (key.slice(5) as SkinWeapon) : null;
@@ -421,8 +421,8 @@ export class Menus {
       }
       into.appendChild(r);
     };
-    row(cos, 'Body', 'body', BODIES); row(cos, 'Hair', 'hair', HAIRS, 'hair'); row(cos, 'Headband', 'band', BANDS); row(cos, 'Headgear', 'headgear', GEAR, 'headgear');
-    row(cos, 'Neck & back', 'back', BACKS, 'back'); row(cos, 'Hands', 'hands', HANDS, 'hands'); row(cos, 'Leg-wear', 'legs', LEGS, 'legs');
+    row(cos, 'Body', 'body', BODIES); row(cos, 'Hair', 'hair', HAIRS, 'hair'); row(cos, 'Hair bow', 'bow', BOWS, 'bow'); row(cos, 'Headband', 'band', BANDS); row(cos, 'Headgear', 'headgear', GEAR, 'headgear');
+    row(cos, 'Neck & back', 'back', BACKS, 'back'); row(cos, 'Hands', 'hands', HANDS, 'hands'); row(cos, 'Arms', 'arms', ARMS, 'arms'); row(cos, 'Leg-wear', 'legs', LEGS, 'legs');
     row(cos, 'Shoes', 'shoes', SHOES, 'shoes'); row(cos, 'Belts & badges', 'badge', BADGES, 'badge');
     const skins = document.createElement('div'); skins.className = 'hm-cos';
     SKIN_WEAPONS.forEach((w, i) => row(skins, w.name, `skin-${w.id}`, SKINS[w.id], i === 0 ? 'skin' : undefined));

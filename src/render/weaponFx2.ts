@@ -1,5 +1,8 @@
 import type { World } from '../sim/world';
 import { DRAW } from './drawStyle';
+import { HERO_LOOK } from '../data/hero';
+import { tint } from './heroCos';
+import { drawClip } from './weaponSkins';
 import { INK } from './ink';
 import { WORLD } from '../data/tuning';
 
@@ -160,7 +163,15 @@ export function drawStyledBeam(ctx: CanvasRenderingContext2D, w: World, ink: str
   const x1 = ws.beamX1, y1 = ws.beamY1, x2 = ws.beamX2, y2 = ws.beamY2;
   const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
   seed = step * 53 + 1;
-  if (ws.beamStyle === 'whip' || ws.beamStyle === 'scythe') {
+  if (ws.beamStyle === 'whip' && DRAW.ink && w.player.weapon === 'whip' && HERO_LOOK.skins.whip === 'leash') {
+    // Leash skin: the lash is a red strap with the clip snapping out at its end
+    ctx.strokeStyle = tint('skin', INK.red); ctx.lineWidth = 3.2 * wpp + 1;
+    ctx.beginPath(); ctx.moveTo(x1, y1);
+    const amp = 14 * k;
+    for (let i = 1; i <= 16; i++) { const t = i / 16, wv = Math.sin(t * Math.PI * 3 + step) * amp * (1 - t); ctx.lineTo(x1 + dx * t + nx * wv, y1 + dy * t + ny * wv); }
+    ctx.stroke();
+    drawClip(ctx, x2, y2, Math.atan2(dy, dx), w.player.scale * 1.3, wpp);
+  } else if (ws.beamStyle === 'whip' || ws.beamStyle === 'scythe') {
     // a lashing rope: wavy, thick at the handle, with a crack at the tip
     ctx.strokeStyle = ink; ctx.lineWidth = 3 * wpp + 0.9;
     ctx.beginPath(); ctx.moveTo(x1, y1);

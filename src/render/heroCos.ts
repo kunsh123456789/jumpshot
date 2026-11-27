@@ -16,7 +16,7 @@ export function slotPal<P extends { ink: string; paper: string; red: string; blu
 }
 /** Main colour of each item (the part the slot colour replaces). */
 const MAIN_BACK: Record<string, PalKey> = { scarf: 'red', ninja: 'ink', cape: 'red', tattered: 'red', page: 'paper', ribbon: 'red', backpack: 'paper', wings: 'paper', butterfly: 'paper', devil: 'red' };
-const MAIN_HANDS: Record<string, PalKey> = { wraps: 'red', mitts: 'ink', fingerless: 'ink', spiked: 'ink', glowband: 'blue', brass: 'paper', flaming: 'red' };
+const MAIN_HANDS: Record<string, PalKey> = { wraps: 'red', mitts: 'ink', fingerless: 'ink', spiked: 'ink', glowband: 'blue', brass: 'paper', flaming: 'red', paws: 'paper' };
 const MAIN_FIST: Record<string, PalKey> = { boxing: 'red', oven: 'paper', lobster: 'red', foam: 'paper' };
 const MAIN_GEAR: Record<string, PalKey> = { cap: 'red', tophat: 'ink', crown: 'red', halo: 'blue', ears: 'ink', goggles: 'ink', horns: 'red', flower: 'red' };
 const MAIN_LEGS: Record<string, PalKey> = { bandaged: 'ink', warmers: 'paper', socks: 'paper' };
@@ -243,6 +243,13 @@ function drawHair(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
     ctx.stroke();
     return;
   }
+  if (HERO_LOOK.hair === 'afro') {
+    // a big round afro: a bumpy ring of curls round the head (the head is drawn over its middle)
+    const cx = x + bk * r * 0.12, cy = y - r * 0.3, R = r * 1.45;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 0.95, 0, TAU); hfill(ctx);
+    for (let i = 0; i < 14; i++) { const a = (i / 14) * TAU; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * R, cy + Math.sin(a) * R * 0.95, r * 0.36, 0, TAU); hfill(ctx); }
+    return;
+  }
   if (HERO_LOOK.hair === 'bangs') {
     // long straight hair down the back (the blunt fringe is drawn in front of the head)
     const L = r * (3.0 - w.sp * 1.2 - w.lift * 0.8), ex = x + bk * r * (1.1 + w.sp * 2.2), ey = y + L;
@@ -318,6 +325,21 @@ function drawFemaleFront(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Ar
   ctx.stroke();
 }
 
+/** Hair bow: a two-loop bow with a knot, high at the back of the head (colour: the Bow slot, red by default). */
+function drawBow(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, wpp: number): void {
+  const r = f.anim.rig.headR * f.scale * INKLOOK.headScale, x0 = X(j, J.head), y0 = Y(j, J.head), face = f.anim.dFace || f.facing || 1;
+  const big = HERO_LOOK.hair === 'afro' ? 1.5 : 1;
+  const bx = x0 - face * r * 0.5 * big, by = y0 - r * 0.95 * big;
+  ctx.fillStyle = tint('bow', INK_RED); ctx.strokeStyle = INK_BLACK; ctx.lineWidth = 1 * wpp + 0.3;
+  for (const sd of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(bx, by);
+    ctx.quadraticCurveTo(bx + sd * r * 0.5, by - r * 0.75, bx + sd * r * 0.95, by - r * 0.35);
+    ctx.quadraticCurveTo(bx + sd * r * 0.85, by + r * 0.3, bx, by);
+    ctx.closePath(); hfill(ctx);
+  }
+  ctx.fillStyle = ctx.fillStyle === INK_PAPER ? INK_RED : INK_PAPER; ctx.beginPath(); ctx.arc(bx, by, r * 0.14, 0, TAU); ctx.fill();
+}
+
 /** Devil horns: two small red horns curving up and out of the top of the head. */
 function drawHorns(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, wpp: number, pal: CosPal): void {
   const r = f.anim.rig.headR * f.scale * INKLOOK.headScale, x0 = X(j, J.head), y0 = Y(j, J.head);
@@ -345,9 +367,10 @@ export function drawHeroFront(ctx: CanvasRenderingContext2D, f: Fighter, j: Floa
   if (f.kind !== 'player') return;
   if (L.body === 'female') { ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; drawFemaleFront(ctx, f, j, wpp, pal); ctx.restore(); }
   if (L.hair === 'wavy' || L.hair === 'bangs') { ctx.save(); drawHairFront(ctx, f, j, pal); ctx.restore(); }
+  if (L.bow === 'bow') { ctx.save(); drawBow(ctx, f, j, wpp); ctx.restore(); }
   if (L.headgear === 'horns') { ctx.save(); drawHorns(ctx, f, j, wpp, pal); ctx.restore(); }
   if (L.headgear === 'flower') drawHeadFlower(ctx, X(j, J.head), Y(j, J.head), f.anim.rig.headR * s * INKLOOK.headScale, face, wpp);
-  if (L.hands === 'none' && L.shoes === 'none' && L.legs === 'none' && L.badge === 'none' && fistSkin === 'default') return;
+  if (L.hands === 'none' && L.arms === 'none' && L.shoes === 'none' && L.legs === 'none' && L.badge === 'none' && fistSkin === 'default') return;
   ctx.save();
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   const lw = 2 * wpp + 0.4;
@@ -357,8 +380,31 @@ export function drawHeroFront(ctx: CanvasRenderingContext2D, f: Fighter, j: Floa
     const x = X(j, hand), y = Y(j, hand), ex = X(j, elbow), ey = Y(j, elbow);
     const dx0 = x - ex, dy0 = y - ey, ln = Math.hypot(dx0, dy0) || 1, dx = dx0 / ln, dy = dy0 / ln, nx = -dy, ny = dx;
     ctx.lineWidth = lw; ctx.strokeStyle = pal.ink; ctx.fillStyle = pal.ink;
+    if (L.arms === 'warmers') {
+      // bunched, ribbed sleeves over the forearms
+      const apl = slotPal(pal, 'arms', 'paper'), wd = 4.6 * s;
+      const ax = ex + dx0 * 0.22, ay = ey + dy0 * 0.22, bx = ex + dx0 * 0.86, by = ey + dy0 * 0.86;
+      ctx.fillStyle = apl.paper; ctx.strokeStyle = pal.ink; ctx.lineWidth = 1.4 * wpp + 0.4; ctx.beginPath();
+      for (let i = 0; i <= 4; i++) { const t = i / 4, bul = wd * (1 + (i % 2) * 0.25); ctx.lineTo(ax + (bx - ax) * t + nx * bul, ay + (by - ay) * t + ny * bul); }
+      for (let i = 4; i >= 0; i--) { const t = i / 4, bul = wd * (1 + (i % 2) * 0.25); ctx.lineTo(ax + (bx - ax) * t - nx * bul, ay + (by - ay) * t - ny * bul); }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 1 * wpp + 0.2; ctx.beginPath();
+      for (let t = 0.25; t < 0.95; t += 0.25) { const mx = ax + (bx - ax) * t, my = ay + (by - ay) * t; ctx.moveTo(mx + nx * wd, my + ny * wd); ctx.lineTo(mx - nx * wd, my - ny * wd); }
+      ctx.stroke();
+      ctx.lineWidth = lw; ctx.strokeStyle = pal.ink; ctx.fillStyle = pal.ink;
+    }
     const hpl = slotPal(pal, 'hands', MAIN_HANDS[L.hands] ?? 'ink');
     switch (L.hands) {
+      case 'paws': {
+        // cat paws: a round mitt with three toe bumps and red beans
+        const ox = x + dx * 2 * s, oy = y + dy * 2 * s;
+        ctx.fillStyle = hpl.paper; ctx.strokeStyle = hpl.ink; ctx.lineWidth = 1.6 * wpp + 0.4;
+        ctx.beginPath(); ctx.arc(ox, oy, 6.5 * s, 0, TAU); ctx.fill(); ctx.stroke();
+        for (const k of [-1, 0, 1]) { ctx.beginPath(); ctx.arc(ox + dx * 5.5 * s + nx * k * 3.6 * s, oy + dy * 5.5 * s + ny * k * 3.6 * s, 2.4 * s, 0, TAU); ctx.fill(); ctx.stroke(); }
+        ctx.fillStyle = hpl.paper === INK_RED ? INK_PAPER : INK_RED;
+        ctx.beginPath(); ctx.arc(ox, oy, 2.6 * s, 0, TAU); ctx.fill();
+        break;
+      }
       case 'fingerless': {
         ctx.fillStyle = hpl.ink; ctx.beginPath(); ctx.arc(x - dx * 1.5 * s, y - dy * 1.5 * s, 4.2 * s, 0, TAU); ctx.fill();
         ctx.strokeStyle = hpl.paper; ctx.lineWidth = 1 * wpp + 0.2; ctx.beginPath();

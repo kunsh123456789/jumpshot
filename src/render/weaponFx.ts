@@ -5,6 +5,8 @@ import { DRAW } from './drawStyle';
 import { INK } from './ink';
 import { drawToss, drawStyledBeam } from './weaponFx2';
 import { drawWeaponSkin } from './weaponSkins';
+import { HERO_LOOK } from '../data/hero';
+import { tint } from './heroCos';
 
 /**
  * Weapon visuals in world space (revision pass 7), shared by every look:
@@ -43,7 +45,8 @@ export function drawWeaponFx(ctx: CanvasRenderingContext2D, w: World, alpha: num
   if (ws.ropeVisible && w.weapon.ropeStyle === 'whip') {
     // whip / scythe tether: one thin taut line with a small crack at the end
     const R = ws.rope;
-    ctx.strokeStyle = ink; ctx.lineWidth = 1.8 * wpp + 0.6;
+    const leash = DRAW.ink && w.weapon.id === 'whip' && HERO_LOOK.skins.whip === 'leash';
+    ctx.strokeStyle = leash ? tint('skin', INK.red) : ink; ctx.lineWidth = (leash ? 2.8 : 1.8) * wpp + 0.6;
     ctx.beginPath(); ctx.moveTo(R[0].x, R[0].y);
     for (let i = 1; i < R.length; i++) ctx.lineTo(R[i].x, R[i].y);
     ctx.stroke();
