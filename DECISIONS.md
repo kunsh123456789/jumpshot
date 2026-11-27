@@ -720,9 +720,16 @@ Yank and Rodeo reuse the hook's tether moves; Disarm needed a new `x2.disarm`.
 
 **Training Room.** A new `'training'` state next to `'tutorial'`: no wave spawns, the hero is healed so it can't die (even with the dummy attacking), Specials may target the dummy (`World.trainingRoom`), and Pause → Restart restarts training. The dummy walks back to its spot after a hit; the bag never moves and only swings (a spring on `Fighter.spriteAng`, render only).
 
-**Sprites.** The sketches were trimmed, turned into transparent ink-coloured PNGs (`src/assets/targets/`) and bundled like the audio. Hit detection stays on the dummy's rig; the sprite is visual only.
+**Targets: references, not pasted images.** The first build pasted the user's Dummy and Bag drawings in as images, but they meant them as references. Both are now redrawn in the game's ink style in `render/targetArt.ts`:
+- paper fill and ink outlines at the enemies' line weight, re-jittered each drawing step so they boil like the figures;
+- the Dummy keeps the sketch's big round head with X eyes, the stubby-sleeved shirt, one post and a base plate, plus a red bullseye;
+- the Bag keeps the sketch's tapered body on a rope, with X eyes near the top and the wraps as red tape.
+
+The PNGs are gone. Hit detection stays on the dummy's rig; the art is visual only.
 
 **Ice Spear finisher** (`ko.ice`): a lunge drawing (`cine_lunge`), the spear as a cine visual drawn by `render/cineFx.ts`, an invert flash as the impact frame, then the existing shatter effect.
+- Second pass: the spear didn't look like one. It is now a black ink shaft running through both of the hero's actual hand joints (with grip wraps), with a long blue ice-crystal head (facets and frost chips) that comes out through the enemy, as in the sketch.
+- The Ice weapon's own held art is hidden during the lunge, so the hero holds only the spear.
 
 **Laser Eyes** is a trait (`sim/powers.ts`), not a separate system, so it uses the same two slots.
 - Hold jump after the apex to hover and climb slowly (150 frames of fuel, refilled by landing).

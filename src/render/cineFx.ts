@@ -2,6 +2,7 @@ import type { World } from '../sim/world';
 import { DRAW } from './drawStyle';
 import { INK } from './ink';
 import { WORLD } from '../data/tuning';
+import { J } from './rig';
 
 /**
  * Cinematic visuals (pass 8): the persistent shapes a finisher / Special script
@@ -95,18 +96,27 @@ export function drawCineFx(ctx: CanvasRenderingContext2D, w: World, _alpha: numb
     ctx.strokeStyle = paperCol; ctx.lineWidth = (4 * k + 1) * wpp;
     ctx.beginPath(); ctx.moveTo(s.x1 + (s.x2 - s.x1) * 0.1, s.y1 + (s.y2 - s.y1) * 0.1); ctx.lineTo(s.x2 - (s.x2 - s.x1) * 0.1, s.y2 - (s.y2 - s.y1) * 0.1); ctx.stroke();
   }
-  // ---- Ice Spear finisher (Pixel look only): a blue spear with a triangular ice head ----
+  // ---- Ice Spear finisher (Pixel look only): a black shaft through both of the hero's hands, a crystal ice head ----
   if (v.spear && DRAW.ink) {
-    const sp2 = v.spear, dx = sp2.x2 - sp2.x1, dy = sp2.y2 - sp2.y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
-    ctx.strokeStyle = INK.blue; ctx.lineWidth = 5.5 * wpp + 1;
-    ctx.beginPath(); ctx.moveTo(sp2.x1, sp2.y1); ctx.lineTo(sp2.x2 - ux * 22, sp2.y2 - uy * 22); ctx.stroke();
-    // the head: a hollow triangle (paper inside, blue outline) like the sketch
-    const hx = sp2.x2, hy = sp2.y2, nx = -uy, ny = ux;
-    ctx.fillStyle = INK.paper; ctx.lineWidth = 3.2 * wpp + 0.8;
-    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx - ux * 40 + nx * 16, hy - uy * 40 + ny * 16); ctx.lineTo(hx - ux * 40 - nx * 16, hy - uy * 40 - ny * 16); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // frost ticks along the shaft
-    ctx.lineWidth = 2 * wpp + 0.5; sd = 1301 + step * 5; ctx.beginPath();
-    for (let k = 0; k < 4; k++) { const t = 0.15 + k * 0.2 + rnd() * 0.06, px = sp2.x1 + dx * t, py = sp2.y1 + dy * t; ctx.moveTo(px + nx * 7, py + ny * 7); ctx.lineTo(px - nx * 7, py - ny * 7); }
+    const hp = w.player, jt = hp.anim.joints, d = hp.facing || 1;
+    const ax = jt[J.handA * 2], ay = jt[J.handA * 2 + 1], bx = jt[J.handB * 2], by = jt[J.handB * 2 + 1];
+    const y = (ay + by) / 2;
+    const back = d > 0 ? Math.min(ax, bx) : Math.max(ax, bx);
+    const x1 = back - d * 95, x2 = v.spear.x2;
+    sd = 1301 + step * 5;
+    // the shaft: a strong ink line with grip wraps where the hands hold it
+    ctx.strokeStyle = INK.ink; ctx.lineWidth = 3.4 * wpp + 1.2;
+    ctx.beginPath(); ctx.moveTo(x1, y + (rnd() - 0.5)); ctx.lineTo(x2 - d * 40, y + (rnd() - 0.5)); ctx.stroke();
+    ctx.lineWidth = 2 * wpp + 0.6; ctx.beginPath();
+    for (const hx of [ax, bx]) { ctx.moveTo(hx - 3, y - 6); ctx.lineTo(hx + 3, y + 6); }
+    ctx.stroke();
+    // the head: a long ice crystal (paper inside, blue outline and facets) with a few frost chips
+    const L = 48, Wd = 15, tipX = x2, bx2 = x2 - d * L, sx = x2 - d * L * 0.62;
+    ctx.fillStyle = INK.paper; ctx.strokeStyle = INK.blue; ctx.lineWidth = 2.8 * wpp + 0.8;
+    ctx.beginPath(); ctx.moveTo(tipX, y); ctx.lineTo(sx, y - Wd); ctx.lineTo(bx2, y - 4); ctx.lineTo(bx2, y + 4); ctx.lineTo(sx, y + Wd); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 1.6 * wpp + 0.4; ctx.beginPath();
+    ctx.moveTo(bx2, y); ctx.lineTo(tipX - d * 4, y); ctx.moveTo(sx, y - Wd); ctx.lineTo(sx + d * 10, y); ctx.lineTo(sx, y + Wd);
+    for (let n = 0; n < 3; n++) { const cx = tipX - d * (8 + rnd() * 30), cy = y + (rnd() - 0.5) * 34; ctx.moveTo(cx - 3, cy); ctx.lineTo(cx + 3, cy); ctx.moveTo(cx, cy - 3); ctx.lineTo(cx, cy + 3); }
     ctx.stroke();
   }
   // ---- weapon Specials (pass 9) ----

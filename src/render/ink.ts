@@ -1,7 +1,7 @@
 import { J, JOINT_N } from './rig';
 import { heldWeapon } from './weaponFx';
 import { HERO_LOOK } from '../data/hero';
-import { drawTargetSprite } from './targetSprites';
+import { drawTarget } from './targetArt';
 import { drawHeroGear } from './heroGear';
 import type { Fighter } from '../sim/fighter';
 import { TAU } from '../core/math';
@@ -188,7 +188,7 @@ export const inkHooks: InkHooks = { smear: null };
  * plus a red pixel burst, and a few props.
  */
 export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: number, time: number, wpp: number): void {
-  if (f.sprite && drawTargetSprite(ctx, f, alpha, time)) return;
+  if (f.sprite && drawTarget(ctx, f, alpha, time, wpp)) return;
   const j = interpJoints(f, alpha, time);
   const a = f.anim;
   const step = Math.floor(time * 12);

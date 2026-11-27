@@ -141,7 +141,7 @@ The interface is a bold arcade-fighter design: navy plates, a cyan / magenta / g
 
 - **Cosmetics** (Pixel look): headband colour (red, blue, black, none), headgear (cap, top hat, crown, halo, cat ears, goggles) and hands (wraps, mitts).
 
-**Training Room.** HOME → TRAINING ROOM (or the title's TRAINING button). A dojo with one target and no waves or game over: your drawn **Dummy**, your drawn **Punching Bag** (hangs and swings when hit) or the stick figure. The bar has TARGET, DUMMY: STILL / ATTACKS (so you can practise dodging and parrying), WEAPON (swap), FILL SPECIAL (Specials can hit the dummy here), RESET and EXIT, with live LAST / COMBO / TOTAL / DPS readouts. Pause → Restart restarts the Training Room.
+**Training Room.** HOME → TRAINING ROOM (or the title's TRAINING button). A dojo with one target and no waves or game over: a training **Dummy** and a **Punching Bag** (hangs and swings when hit), drawn in the game's ink style from your sketches, or the stick figure. The bar has TARGET, DUMMY: STILL / ATTACKS (so you can practise dodging and parrying), WEAPON (swap), FILL SPECIAL (Specials can hit the dummy here), RESET and EXIT, with live LAST / COMBO / TOTAL / DPS readouts. Pause → Restart restarts the Training Room.
 
 **Finishers from your sketches.** Hammer: **HAMMER CRUSH**. Ice: **ICE SPEAR**: the last enemy is dazed, you lunge, a spear drives clean through it with an impact-frame flash, then it shatters.
 
