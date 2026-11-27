@@ -196,24 +196,6 @@ export class Clip3Fx {
     ctx.save();
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     this.drawSimBits(ctx, w, wpp, G, step);
-    // Earth's Dust Dome (134-144): a dithered dome of dust churning round the hero, boulders orbiting it
-    const p = w.player, mv = p.state === 'move' ? p.move : null;
-    if (mv && mv.id === 'ea_dome' && p.moveFrame >= p.effStartup - 4) {
-      const k = Math.min(1, (p.moveFrame - p.effStartup + 4) / 8), R = 240 * k, cx = p.x, cy = G;
-      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = this.pattern(ctx, INK.ink) ?? INK.ink;
-      const c0 = this.m.transformPoint(new DOMPoint(cx, cy)), c1 = this.m.transformPoint(new DOMPoint(cx + R, cy - R * 0.8));
-      ctx.beginPath(); ctx.ellipse(c0.x, c0.y, Math.abs(c1.x - c0.x), Math.abs(c1.y - c0.y), 0, Math.PI, TAU); ctx.fill(); ctx.restore();
-      sd = 333 + step; ctx.strokeStyle = INK.ink; ctx.lineWidth = 2.2 * wpp + 0.5; ctx.beginPath();
-      for (let i = 0; i <= 24; i++) { const a = Math.PI + (i / 24) * Math.PI, rr = R * (0.94 + rnd() * 0.1); const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr * 0.8; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
-      ctx.stroke();
-      for (let i = 0; i < 3; i++) {
-        const a = this.time * 5 + (i / 3) * TAU, bx = cx + Math.cos(a) * R * 1.05, by = cy - R * 0.45 + Math.sin(a) * R * 0.3, r = 18;
-        ctx.fillStyle = INK.paper; ctx.beginPath();
-        for (let q = 0; q < 7; q++) { const b = (q / 7) * TAU + a, rr = r * (0.8 + (q % 2) * 0.3); ctx.lineTo(bx + Math.cos(b) * rr, by + Math.sin(b) * rr); }
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = this.pattern(ctx, INK.ink) ?? INK.ink; ctx.fill();
-      }
-    }
     // dust mounds that stay: dithered humps along the floor
     for (const d of this.mounds) {
       const wd = 70 * d.a, h = 24 * d.a;

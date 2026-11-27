@@ -12,7 +12,7 @@ import type { Fighter } from '../../sim/fighter';
  * weapon by adding a file here and listing it in index.ts.
  */
 export type WeaponId = 'fists' | 'hook' | 'staff' | 'laser' | 'raygun'
-  | 'whip' | 'hammer' | 'daggers' | 'ice' | 'scythe' | 'cape' | 'fan' | 'earth';
+  | 'whip' | 'hammer' | 'daggers' | 'ice' | 'scythe';
 
 export interface MovePair { light: string; heavy: string }
 /**

@@ -874,3 +874,8 @@ All the effects live in `render/clip3Fx.ts`. They are Pixel look only and render
   - The VS card doesn't freeze the fight.
   - The Dust Dome's boulders are visual, not kickable.
   - The indoor stairs are background only.
+
+## The clip 3 weapons were removed
+- The player asked to remove all the new weapons. Cape, War Fan and Earth are gone: the weapon file, the registry, the families and Special names, the icons, and the Earth Dust Dome visual.
+- A save that had one of them equipped falls back to Fists (`weaponById`).
+- Everything else from clip 3 stays, including the Flame blade, which is a Staff skin.
