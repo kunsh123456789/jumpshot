@@ -54,3 +54,27 @@ New material: `sheet_000-024.png` (the opening frames, not seen before) and `gif
 | gif2 262-284 | Close grappling into an over-the-shoulder throw with a smear | **Over-the-shoulder slam** after the Long Arm (released behind the hero) |
 | gif2 336-356 | Dizzy stars around a stunned fighter | The stunned stars already exist |
 | sheet_000-024 + all | Low crouches, coiled extremes, held contact drawings, crescent smears on limbs | **Fists Reference v2** set (Legacy kept as a setting) |
+
+## Third clip: `reference/gif3_sheet0-4.png` (frames 0-298, every 2nd)
+
+Sent as more reference. What it shows, and what the game takes from it:
+
+| Frames | What happens | Taken into the game |
+|---|---|---|
+| 0-10 | A row of fighters mid-action, then a hard cut to a dithered "production" card | Hard cuts and dither transitions, no fades |
+| 12-30 | Black title card, a planet rising, blue-rimmed stars | Black frames used as punctuation |
+| 32-46 | Clouds drawn as single jagged outlines, no fill | Outline-only shapes for big effects |
+| 48-50 | Vertical rain streaks | (not used yet) |
+| 62 | **Impact frame**: a full black frame with white radial spikes from one point, a white jagged lightning bolt and thin red lines | The Ice Special's shatter impact frame copies this: black screen, white radial wedges and red lines from the shatter point |
+| 64-72 | A huge cloud outline, then a dithered checker frame | Dithered stipple as a flash between two drawings |
+| 74-76 | An explosion: jagged outline shards flying out, dust settling as dotted stipple | Shattered ice flies out as outline shards |
+| 98-106 | A dash leaving a dithered black smear column | (reference for future dash smears) |
+| 110-132 | Fighters with red scribble-hatch weapon smears; a sword thrust | Red scribble smears (already in the game) |
+| 134-146 | A big **dithered dust cloud** with chunky rocks thrown out of it | Dithered fills on big clouds |
+| 160-166 | A crater left in the floor that stays | Persistent floor damage (already in the game) |
+| 168-178 | A dither fade to black, then a house with brick hatching, a cloaked fighter | Background hatching density |
+| 182-214 | A giant ball, a cape swirl, a fighter thrown through the air, an inverted **beam impact frame** (208) and a long tapered beam (206-214) | Long tapered beams; inverted frames on the big hit |
+| 216-238 | The house wall blasted open into a black dithered hole | Black dithered holes for big destruction |
+| 242-276 | An indoor stage with stairs, crates and hanging lamps | Stage props drawn as flat outlines with dither shading |
+| 278-298 | A **VS screen**: inverted image, a red jagged "VS", red pixel squares in the corners, "5x" text | (reference for a future VS / boss intro card) |
+

@@ -65,6 +65,11 @@ export interface CineVisual {
   marks: number[];
   /** Ice Spear finisher: the spear held in the hero's hands, as a line from its butt to its tip. */
   spear: { x1: number; y1: number; x2: number; y2: number } | null;
+  /** Ice Special finisher (Pixel look): enemies encased in ice chunks (k = 0..1 growth), the shatter's impact
+   *  frame (t = frames since), and the flying ice shards as a flat list x, y, vx, vy, angle, spin, size. */
+  encase: { x: number; y: number; s: number; k: number }[];
+  impact: { x: number; y: number; t: number } | null;
+  shards: number[];
 }
 
 export interface CineScript {
@@ -78,7 +83,7 @@ export interface CineScript {
   end: (c: CineCtx) => void;
 }
 
-const emptyVis = (): CineVisual => ({ beam: null, ropes: [], tornado: null, slash: [], bubble: null, dark: 0, crack: null, freeze: 0, bw: 0, scythe: null, marks: [], spear: null });
+const emptyVis = (): CineVisual => ({ beam: null, ropes: [], tornado: null, slash: [], bubble: null, dark: 0, crack: null, freeze: 0, bw: 0, scythe: null, marks: [], spear: null, encase: [], impact: null, shards: [] });
 
 export class CinePlayer {
   script: CineScript | null = null;

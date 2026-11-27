@@ -2,6 +2,8 @@ import { ANIMS } from './anims';
 import './anims/cineSet';
 import { WORLD } from './tuning';
 import { isBoss } from './enemies';
+import { CINE } from './tuning';
+import { DRAW } from '../render/drawStyle';
 import type { Fighter } from '../sim/fighter';
 import { fx, hero, place, pose, strike, tween, type CineCtx, type CineScript } from '../sim/cine';
 
@@ -637,10 +639,18 @@ const spDaggers: CineScript = {
 /** Deep Freeze: the whole screen freezes solid, enemies become ice statues, one punch shatters everything. */
 const spIce: CineScript = {
   id: 'sp.ice', name: 'DEEP FREEZE',
-  len: () => 78,
-  start: (c) => { grabAll(c); },
+  len: (c) => (c.v.fin ? 104 : 78),
+  start: (c) => {
+    grabAll(c);
+    // Pixel look only (the player's sketch): when the Special will KO someone it plays as a finisher instead.
+    const dmg = (20 + c.tier * 5) * c.dmg;
+    if (DRAW.ink && c.group.some((e) => !isBoss(e) && e.hp <= dmg * (e.kind === 'elite' ? CINE.eliteMult : 1))) {
+      c.v.fin = 1; fx(c, 'slowmo', c.p.x, c.p.cy, 0.3); fx(c, 'focus', c.p.x, c.p.cy, 0.45);
+    }
+  },
   frame: (c) => {
     const p = c.p, f = c.f;
+    if (c.v.fin) { iceFinisher(c); return; }
     c.vis.freeze = f < 44 ? tween(c, 0, 18, 0, 1) : tween(c, 44, 62, 1, 0);
     for (const e of c.group) { pose(e, 'hurtHeavy', 0); if (f < 44) { e.frozen = 2; } }
     if (f === 10) fx(c, 'stars', p.x, p.cy - 40, 0.6);
@@ -650,8 +660,44 @@ const spIce: CineScript = {
       for (const e of c.group) { c.w.events.emit('shatter', { x: e.cx, y: e.cy }); strike(c, e, 20 + c.tier * 5, { vx: (Math.sign(e.x - p.x) || 1) * 800, vy: -900, release: true, kind: 'launch', weight: 1.1 }); }
     }
   },
-  end: (c) => { c.vis.freeze = 0; releaseAll(c, -600); },
+  end: (c) => { c.vis.freeze = 0; c.vis.encase = []; c.vis.impact = null; c.vis.shards = []; releaseAll(c, -600); },
 };
+
+/**
+ * Deep Freeze as a finisher (Pixel look, from the player's sketch): the camera zooms in, ice chunks grow over
+ * every caught enemy, the hero points at them, and they SHATTER on an impact frame, chunks flying apart.
+ */
+const SHATTER_F = 60;
+function iceFinisher(c: CineCtx): void {
+  const p = c.p, f = c.f, v = c.vis;
+  for (const e of c.group) if (e.alive) { pose(e, 'hurtHeavy', 0); if (f < SHATTER_F) e.frozen = 2; }
+  if (f < 18) hero(c, 'cine_charge', f % 6); else hero(c, 'cine_point', f - 18);
+  if (f === 18 && c.group.length) { const e = c.group[0]; p.facing = e.x >= p.x ? 1 : -1; }
+  if (f < SHATTER_F) {
+    v.encase = c.group.filter((e) => e.alive).map((e, i) => ({ x: e.x, y: e.y, s: e.scale, k: tween(c, 6 + i * 3, 20 + i * 3, 0, 1) }));
+    if (f === 20) fx(c, 'stars', p.x, p.cy - 40, 0.5);
+    if (f === 52) fx(c, 'focus', p.x, p.cy, 0.55);
+  }
+  if (f === SHATTER_F) {
+    let sx = 0, sy = 0;
+    for (const e of c.group) { sx += e.cx; sy += e.cy; }
+    const n = Math.max(1, c.group.length);
+    v.impact = { x: sx / n, y: sy / n, t: 0 };
+    // every chunk bursts into shards
+    for (const b of v.encase) for (let k = 0; k < 9; k++) {
+      const a = -Math.PI * (0.1 + 0.8 * ((k * 0.37 + b.x * 0.001) % 1)), sp = 500 + ((k * 131) % 7) * 110;
+      v.shards.push(b.x + (k - 4) * 9 * b.s, b.y - (30 + ((k * 53) % 9) * 18) * b.s, Math.cos(a) * sp * (k % 2 ? 1 : -1), Math.sin(a) * sp, k, (k % 3 - 1) * 0.3, (12 + (k % 4) * 6) * b.s);
+    }
+    v.encase = [];
+    fx(c, 'shake', p.x, p.cy, 2.2); fx(c, 'boom', v.impact.x, v.impact.y);
+    for (const e of c.group) { c.w.events.emit('shatter', { x: e.cx, y: e.cy }); e.deathStyle = 0; strike(c, e, 20 + c.tier * 5, { vx: (Math.sign(e.x - p.x) || 1) * 800, vy: -900, release: true, kind: 'launch', weight: 1.3 }); }
+  }
+  if (v.impact && ++v.impact.t > 7) v.impact = null;
+  // shards fly and fall off the floor
+  const s = v.shards;
+  for (let i = 0; i < s.length; i += 7) { s[i] += s[i + 2] / 60; s[i + 1] += s[i + 3] / 60; s[i + 3] += 1500 / 60; s[i + 4] += s[i + 5]; }
+  for (let i = s.length - 7; i >= 0; i -= 7) if (s[i + 1] > G + 10) s.splice(i, 7);
+}
 
 /** Reaper: the world drains to black and white; a giant shadow scythe sweeps the screen and their souls heal you. */
 const spScythe: CineScript = {

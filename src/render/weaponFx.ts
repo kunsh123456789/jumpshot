@@ -22,7 +22,7 @@ const TAU = Math.PI * 2;
 export function heldWeapon(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, col: string, wpp: number): void {
   if (f.team !== 'player' || f.state === 'ko') return;
   // Ice Spear finisher: the hero holds the spear (drawn by cineFx) instead of the weapon.
-  if (f.state === 'cine' && f.cineAnim === 'cine_lunge') return;
+  if (f.state === 'cine' && (f.cineAnim === 'cine_lunge' || f.cineAnim === 'cine_point')) return;
   const wd = weaponById(f.weapon);
   if (wd.held) wd.held(ctx, f, j, col, wpp);
 }

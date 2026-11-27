@@ -60,6 +60,18 @@ export function drawExtraFx(ctx: CanvasRenderingContext2D, w: World, alpha: numb
     if (!s.on || s.delay > 0) continue;
     const k = s.t < 4 ? s.t / 4 : 1 - (s.t - 4) / 12;
     const h = 80 * Math.max(0, k);
+    if (DRAW.ink && s.move && s.move.id.startsWith('ic')) {
+      // Pixel look, Ice (from the player's sketch): blue-outlined crystal shards, a zig-zag row that grows
+      // taller the further it runs from the hero.
+      const H = h * (0.75 + 0.32 * s.i), G0 = WORLD.groundY;
+      ctx.fillStyle = paper; ctx.strokeStyle = ICE; ctx.lineWidth = 2.2 * wpp + 0.6;
+      ctx.beginPath();
+      ctx.moveTo(s.x - 22, G0); ctx.lineTo(s.x - 16, G0 - H * 0.5); ctx.lineTo(s.x - 9, G0 - H * 0.42);
+      ctx.lineTo(s.x - 1, G0 - H); ctx.lineTo(s.x + 9, G0 - H * 0.55); ctx.lineTo(s.x + 15, G0 - H * 0.66); ctx.lineTo(s.x + 22, G0);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s.x - 1, G0 - H * 0.82); ctx.lineTo(s.x + 2, G0 - H * 0.35); ctx.stroke();
+      continue;
+    }
     ctx.fillStyle = ink;
     ctx.beginPath();
     for (const o of [-14, 0, 14]) { const hh = h * (o === 0 ? 1 : 0.65); ctx.moveTo(s.x + o - 9, WORLD.groundY); ctx.lineTo(s.x + o, WORLD.groundY - hh); ctx.lineTo(s.x + o + 9, WORLD.groundY); }

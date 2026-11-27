@@ -3,6 +3,7 @@ import { DRAW } from './drawStyle';
 import { INK } from './ink';
 import { WORLD } from '../data/tuning';
 import { J } from './rig';
+import { settings } from '../core/settings';
 
 /**
  * Cinematic visuals (pass 8): the persistent shapes a finisher / Special script
@@ -190,8 +191,74 @@ export function drawCineFx(ctx: CanvasRenderingContext2D, w: World, _alpha: numb
       ctx.beginPath(); ctx.moveTo(x - dx * 0.8, y - dy * 0.8); ctx.lineTo(x + dx * 0.8, y + dy * 0.8); ctx.stroke();
     }
   }
+  if (DRAW.ink) drawIceFinisher(ctx, v, step, wpp);
   void WORLD;
   ctx.restore();
+}
+
+/** Chunk layout over a standing body (dx, dy from the feet in body units, half-width, half-height). */
+const CHUNKS = [[0, -182, 28, 26], [0, -128, 30, 36], [-40, -132, 16, 34], [40, -132, 16, 34], [-16, -46, 18, 44], [16, -46, 18, 44]];
+
+/**
+ * Ice Special finisher (Pixel look, from the player's sketch + reference clip frame 62): blue-outlined ice
+ * chunks locking every body part, a full black impact frame with white wedges and red streaks bursting
+ * from the shatter point, then the chunks flying apart as shards.
+ */
+function drawIceFinisher(ctx: CanvasRenderingContext2D, v: NonNullable<World['cine']['ctx']>['vis'], step: number, wpp: number): void {
+  if (v.encase.length) {
+    ctx.strokeStyle = INK.blue; ctx.lineWidth = 2.4 * wpp + 0.6;
+    for (const b of v.encase) {
+      if (b.k <= 0) continue;
+      sd = 401 + Math.floor(b.x) + step;
+      for (const [dx, dy, hw, hh] of CHUNKS) {
+        const cx = b.x + dx * b.s, cy = b.y + dy * b.s, rx = hw * b.s * b.k + 4, ry = hh * b.s * b.k + 4;
+        ctx.beginPath();
+        for (let i = 0; i < 7; i++) {
+          const a = (i / 7) * TAU + 0.3, j = 0.86 + rnd() * 0.22;
+          const x = cx + Math.cos(a) * rx * j, y = cy + Math.sin(a) * ry * j;
+          if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+        }
+        ctx.closePath(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - rx * 0.5, cy - ry * 0.55); ctx.lineTo(cx - rx * 0.2, cy - ry * 0.15); ctx.stroke();
+      }
+    }
+  }
+  if (v.impact) {
+    const t = v.impact.t, m = ctx.getTransform();
+    const sx = m.a * v.impact.x + m.c * v.impact.y + m.e, sy = m.b * v.impact.x + m.d * v.impact.y + m.f;
+    const W = ctx.canvas.width, H = ctx.canvas.height, R = Math.hypot(W, H);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (t < 4 && !settings.reduceFlashes) { ctx.fillStyle = INK.ink; ctx.fillRect(0, 0, W, H); }
+    sd = 77 + step;
+    ctx.fillStyle = INK.paper;
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * TAU + rnd() * 0.3, wd = 0.03 + rnd() * 0.05, r0 = 30 + rnd() * 70 + t * 30;
+      ctx.beginPath();
+      ctx.moveTo(sx + Math.cos(a) * r0, sy + Math.sin(a) * r0);
+      ctx.lineTo(sx + Math.cos(a - wd) * R, sy + Math.sin(a - wd) * R); ctx.lineTo(sx + Math.cos(a + wd) * R, sy + Math.sin(a + wd) * R);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.strokeStyle = INK.red; ctx.lineWidth = 4 * wpp + 1;
+    ctx.beginPath();
+    for (let i = 0; i < 7; i++) {
+      const a = rnd() * TAU, r0 = 60 + rnd() * 80;
+      ctx.moveTo(sx + Math.cos(a) * r0, sy + Math.sin(a) * r0); ctx.lineTo(sx + Math.cos(a) * R * 0.6, sy + Math.sin(a) * R * 0.6);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+  const s = v.shards;
+  if (s.length) {
+    ctx.fillStyle = INK.paper; ctx.strokeStyle = INK.blue; ctx.lineWidth = 2.2 * wpp + 0.5;
+    for (let i = 0; i < s.length; i += 7) {
+      const x = s[i], y = s[i + 1], a = s[i + 4], r = s[i + 6];
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      ctx.lineTo(x + Math.cos(a + 2.3) * r * 0.6, y + Math.sin(a + 2.3) * r * 0.6);
+      ctx.lineTo(x + Math.cos(a + 3.9) * r * 0.75, y + Math.sin(a + 3.9) * r * 0.75);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  }
 }
 
 /**

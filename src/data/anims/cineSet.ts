@@ -128,5 +128,11 @@ export const iceLunge = drawn({ id: 'cine_lunge', strike: 'arm', drawings: [
   { hold: 60, p: { rootY: -55, lean: 0.7, head: -0.22, aU: 1.56, aL: 0.0, bU: 1.48, bL: 0.06, footA: 63, footB: -59, flex: -6, stretch: 1.09 } },
 ] });
 
-const ALL: AnimDef[] = [axeWind, axeHit, hammerUp, hammerSlam, iceLunge, roundhouse, xslash, spinGrab, hurl, pileDrive, erupt, charge, beamHold, activate, activateAir, plantSplit];
+/** Ice Special finisher (from the player's sketch): standing tall, one arm thrust out pointing at the frozen enemies. */
+export const icePoint = drawn({ id: 'cine_point', drawings: [
+  { hold: 4, p: { rootY: -10, lean: -0.05, head: 0.05, aU: 1.1, aL: 0.5, bU: 0.35, bL: 0.7, footA: 22, footB: -22, flex: -2 } },
+  { hold: 60, p: { rootY: -6, lean: -0.1, head: 0.1, aU: 1.0, aL: -0.05, bU: 0.25, bL: 0.5, footA: 26, footB: -24, flex: -2, stretch: 1.03 } },
+] });
+
+const ALL: AnimDef[] = [axeWind, axeHit, hammerUp, hammerSlam, iceLunge, icePoint, roundhouse, xslash, spinGrab, hurl, pileDrive, erupt, charge, beamHold, activate, activateAir, plantSplit];
 registerAnims(ALL, 'cineSet (pass 8)');

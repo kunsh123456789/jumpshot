@@ -196,7 +196,7 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
   const scribbled = f.state === 'dead' && f.deathStyle === 2;
   if (!scribbled && f.state === 'dead' && f.deadTimer > 14 && (step & 1)) return;
   if (f.state === 'dead' && f.deadTimer > 30) return;
-  if (f.team === 'player' && f.invuln > 0 && f.state !== 'dodge' && f.state !== 'move' && (step & 1)) return;
+  if (f.team === 'player' && f.invuln > 0 && f.state !== 'dodge' && f.state !== 'move' && f.state !== 'cine' && (step & 1)) return;
   // New movesets: the daggers' smoke-bomb vanish hides the hero; the scythe's phase flickers it.
   if (f.team === 'player' && (f.vanish > 0 || (f.phase > 0 && (step & 1)))) return;
   let col = inkColor(f);

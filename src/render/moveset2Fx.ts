@@ -44,6 +44,23 @@ export function drawMoveset2Fx(ctx: CanvasRenderingContext2D, w: World, time: nu
     if (!wl.on) continue;
     const a = Math.min(1, wl.t / 20), rise = Math.min(1, (wl.max - wl.t) / 8);
     const h = 230 * rise;
+    if (DRAW.ink) {
+      // Pixel look (from the player's sketch): a tall ice slab with a low step on the caster's side and a
+      // slanted top, paper inside, blue outline and facet shines. Blinks out in its last frames (no fades in 1-bit).
+      if (wl.t < 14 && (step & 1)) continue;
+      const s = wl.side, X = (dx: number) => wl.x + s * dx;
+      ctx.fillStyle = INK.paper; ctx.strokeStyle = INK.blue; ctx.lineWidth = 2.6 * wpp + 0.7;
+      ctx.beginPath();
+      ctx.moveTo(X(-30), G); ctx.lineTo(X(-30), G - h * 0.42); ctx.lineTo(X(-12), G - h * 0.49);
+      ctx.lineTo(X(-9), G - h); ctx.lineTo(X(22), G - h * 0.93); ctx.lineTo(X(24), G - h * 0.35); ctx.lineTo(X(28), G);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 1.6 * wpp + 0.4; ctx.beginPath();
+      ctx.moveTo(X(-2), G - h * 0.9); ctx.lineTo(X(4), G - h * 0.55);
+      ctx.moveTo(X(10), G - h * 0.82); ctx.lineTo(X(13), G - h * 0.68);
+      ctx.moveTo(X(-24), G - h * 0.36); ctx.lineTo(X(-18), G - h * 0.18);
+      ctx.stroke();
+      continue;
+    }
     ctx.globalAlpha = 0.6 * a; ctx.fillStyle = '#cdf3ff';
     ctx.beginPath(); ctx.moveTo(wl.x - 26, G); ctx.lineTo(wl.x - 20, G - h); ctx.lineTo(wl.x + 4, G - h - 22); ctx.lineTo(wl.x + 26, G - h * 0.9); ctx.lineTo(wl.x + 24, G); ctx.closePath(); ctx.fill();
     ctx.globalAlpha = a; ctx.strokeStyle = '#2a9be0'; ctx.lineWidth = 2.2 * wpp + 0.6; ctx.stroke();

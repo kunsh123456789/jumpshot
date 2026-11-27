@@ -21,7 +21,7 @@ export interface Shot {
   life: number; grav: number; homing: number; pierce: number; radius: number; spin: number;
   move: MoveDef | null; hits: Int32Array; nHits: number;
 }
-export interface Spike { on: boolean; x: number; delay: number; t: number; move: MoveDef | null; first: boolean }
+export interface Spike { on: boolean; x: number; delay: number; t: number; move: MoveDef | null; first: boolean; i: number }
 
 const MAX_SHOTS = 48, MAX_SPIKES = 24;
 
@@ -30,7 +30,7 @@ export class WeaponExtra {
     on: false, kind: '', x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, life: 0, grav: 0, homing: 0, pierce: 1, radius: 10, spin: 0,
     move: null, hits: new Int32Array(8), nHits: 0,
   }));
-  readonly spikes: Spike[] = Array.from({ length: MAX_SPIKES }, () => ({ on: false, x: 0, delay: 0, t: 0, move: null, first: true }));
+  readonly spikes: Spike[] = Array.from({ length: MAX_SPIKES }, () => ({ on: false, x: 0, delay: 0, t: 0, move: null, first: true, i: 0 }));
   /** Chain-lightning arcs to draw (x1,y1,x2,y2,t). */
   readonly arcs = new Float32Array(5 * 16);
   nArcs = 0;
@@ -68,7 +68,7 @@ export class WeaponExtra {
     for (let i = 0; i < K.count; i++) {
       const s = this.spikes.find((x) => !x.on);
       if (!s) return;
-      s.on = true; s.move = m; s.t = 0; s.first = i === 0;
+      s.on = true; s.move = m; s.t = 0; s.first = i === 0; s.i = i;
       // A single spike (geyser / pillar launcher) erupts under the target; lines start in front.
       const tx = K.count === 1 && p.target && p.target.alive && Math.abs(p.target.x - p.x) < 520 ? p.target.x : 0;
       s.x = tx || p.x + p.facing * (K.start + i * K.spacing) * p.scale;

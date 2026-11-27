@@ -745,3 +745,15 @@ The PNGs are gone. Hit detection stays on the dummy's rig; the art is visual onl
 - The Rhythm latency offset is **kept**: it is a calibration of your device and ear, not a preference, and losing it would mean re-running the calibration.
 - After the reset the panel reopens so every control shows its default, and the look, moveset, mode and layout listeners are notified.
 
+
+## Ice sketches (Glacier Wall, Crystal Rush, Deep Freeze finisher) — Pixel look only
+- **Glacier Wall** is redrawn from the sketch in the ink path only: a tall blue-outlined slab with a low step on the caster's side and a slanted top. It blinks out instead of fading. The neon drawing is unchanged.
+- **Crystal Rush** (`ic2_rush`) replaces the duplicate Lance in the new Ice moveset's ground ↗ heavy slot. Six crystal spikes zig-zag forward, each taller than the last, with a short freeze.
+  - In the Pixel look, every Ice spike move draws blue crystals instead of black triangles. `Spike.i` carries the index that sets the heights.
+- **Deep Freeze as a finisher:** when the Ice Special will KO at least one non-boss enemy, it plays the sketch's version (Pixel look only). The check uses the predicted damage after the elite multiplier.
+  1. Slow-mo and zoom in.
+  2. Ice chunks grow over each body part.
+  3. The hero points (`cine_point`, with the spear hidden).
+  4. The shatter: a black impact frame with white wedges and red streaks, taken from frame 62 of the reference clip and skipped with Reduce Flashes, then shards fly.
+  - The old Deep Freeze still plays otherwise, and always in the neon look. `data/cines.ts` reads `DRAW.ink` for this, as `handDrawn.ts` already does. The Classic fingerprint is unaffected.
+- **Fix:** the hero no longer blinks through cinematics in the Pixel look. The cinematic invulnerability was triggering the invulnerability blink.
