@@ -861,3 +861,16 @@ All the effects live in `render/clip3Fx.ts`. They are Pixel look only and render
   - **Earth** (Special: LANDSLIDE, using the fists family): rock-fist string; Boulder Kick (a heavy rolling rock); pebble toss; Dust Dome (drawn as a dithered dome with orbiting boulders); rock-pillar launcher; rock spikes; a quake line of spikes; tremor stomp; air rock, rock uppercut, and a Meteor Drop with an impact shockwave.
 - **Pixel look only:** they're offered in the loadout only in the Pixel look. In the other looks, `weaponById` falls back to Fists, so the neon look and Classic are unchanged.
 - **Tests:** they are part of the fuzz test, which now reports the weapon actually equipped, and their Specials were run start to finish.
+- **Review fixes:**
+  - Bosses and the training dummy never break walls or pass through them, and a ring-out needs that side to be broken.
+  - The red tear only fires on blade hits that actually K.O., at most once a second.
+  - The stipple flash fires only for meteors, wall breaks and boss phase changes, at most once a second. Hammer shockwaves had been triggering it 20 times a minute.
+  - Full-screen frames only fire in the Pixel look, not in Crisp.
+  - The clash is won by a new swipe (the controller's swipe count), not by a move's automatic follow-up.
+  - Verified: a boss clamps at a broken wall; the ball deals 14 standing, 0 when jumped, and is parried by a parry; a clash is won with a swing and lost without one; fuzz passes in Rhythm Mode and on the Colossus wave; and the Classic fingerprint is identical.
+- **Where the build differs from the report:**
+  - Swords plant on blade K.O.s; thrown weapons don't stick in the floor.
+  - Parasol Drift pops you up; it isn't a slow glide.
+  - The VS card doesn't freeze the fight.
+  - The Dust Dome's boulders are visual, not kickable.
+  - The indoor stairs are background only.

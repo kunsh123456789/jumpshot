@@ -38,7 +38,7 @@ export class Clip3Sim {
 
   /** A hard wall bounce (physics.ts): crack the wall, or smash through it. Returns true if it broke. */
   wallHit(w: World, e: Fighter, dir: number, speed: number): boolean {
-    if (!this.on || e.team !== 'enemy' || isBoss(e)) return false;
+    if (!this.on || !this.breaker(e)) return false;
     const side = dir > 0 ? 0 : 1;
     if (this.broken[side]) return false;
     this.cracks[side]++;
@@ -53,10 +53,13 @@ export class Clip3Sim {
 
   /** May this body pass the page edge at x (a broken wall, while it is flying)? */
   passable(e: Fighter): boolean {
-    if (!this.on || e.team !== 'enemy') return false;
+    if (!this.on || !this.breaker(e)) return false;
     const side = e.x < WORLD.arenaW / 2 ? 0 : 1;
     return this.broken[side] && !e.grounded;
   }
+
+  /** Only ordinary enemies break walls and pass through them (never bosses or the training dummy). */
+  private breaker(e: Fighter): boolean { return e.team === 'enemy' && !isBoss(e) && e.kind !== 'dummy'; }
 
   spawnBall(w: World, boss: Fighter): void {
     if (!this.on) return;
@@ -73,7 +76,7 @@ export class Clip3Sim {
     if (p.state !== 'move' || !m || p.moveFrame < p.effStartup || p.moveFrame >= p.effStartup + m.active) return false;
     if (Math.abs(p.x - e.x) > CLASH.reach || Math.sign(e.x - p.x) !== p.facing || Math.sign(p.x - e.x) !== e.facing) return false;
     const x = (p.x + e.x) / 2, y = (p.cy + e.cy) / 2;
-    this.clash = { e, t: 0, serial: p.moveSerial, x, y };
+    this.clash = { e, t: 0, serial: w.ctrl.swipes, x, y };
     e.attack = null; e.vx = 0; e.telegraph = 0;
     e.setState('recover', CLASH.window);
     e.hitstop = CLASH.freeze; p.hitstop = Math.max(p.hitstop, CLASH.freeze);
@@ -87,8 +90,9 @@ export class Clip3Sim {
     const p = w.player;
     // ring-outs through a broken wall
     for (const e of w.enemies) {
-      if (e.remove || e.team !== 'enemy') continue;
-      if (e.x < -160 || e.x > WORLD.arenaW + 160) {
+      if (e.remove || !this.breaker(e)) continue;
+      const out = e.x < -160 ? 0 : e.x > WORLD.arenaW + 160 ? 1 : -1;
+      if (out >= 0 && this.broken[out]) {
         if (e.alive) { ko(w, e, e.x < 0 ? -1 : 1); w.events.emit('text', { text: 'RING OUT!', x: Math.max(80, Math.min(WORLD.arenaW - 80, e.x)), y: e.y - 160, color: '#e22424', size: 30 }); }
         e.remove = true;
       }
@@ -115,7 +119,7 @@ export class Clip3Sim {
     const c = this.clash;
     if (c) {
       c.t++;
-      if (p.moveSerial !== c.serial && c.e.alive) {
+      if (w.ctrl.swipes !== c.serial && c.e.alive) {
         const e = c.e;
         e.poise = 0; e.ai.stagger = 60; e.setState('stunned', 70);
         e.vx = Math.sign(e.x - p.x) * 260;

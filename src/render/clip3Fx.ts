@@ -52,13 +52,18 @@ export class Clip3Fx {
   /** World -> low-res layer transform captured while drawing the world (for screen frames at a world point). */
   private m: DOMMatrix | null = null;
   private pats = new Map<string, CanvasPattern>();
+  /** Cooldowns (s) so full-screen frames stay rare. */
+  private tearCd = 0; private stippleCd = 0;
+  /** Full-screen frames only exist in the Pixel look (drawScreen runs only there). */
+  private get px(): boolean { return DRAW.ink && settings.look === 'pixel'; }
 
   bind(w: World): void {
     const ev = w.events;
     ev.on('hit', (e) => {
       if (!DRAW.ink || e.attacker.team !== 'player') return;
       const v = e.victim, m = e.move;
-      if (e.kind === 'finisher' && BLADES.has(w.weapon.id) && !settings.reduceFlashes) {
+      if (this.px && e.kind === 'finisher' && v.hp <= 0 && this.tearCd <= 0 && BLADES.has(w.weapon.id) && !settings.reduceFlashes) {
+        this.tearCd = 1;
         this.tear = { t: 0, life: 0.14, x: e.x, y: e.y, a: Math.atan2(e.dirY || -0.35, e.dirX || 1) - 0.5, seed: (Math.random() * 1e9) | 0 };
         effects.invert = 0; // the tear replaces the plain invert
       }
@@ -80,17 +85,18 @@ export class Clip3Fx {
       if (e.power > 0.55) this.debris.push(mk(e.x, WORLD.groundY, 0.22, e.power));
       if (e.power > 0.95) this.addMounds(e.x, 1);
     });
-    const blast = (x: number) => {
+    const blast = (x: number, flash: boolean) => {
       if (!DRAW.ink) return;
       this.addMounds(x, 3);
-      if (!settings.reduceFlashes) { this.stipple = 0.07; effects.screenFlash = 0; }
+      if (!flash) return;
+      if (this.px && !settings.reduceFlashes && this.stippleCd <= 0) { this.stipple = 0.07; this.stippleCd = 1; effects.screenFlash = 0; }
     };
-    ev.on('shockwave', (e) => blast(e.x));
-    ev.on('meteor', (e) => blast(e.x));
-    ev.on('bossPhase', () => { if (DRAW.ink && !settings.reduceFlashes) this.stipple = 0.1; });
-    ev.on('wallBreak', (e) => { if (DRAW.ink) { this.addMounds(e.x - e.dir * 60, 2); if (!settings.reduceFlashes) this.stipple = 0.08; this.punch(0.14, 0.1); } });
-    ev.on('clash', (e) => { if (DRAW.ink && !e.end && !settings.reduceFlashes) this.tear = { t: 0, life: 0.1, x: e.x, y: e.y, a: -0.2, seed: (Math.random() * 1e9) | 0 }; });
-    ev.on('waveClear', () => { if (DRAW.ink) this.cut = this.cutLife; });
+    ev.on('shockwave', (e) => blast(e.x, false));
+    ev.on('meteor', (e) => blast(e.x, true));
+    ev.on('bossPhase', () => { if (this.px && !settings.reduceFlashes) { this.stipple = 0.1; this.stippleCd = 1; } });
+    ev.on('wallBreak', (e) => { if (DRAW.ink) { this.addMounds(e.x - e.dir * 60, 2); if (this.px && !settings.reduceFlashes) { this.stipple = 0.08; this.stippleCd = 1; } this.punch(0.14, 0.1); } });
+    ev.on('clash', (e) => { if (this.px && !e.end && !settings.reduceFlashes) this.tear = { t: 0, life: 0.1, x: e.x, y: e.y, a: -0.2, seed: (Math.random() * 1e9) | 0 }; });
+    ev.on('waveClear', () => { if (this.px) this.cut = this.cutLife; });
     ev.on('waveStart', (e) => {
       this.xs.length = 0; this.mounds.length = 0; this.trails.clear(); this.swords.length = 0; this.planks.length = 0;
       this.wave = e.wave;
@@ -98,7 +104,7 @@ export class Clip3Fx {
       [A * 0.6, A * 0.6 + 58, A * 0.6 + 29].forEach((x, i) => { this.crates[i].x = x; this.crates[i].y = i === 2 ? WORLD.groundY - 56 : WORLD.groundY; this.crates[i].broken = false; });
       [A * 0.28, A * 0.52, A * 0.78].forEach((x, i) => { this.lamps[i].x = x; this.lamps[i].a = 0; this.lamps[i].v = 0; });
       this.finalBoss = false;
-      if (DRAW.ink && e.boss) this.vs = { t: 0, life: 1.6, name: 'YOU', sub: '' };
+      if (this.px && e.boss) this.vs = { t: 0, life: 1.6, name: 'YOU', sub: '' };
     });
     ev.on('spawn', (e) => {
       const b = e.enemy.def?.boss;
@@ -121,7 +127,7 @@ export class Clip3Fx {
     }
   }
   /** Game over: a dithered card dissolve before the results (frame 10). */
-  titleCard(): void { if (DRAW.ink) this.title = this.titleLife; }
+  titleCard(): void { if (this.px) this.title = this.titleLife; }
   /** Rain on every fourth wave from wave 3 (not on boss waves). */
   raining(w: World): boolean { return DRAW.ink && !settings.mobilePerf && w.wave >= 3 && w.wave % 4 === 3 && !w.enemies.some((e) => e.def?.boss); }
   /** The extra zoom factor from the hard punch-in (1 = none). */
@@ -134,7 +140,7 @@ export class Clip3Fx {
   update(dt: number, w: World): void {
     this.time += dt;
     const dec = (v: number) => Math.max(0, v - dt);
-    this.stipple = dec(this.stipple); this.cut = dec(this.cut); this.title = dec(this.title); this.punchT = dec(this.punchT);
+    this.stipple = dec(this.stipple); this.tearCd = dec(this.tearCd); this.stippleCd = dec(this.stippleCd); this.cut = dec(this.cut); this.title = dec(this.title); this.punchT = dec(this.punchT);
     if (this.tear.t < this.tear.life) this.tear.t += dt;
     if (this.vs.t < this.vs.life) this.vs.t += dt;
     for (const list of [this.pillars, this.rings, this.balls, this.debris]) {

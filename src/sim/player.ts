@@ -41,6 +41,8 @@ export class PlayerController {
     for (let i = 0; i < 8; i++) this.pool.push({ ev: null as unknown as SwipeEvent, age: 0, heavy: false, used: false });
   }
 
+  /** Swipes ingested so far (the blade clash reads it: swing again during the lock to win). */
+  swipes = 0;
   reset(): void { this.buf.length = 0; this.lastMove = null; this.lastMoveFrame = -999; }
 
   /** Ingest this tick's swipes. */
@@ -63,6 +65,7 @@ export class PlayerController {
       p.idleFrames = 0;
       // Long-press: the Special (never buffered as an attack).
       if (ev.kind === 'hold') { w.special.request(w, ev); continue; }
+      if (ev.kind === 'swipe') this.swipes++;
       let b: Buffered;
       if (this.buf.length >= INPUT.bufferSize) {
         b = this.buf[this.buf.length - 1]; // replace the tail with the newest intent
