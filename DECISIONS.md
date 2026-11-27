@@ -783,3 +783,8 @@ The PNGs are gone. Hit detection stays on the dummy's rig; the art is visual onl
   - hair: ponytail, long, bob, space buns, pigtails;
   - body: wide hips, same as male, hourglass outline, skirt, red dress.
   - The variant code is kept aside as a patch until the player picks.
+- **The player's pick:** the player rejected round 2 (full looks with lashes, blush and bows) as a whole. They picked:
+  - **Hair** (a new "Hair (female)" row in Home): ponytail, long wavy (with a small side fringe), or space buns. It only shows on the Female body.
+  - **Female body:** the hips build plus the **hourglass outline** around the torso.
+  - **A Flower headband option:** a red five-petal flower over the ear instead of the band's tail. It is Pixel look only; the neon look never drew the band.
+  - The other options (bob, pigtails, skirts, dress, lashes, blush, bow) were dropped, along with the preview patch.

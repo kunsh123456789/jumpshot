@@ -3,7 +3,7 @@ import { heldWeapon } from './weaponFx';
 import { HERO_LOOK } from '../data/hero';
 import { drawTarget } from './targetArt';
 import { drawHeroGear } from './heroGear';
-import { drawHeroBack, drawHeroFront, femaleJoints } from './heroCos';
+import { drawHeadFlower, drawHeroBack, drawHeroFront, femaleJoints } from './heroCos';
 import type { Fighter } from '../sim/fighter';
 import { TAU } from '../core/math';
 import { WORLD } from '../data/tuning';
@@ -250,7 +250,8 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
   if (f.team === 'player') {
     // Headband tail: a 2-segment line (the hero's cosmetic colour) that only changes with the drawing.
     const fl = f.grounded ? 0.15 : -0.25;
-    if (f.kind === 'player' && HERO_LOOK.band !== 'none') {
+    if (f.kind === 'player' && HERO_LOOK.band === 'flower') drawHeadFlower(ctx, hx, hy, headR, face, wpp);
+    else if (f.kind === 'player' && HERO_LOOK.band !== 'none') {
       ctx.strokeStyle = HERO_LOOK.band === 'blue' ? INK.blue : HERO_LOOK.band === 'black' ? INK.ink : INK.red; ctx.lineWidth = 2 * wpp; ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(hx - face * headR * 0.9, hy - headR * 0.25);

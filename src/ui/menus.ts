@@ -3,7 +3,7 @@ import { audio } from '../core/audio';
 import { WEAPONS, activeDef, availableWeapons, type WeaponDef, type WeaponId } from '../data/weapons';
 import { MOVES } from '../data/moves';
 import { MovePreview, HeroPreview } from './preview';
-import { BACKS, BADGES, BANDS, BODIES, FEET, GEAR, HANDS, SKINS, SKIN_WEAPONS, TRAITS, TRAIT_SLOTS, traitById, type HeroSave, type SkinWeapon } from '../data/hero';
+import { BACKS, BADGES, BANDS, BODIES, HAIRS, FEET, GEAR, HANDS, SKINS, SKIN_WEAPONS, TRAITS, TRAIT_SLOTS, traitById, type HeroSave, type SkinWeapon } from '../data/hero';
 import { anyUnlocked, isUnlocked, enterCode } from './cheats';
 import { STYLE } from '../data/tuning';
 import { icon } from './icons';
@@ -391,7 +391,7 @@ export class Menus {
     renderTraits();
     // cosmetics
     const cos = document.createElement('div'); cos.className = 'hm-cos';
-    type CosKey = 'band' | 'headgear' | 'hands' | 'body' | 'back' | 'feet' | 'badge';
+    type CosKey = 'band' | 'headgear' | 'hands' | 'body' | 'hair' | 'back' | 'feet' | 'badge';
     const row = (label: string, key: CosKey | `skin-${SkinWeapon}`, opts: { id: string; name: string }[]) => {
       const sw = key.startsWith('skin-') ? (key.slice(5) as SkinWeapon) : null;
       const cur = (): string => (sw ? hero().skins[sw] : hero()[key as CosKey]);
@@ -407,7 +407,7 @@ export class Menus {
       }
       r.appendChild(seg); cos.appendChild(r);
     };
-    row('Body', 'body', BODIES); row('Headband', 'band', BANDS); row('Headgear', 'headgear', GEAR);
+    row('Body', 'body', BODIES); row('Hair (female)', 'hair', HAIRS); row('Headband', 'band', BANDS); row('Headgear', 'headgear', GEAR);
     row('Neck & back', 'back', BACKS); row('Hands', 'hands', HANDS); row('Feet', 'feet', FEET); row('Belts & badges', 'badge', BADGES);
     const skins = document.createElement('div'); skins.className = 'hm-cos';
     { const keep = cos; for (const w of SKIN_WEAPONS) { row(w.name, `skin-${w.id}`, SKINS[w.id]); skins.appendChild(keep.lastChild as Node); } }

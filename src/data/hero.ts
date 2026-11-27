@@ -4,10 +4,12 @@
  * by the sim through one modifiers object (World.traits), which is exactly the identity when no
  * trait is equipped, so a run without traits plays frame for frame as it always did.
  */
-export type BandId = 'red' | 'blue' | 'black' | 'none';
+export type BandId = 'red' | 'blue' | 'black' | 'flower' | 'none';
 export type GearId = 'none' | 'cap' | 'tophat' | 'crown' | 'halo' | 'ears' | 'goggles';
 export type HandsId = 'none' | 'wraps' | 'mitts' | 'fingerless' | 'spiked' | 'glowband' | 'brass' | 'flaming';
 export type BodyId = 'male' | 'female';
+/** The female hero's hair (the player's picks from the options page). */
+export type HairId = 'ponytail' | 'wavy' | 'buns';
 export type BackId = 'none' | 'scarf' | 'ninja' | 'cape' | 'tattered' | 'page' | 'ribbon' | 'backpack' | 'wings';
 export type FeetId = 'none' | 'sneakers' | 'boots' | 'bandaged' | 'rocket' | 'flipflops';
 export type BadgeId = 'none' | 'belt' | 'sheriff' | 'rank';
@@ -16,13 +18,13 @@ export type SkinWeapon = 'staff' | 'laser' | 'hook' | 'fists';
 
 export interface HeroSave {
   band: BandId; headgear: GearId; hands: HandsId; traits: (string | null)[];
-  body: BodyId; back: BackId; feet: FeetId; badge: BadgeId;
+  body: BodyId; hair: HairId; back: BackId; feet: FeetId; badge: BadgeId;
   skins: Record<SkinWeapon, string>;
 }
 
 /** Cosmetic options. The Pixel look has four colours, so colour choices stick to its ink colours; the rest are shapes. */
 export const BANDS: { id: BandId; name: string }[] = [
-  { id: 'red', name: 'Red' }, { id: 'blue', name: 'Blue' }, { id: 'black', name: 'Black' }, { id: 'none', name: 'None' },
+  { id: 'red', name: 'Red' }, { id: 'blue', name: 'Blue' }, { id: 'black', name: 'Black' }, { id: 'flower', name: 'Flower' }, { id: 'none', name: 'None' },
 ];
 export const GEAR: { id: GearId; name: string }[] = [
   { id: 'none', name: 'None' }, { id: 'cap', name: 'Cap' }, { id: 'tophat', name: 'Top hat' }, { id: 'crown', name: 'Crown' },
@@ -33,6 +35,7 @@ export const HANDS: { id: HandsId; name: string }[] = [
   { id: 'spiked', name: 'Spiked gauntlets' }, { id: 'glowband', name: 'Glow band' }, { id: 'brass', name: 'Brass knuckles' }, { id: 'flaming', name: 'Flaming fists' },
 ];
 export const BODIES: { id: BodyId; name: string }[] = [{ id: 'male', name: 'Male' }, { id: 'female', name: 'Female' }];
+export const HAIRS: { id: HairId; name: string }[] = [{ id: 'ponytail', name: 'Ponytail' }, { id: 'wavy', name: 'Long wavy' }, { id: 'buns', name: 'Space buns' }];
 export const BACKS: { id: BackId; name: string }[] = [
   { id: 'none', name: 'None' }, { id: 'scarf', name: 'Red scarf' }, { id: 'ninja', name: 'Ninja scarf' }, { id: 'cape', name: 'Cape' },
   { id: 'tattered', name: 'Tattered cape' }, { id: 'page', name: 'Notebook cape' }, { id: 'ribbon', name: 'Ribbon' }, { id: 'backpack', name: 'Backpack' }, { id: 'wings', name: 'Wings' },
@@ -53,8 +56,8 @@ export const SKINS: Record<SkinWeapon, { id: string; name: string }[]> = {
 export const SKIN_WEAPONS: { id: SkinWeapon; name: string }[] = [{ id: 'fists', name: 'Fists' }, { id: 'staff', name: 'Staff' }, { id: 'laser', name: 'Laser' }, { id: 'hook', name: 'Hook' }];
 
 /** What the renderers draw (kept in step with the save by applyHero). */
-export const HERO_LOOK: { band: BandId; headgear: GearId; hands: HandsId; body: BodyId; back: BackId; feet: FeetId; badge: BadgeId; skins: Record<SkinWeapon, string>; rank: number } = {
-  band: 'red', headgear: 'none', hands: 'none', body: 'male', back: 'none', feet: 'none', badge: 'none', skins: { staff: 'default', laser: 'default', hook: 'default', fists: 'default' }, rank: 0,
+export const HERO_LOOK: { band: BandId; headgear: GearId; hands: HandsId; body: BodyId; hair: HairId; back: BackId; feet: FeetId; badge: BadgeId; skins: Record<SkinWeapon, string>; rank: number } = {
+  band: 'red', headgear: 'none', hands: 'none', body: 'male', hair: 'ponytail', back: 'none', feet: 'none', badge: 'none', skins: { staff: 'default', laser: 'default', hook: 'default', fists: 'default' }, rank: 0,
 };
 
 export const TRAIT_SLOTS = 2;
@@ -103,7 +106,7 @@ export function combineTraits(ids: (string | null)[]): TraitMods {
 }
 
 const SKINS_DEFAULT = (): Record<SkinWeapon, string> => ({ staff: 'default', laser: 'default', hook: 'default', fists: 'default' });
-export const HERO_DEFAULT: HeroSave = { band: 'red', headgear: 'none', hands: 'none', traits: [null, null], body: 'male', back: 'none', feet: 'none', badge: 'none', skins: SKINS_DEFAULT() };
+export const HERO_DEFAULT: HeroSave = { band: 'red', headgear: 'none', hands: 'none', traits: [null, null], body: 'male', hair: 'ponytail', back: 'none', feet: 'none', badge: 'none', skins: SKINS_DEFAULT() };
 
 /** Validate a saved hero: unknown ids fall back to defaults, duplicate or unknown traits are dropped. */
 export function sanitizeHero(raw: unknown): HeroSave {
@@ -118,10 +121,10 @@ export function sanitizeHero(raw: unknown): HeroSave {
   for (const w of SKIN_WEAPONS) skins[w.id] = pick(rs[w.id], SKINS[w.id], 'default');
   return {
     band: pick(r.band, BANDS, 'red'), headgear: pick(r.headgear, GEAR, 'none'), hands: pick(r.hands, HANDS, 'none'), traits,
-    body: pick(r.body, BODIES, 'male'), back: pick(r.back, BACKS, 'none'), feet: pick(r.feet, FEET, 'none'), badge: pick(r.badge, BADGES, 'none'), skins,
+    body: pick(r.body, BODIES, 'male'), hair: pick(r.hair, HAIRS, 'ponytail'), back: pick(r.back, BACKS, 'none'), feet: pick(r.feet, FEET, 'none'), badge: pick(r.badge, BADGES, 'none'), skins,
   };
 }
 export function applyHero(h: HeroSave): void {
   HERO_LOOK.band = h.band; HERO_LOOK.headgear = h.headgear; HERO_LOOK.hands = h.hands;
-  HERO_LOOK.body = h.body; HERO_LOOK.back = h.back; HERO_LOOK.feet = h.feet; HERO_LOOK.badge = h.badge; HERO_LOOK.skins = { ...h.skins };
+  HERO_LOOK.body = h.body; HERO_LOOK.hair = h.hair; HERO_LOOK.back = h.back; HERO_LOOK.feet = h.feet; HERO_LOOK.badge = h.badge; HERO_LOOK.skins = { ...h.skins };
 }

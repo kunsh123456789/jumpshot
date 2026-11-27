@@ -2,6 +2,9 @@ import { HERO_LOOK } from '../data/hero';
 import { STYLE, WORLD } from '../data/tuning';
 import type { Fighter } from '../sim/fighter';
 import { J, JOINT_N } from './rig';
+import { INKLOOK } from '../data/inkLook';
+
+const INK_RED = '#e22424', INK_PAPER = '#ffffff';
 
 /**
  * The hero's wardrobe for the Pixel look only (the player's standing rule: new visuals go to the main
@@ -78,7 +81,8 @@ export function drawHeroBack(ctx: CanvasRenderingContext2D, f: Fighter, j: Float
   const lw = 2.2 * wpp + 0.4;
   ctx.lineWidth = lw; ctx.strokeStyle = pal.ink;
   // Female: a ponytail swinging behind the head (drawn first so the head outline covers its root).
-  if (female) {
+  if (female && HERO_LOOK.hair !== 'ponytail') drawHair(ctx, headX, headY, headR, w, pal);
+  if (female && HERO_LOOK.hair === 'ponytail') {
     const tx = headX + w.back * headR * 0.9, ty = headY - headR * 0.35;
     const ex = tx + w.back * headR * (1.3 + w.sp * 0.9), ey = ty + headR * (1.4 - w.sp * 0.9 - w.lift * 0.6) + wob(w.step, 1) * headR * 0.25;
     ctx.fillStyle = pal.ink;
@@ -159,6 +163,64 @@ export function drawHeroBack(ctx: CanvasRenderingContext2D, f: Fighter, j: Float
   ctx.restore();
 }
 
+/** Female hair behind the head (the ponytail is drawn inline above): long wavy hair or space buns. */
+function drawHair(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, w: { step: number; back: number; sp: number; lift: number }, pal: CosPal): void {
+  const bk = w.back;
+  ctx.fillStyle = pal.ink;
+  if (HERO_LOOK.hair === 'buns') {
+    for (const ox of [-0.75, 0.75]) { ctx.beginPath(); ctx.arc(x + ox * r, y - 0.95 * r, r * 0.52, 0, TAU); ctx.fill(); }
+    return;
+  }
+  // long wavy hair to mid-back: a wavy outer edge that streams back in a run and lifts in the air
+  const L = r * (3.1 - w.sp * 1.2 - w.lift * 0.8), ex = x + bk * r * (1.0 + w.sp * 2.2), ey = y + L;
+  ctx.beginPath();
+  ctx.moveTo(x - bk * r * 0.3, y - r * 1.2);
+  ctx.quadraticCurveTo(x + bk * r * 1.9, y - r * 1.2, x + bk * r * 1.55, y + r * 0.2);
+  const n = 5;
+  for (let i = 1; i <= n; i++) {
+    const k = i / n, px = x + bk * r * 1.55 + (ex - x - bk * r * 1.55) * k, py = y + r * 0.2 + (ey - y - r * 0.2) * k;
+    ctx.quadraticCurveTo(px + bk * r * 0.45 * (i % 2 ? 1 : -1), py - r * 0.25, px + wob(w.step, i) * r * 0.08, py);
+  }
+  ctx.quadraticCurveTo(ex - bk * r * 0.6, ey - r * 0.6, x + bk * r * 0.35, y + r * 0.9);
+  ctx.quadraticCurveTo(x + bk * r * 0.2, y + r * 0.3, x + bk * r * 0.1, y);
+  ctx.closePath(); ctx.fill();
+}
+
+/** The Flower headband option: a red five-petal flower over the ear instead of the headband tail. */
+export function drawHeadFlower(ctx: CanvasRenderingContext2D, x0: number, y0: number, r: number, face: number, wpp: number): void {
+  const bx = x0 - face * r * 0.55, by = y0 - r * 0.8;
+  ctx.save();
+  ctx.fillStyle = INK_RED;
+  for (let i = 0; i < 5; i++) { const a = (i / 5) * TAU; ctx.beginPath(); ctx.arc(bx + Math.cos(a) * r * 0.28, by + Math.sin(a) * r * 0.28, r * 0.22, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = INK_PAPER; ctx.beginPath(); ctx.arc(bx, by, r * 0.14, 0, TAU); ctx.fill();
+  void wpp;
+  ctx.restore();
+}
+
+/** Female front layer: the wavy hair's fringe and the hourglass outline round the torso. */
+function drawFemaleFront(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, wpp: number, pal: CosPal): void {
+  const s = f.scale, face = f.anim.dFace || f.facing || 1;
+  const r = f.anim.rig.headR * s * INKLOOK.headScale, x0 = X(j, J.head), y0 = Y(j, J.head);
+  if (HERO_LOOK.hair === 'wavy') {
+    ctx.fillStyle = pal.ink; ctx.beginPath();
+    ctx.moveTo(x0 - face * r * 0.35, y0 - r * 0.95);
+    ctx.quadraticCurveTo(x0 + face * r * 0.55, y0 - r * 1.15, x0 + face * r * 0.88, y0 - r * 0.45);
+    ctx.quadraticCurveTo(x0 + face * r * 0.45, y0 - r * 0.78, x0 - face * r * 0.35, y0 - r * 0.95);
+    ctx.closePath(); ctx.fill();
+  }
+  // hourglass: a slim outline either side of the torso, shoulders in to a pinched waist and out round the hips
+  const hx = X(j, J.hip), hy = Y(j, J.hip), cx = X(j, J.chest), cy = Y(j, J.chest), nx = X(j, J.neck), ny = Y(j, J.neck);
+  const mx = (cx + hx) / 2, my = (cy + hy) / 2, dx = cx - hx, dy = cy - hy, L = Math.hypot(dx, dy) || 1, px = -dy / L, py = dx / L;
+  ctx.strokeStyle = pal.ink; ctx.lineWidth = 2 * wpp + 0.4;
+  ctx.beginPath();
+  for (const sd of [1, -1]) {
+    ctx.moveTo(nx + px * sd * 5 * s, ny + py * sd * 5 * s + 3 * s);
+    ctx.quadraticCurveTo(cx + px * sd * 6 * s, cy + py * sd * 6 * s, mx + px * sd * 3 * s, my + py * sd * 3 * s);
+    ctx.quadraticCurveTo(hx + px * sd * 9 * s, hy + py * sd * 9 * s, hx + px * sd * 6 * s, hy + py * sd * 6 * s + 6 * s);
+  }
+  ctx.stroke();
+}
+
 /** A five-point star. */
 function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
   ctx.beginPath();
@@ -169,6 +231,7 @@ function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): v
 export function drawHeroFront(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, time: number, wpp: number, pal: CosPal): void {
   const L = HERO_LOOK, s = f.scale, w = wind(f, time), face = f.anim.dFace || f.facing || 1;
   const fistSkin = f.weapon === 'fists' ? L.skins.fists : 'default';
+  if (L.body === 'female' && f.kind === 'player') { ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; drawFemaleFront(ctx, f, j, wpp, pal); ctx.restore(); }
   if (L.hands === 'none' && L.feet === 'none' && L.badge === 'none' && fistSkin === 'default') return;
   ctx.save();
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';

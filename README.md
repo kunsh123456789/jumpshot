@@ -10,7 +10,9 @@ There are two modes, switched on the title screen or in Settings:
 
 ## Your hero (Home)
 The **Home** screen lets you dress the hero. These cosmetics show in the Pixel look:
-- **Body:** Male or Female.
+- **Body:** Male or Female (narrower shoulders, wider hips and an hourglass outline).
+- **Hair (Female):** ponytail, long wavy hair, or space buns.
+- **Headband:** red, blue, black, a red flower, or none.
 - **Neck and back:** red scarf, ninja scarf, cape, tattered cape, notebook-page cape, ribbon, backpack, line-art wings.
 - **Hands:** tape wraps, mitts, fingerless gloves, spiked gauntlets, glow band, brass knuckles, flaming fists.
 - **Feet:** sneakers, boots, bandaged feet, rocket shoes, flip-flops.
