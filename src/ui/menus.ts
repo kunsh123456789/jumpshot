@@ -1,4 +1,4 @@
-import { settings, saveSettings, save, updateHero } from '../core/settings';
+import { settings, saveSettings, save, updateHero, resetSettingsToDefaults } from '../core/settings';
 import { audio } from '../core/audio';
 import { WEAPONS, activeDef, availableWeapons, type WeaponDef, type WeaponId } from '../data/weapons';
 import { MOVES } from '../data/moves';
@@ -271,6 +271,25 @@ export class Menus {
       if (isUnlocked('cheatNuke')) check('Nuke button (also the N key)', 'cheatNuke');
     }
     sec('OTHER');
+    {
+      // Quick reset: settings only (never your progress). Two taps: the first arms the button.
+      const row = document.createElement('div'); row.className = 'pad';
+      const b = this.btn(row, 'RESET SETTINGS TO DEFAULT', () => {
+        if (!b.dataset.armed) {
+          b.dataset.armed = '1'; b.classList.add('danger'); b.querySelector('span')!.textContent = 'TAP AGAIN TO RESET';
+          window.setTimeout(() => { if (b.isConnected && b.dataset.armed) { delete b.dataset.armed; b.classList.remove('danger'); b.querySelector('span')!.textContent = 'RESET SETTINGS TO DEFAULT'; } }, 3500);
+          return;
+        }
+        resetSettingsToDefaults();
+        applyPerfClass();
+        for (const ev of ['jumpshot-look', 'jumpshot-moveset', 'jumpshot-mode', 'jumpshot-debug', 'resize']) window.dispatchEvent(new Event(ev));
+        this.placePause();
+        this.showSettings(onClose, onTutorial, onCalibrate, onReset);
+        this.banner('SETTINGS RESET', 'back to defaults', 1100);
+      }, 'btn small', 'retry');
+      b.id = 'set-resetdefaults';
+      p.appendChild(row);
+    }
     check('Debug overlay', 'debug', () => window.dispatchEvent(new Event('jumpshot-debug')));
     if (onTutorial || onReset) {
       const b = document.createElement('div'); b.className = 'pad';

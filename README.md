@@ -147,6 +147,8 @@ The interface is a bold arcade-fighter design: navy plates, a cyan / magenta / g
 
 **Roadmap.** The title screen's **ROADMAP** button shows waves 1-40 as four stages of ten, each ending in a boss. Tap (or focus) a wave for its enemies, what is new, the arena and page, the HP and damage scaling, and boss notes; cleared waves are green and your best wave is outlined. It is built from the real wave tables, and the same data is written out in `ROADMAP.md`.
 
+**Reset settings.** Settings → Other → **RESET SETTINGS TO DEFAULT** (tap twice) puts every setting back to its default and keeps your progress, weapon, character and the Rhythm latency offset (that is a measurement of your device).
+
 **Tutorial and Reset.** The title screen has a **TUTORIAL** button (replay the training at any time) and a **RESET GAME** button (both are also under Settings → Other). Reset asks first, then deletes everything the game saved in this browser and restarts it as a first launch: high score, best combo and wave, tutorial progress, unlocked codes, weapon choice and every setting. On short landscape screens the two buttons sit in the top-left corner.
 
 ## Weapons

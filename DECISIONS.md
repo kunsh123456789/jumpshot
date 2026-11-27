@@ -730,3 +730,11 @@ Yank and Rodeo reuse the hook's tether moves; Disarm needed a new `x2.disarm`.
 - The cost is -15% max HP and -10% damage.
 - Flames, beams and the fuel bar are Pixel look only.
 
+## Reset settings to default
+
+**Asked:** "a quick reset to default settings button in settings".
+- A two-tap button in Settings → Other (the first tap arms it, so a stray tap can't wipe your setup).
+- It resets `settings` only (`resetSettingsToDefaults()`): saves, high score, hero, weapon and unlocked codes are untouched. Cheat switches go off, and Mobile performance follows the device again.
+- The Rhythm latency offset is **kept**: it is a calibration of your device and ear, not a preference, and losing it would mean re-running the calibration.
+- After the reset the panel reopens so every control shows its default, and the look, moveset, mode and layout listeners are notified.
+

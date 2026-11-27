@@ -97,6 +97,19 @@ export const settings: Settings = {
 };
 
 const DEFAULTS_REV = 2;
+const FACTORY: Settings = { ...settings };
+
+/**
+ * Put every setting back to its default (the cheat switches go off too). The Rhythm latency offset is kept:
+ * it is a measurement of this device, not a preference. Saves, the hero and unlocked codes are untouched.
+ */
+export function resetSettingsToDefaults(): void {
+  const offset = settings.rhythmOffset;
+  Object.assign(settings, FACTORY);
+  settings.rhythmOffset = offset;
+  settings.mobilePerf = isTouchDevice();
+  saveSettings();
+}
 
 export function loadSettings(): void {
   let hasChoice = false;
