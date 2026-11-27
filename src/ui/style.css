@@ -457,6 +457,14 @@ body.perf .sp.ready .bar::after { opacity: .8; }
 .hm-sw.sw-red { background: #e22424; }
 .hm-sw.sw-blue { background: #2436e6; }
 .hm-sw.sw-white { background: #fff; }
+.hm-sw.sw-pink { background: #ff66aa; }
+.hm-sw.sw-purple { background: #8833dd; }
+.hm-sw.sw-green { background: #22aa44; }
+.hm-sw.sw-orange { background: #ff8811; }
+.hm-sw.sw-custom { position: relative; display: inline-block; background: conic-gradient(#e22424, #ff8811, #ffd23f, #22aa44, #2436e6, #8833dd, #ff66aa, #e22424); overflow: hidden; }
+.hm-sw.sw-custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.hm-sw.sw-custom:focus-within { outline: 2px solid #fff; outline-offset: 2px; }
+.hm-swatches { flex-wrap: wrap; }
 .hm-reset { display: flex; justify-content: flex-start; margin-top: var(--s3); }
 .hm-canvas { image-rendering: pixelated; }
 .hm-foot { display: flex; gap: var(--s3); justify-content: center; flex-wrap: wrap; padding-top: var(--s2); }

@@ -816,3 +816,7 @@ The PNGs are gone. Hit detection stays on the dummy's rig; the art is visual onl
 - **Round 3 (approved):**
   - Added: Afro (hair), a **Hair bow** row (it sits on any hair style and has its own colour), the **Leash** whip skin (strap, loop handle and clip; the lash and the tether turn into the strap), an **Arms** row with arm warmers (wearable with any gloves), and **Paws** (Hands).
   - Held back: dreadlocks and the messy mod cut wait for the player's reference drawings. Cat stockings were cut because their cat ears didn't read at the game's pixel size; they need a redo.
+- **The player's torso pick: hip flare only.** The hourglass outline is gone, because it merged into a thick block at the game's pixel size. The female body keeps narrower shoulders and wider hips, and is now slightly taller, all in the legs: everything above the knees is raised 6 units, the knees 3 and the feet not at all. This is render-only, so hitboxes are unchanged.
+- **More colours:** Pink, Purple, Green and Orange, plus **any colour** from a custom picker swatch, on every colourable slot.
+  - The Pixel look normally snaps every pixel to its four inks. Each chosen colour now gets only its own 12-bit cell of the quantizer's lookup table redirected to it (`syncExtraInks` in `ink.ts`), so the rest of the game still snaps exactly as before.
+  - Saves store a colour as a name or as `#rrggbb`.

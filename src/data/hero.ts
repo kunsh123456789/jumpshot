@@ -19,8 +19,8 @@ export type LegsId = 'none' | 'bandaged' | 'warmers' | 'socks';
 export type BadgeId = 'none' | 'belt' | 'sheriff' | 'rank';
 /** Weapons with skins, and each one's skin ids ('default' = the weapon's own drawing). */
 export type SkinWeapon = 'staff' | 'laser' | 'hook' | 'fists' | 'whip';
-/** Per-slot colour: 'default' keeps each item's own colours; the rest are the Pixel page's four inks. */
-export type ColorId = 'default' | 'black' | 'red' | 'blue' | 'white';
+/** Per-slot colour: 'default' keeps each item's own colours; a named colour, or any '#rrggbb' from the custom picker. */
+export type ColorId = string;
 export type ColorSlot = 'hair' | 'bow' | 'headgear' | 'back' | 'hands' | 'arms' | 'legs' | 'shoes' | 'badge' | 'skin';
 
 export interface HeroSave {
@@ -73,8 +73,15 @@ export const SKINS: Record<SkinWeapon, { id: string; name: string }[]> = {
 };
 export const SKIN_WEAPONS: { id: SkinWeapon; name: string }[] = [{ id: 'fists', name: 'Fists' }, { id: 'staff', name: 'Staff' }, { id: 'laser', name: 'Laser' }, { id: 'hook', name: 'Hook' }, { id: 'whip', name: 'Whip' }];
 export const COLORS: { id: ColorId; name: string }[] = [
-  { id: 'default', name: 'Default' }, { id: 'black', name: 'Black' }, { id: 'red', name: 'Red' }, { id: 'blue', name: 'Blue' }, { id: 'white', name: 'White' },
+  { id: 'default', name: 'Default' }, { id: 'black', name: 'Black' }, { id: 'white', name: 'White' }, { id: 'red', name: 'Red' }, { id: 'blue', name: 'Blue' },
+  { id: 'pink', name: 'Pink' }, { id: 'purple', name: 'Purple' }, { id: 'green', name: 'Green' }, { id: 'orange', name: 'Orange' },
 ];
+/** The ink each named colour draws with (Pixel look: black / white / red / blue are the page's own inks). */
+export const COLOR_HEX: Record<string, string> = {
+  black: '#000000', white: '#ffffff', red: '#e22424', blue: '#2436e6', pink: '#ff66aa', purple: '#8833dd', green: '#22aa44', orange: '#ff8811',
+};
+/** The hex a colour id draws with, or null for Default. */
+export function colorHex(id: string): string | null { return id === 'default' ? null : COLOR_HEX[id] ?? (/^#[0-9a-f]{6}$/i.test(id) ? id.toLowerCase() : null); }
 export const COLOR_SLOTS: ColorSlot[] = ['hair', 'bow', 'headgear', 'back', 'hands', 'arms', 'legs', 'shoes', 'badge', 'skin'];
 const COLORS_DEFAULT = (): Record<ColorSlot, ColorId> => ({ hair: 'default', bow: 'default', headgear: 'default', back: 'default', hands: 'default', arms: 'default', legs: 'default', shoes: 'default', badge: 'default', skin: 'default' });
 
@@ -152,7 +159,7 @@ export function sanitizeHero(raw: unknown): HeroSave {
   const skins = SKINS_DEFAULT(), rs = (r.skins && typeof r.skins === 'object' ? r.skins : {}) as Record<string, unknown>;
   for (const w of SKIN_WEAPONS) skins[w.id] = pick(rs[w.id], SKINS[w.id], 'default');
   const colors = COLORS_DEFAULT(), rc = (r.colors && typeof r.colors === 'object' ? r.colors : {}) as Record<string, unknown>;
-  for (const k of COLOR_SLOTS) colors[k] = pick(rc[k], COLORS, 'default');
+  for (const k of COLOR_SLOTS) { const c = rc[k]; colors[k] = typeof c === 'string' && (COLORS.some((o) => o.id === c) || /^#[0-9a-f]{6}$/i.test(c)) ? c.toLowerCase() : 'default'; }
   const body = pick(r.body, BODIES, 'male');
   let band: unknown = r.band, headgear: unknown = r.headgear, hair: unknown = r.hair, shoes: unknown = r.shoes, legs: unknown = r.legs;
   if ((r.v ?? 0) < 3) {

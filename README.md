@@ -9,7 +9,7 @@ There are two modes, switched on the title screen or in Settings:
 - **Classic Mode**: the original game, unchanged.
 
 ## Your hero (Character)
-The **Character** screen (title screen, or **Character** in the pause menu) lets you dress the hero, recolour any slot (black, red, blue or white) and reset everything with **Reset Character**. These cosmetics show in the Pixel look:
+The **Character** screen (title screen, or **Character** in the pause menu) lets you dress the hero, recolour any slot (black, white, red, blue, pink, purple, green, orange, or any colour from the picker) and reset everything with **Reset Character**. These cosmetics show in the Pixel look:
 - **Body:** Male or Female (narrower shoulders, wider hips and an hourglass outline).
 - **Hair (either body):** ponytail, long wavy hair, space buns, messy bun, long hair with bangs, or an afro, plus an optional hair bow.
 - **Headband:** red, blue, black, or none.

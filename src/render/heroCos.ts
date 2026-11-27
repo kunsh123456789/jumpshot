@@ -1,17 +1,17 @@
-import { HERO_LOOK, type ColorId, type ColorSlot } from '../data/hero';
+import { HERO_LOOK, colorHex, type ColorId, type ColorSlot } from '../data/hero';
 import { STYLE, WORLD } from '../data/tuning';
 import type { Fighter } from '../sim/fighter';
 import { J, JOINT_N } from './rig';
 import { INKLOOK } from '../data/inkLook';
 
-const INK_RED = '#e22424', INK_PAPER = '#ffffff', INK_BLACK = '#000000', INK_BLUE = '#2436e6';
-const HEX: Record<ColorId, string | null> = { default: null, black: INK_BLACK, red: INK_RED, blue: INK_BLUE, white: INK_PAPER };
+const INK_RED = '#e22424', INK_PAPER = '#ffffff', INK_BLACK = '#000000';
+const HEX = (id: ColorId): string | null => colorHex(id);
 /** The player's colour for a slot, or `base` when the slot is on Default. */
-export function tint(slot: ColorSlot, base: string): string { return HEX[HERO_LOOK.colors[slot]] ?? base; }
+export function tint(slot: ColorSlot, base: string): string { return HEX(HERO_LOOK.colors[slot]) ?? base; }
 type PalKey = 'ink' | 'paper' | 'red' | 'blue';
 /** A palette whose `main` entry (the item's own main colour) is swapped for the slot's chosen colour. */
 export function slotPal<P extends { ink: string; paper: string; red: string; blue: string }>(pal: P, slot: ColorSlot, main: PalKey): P {
-  const c = HEX[HERO_LOOK.colors[slot]];
+  const c = HEX(HERO_LOOK.colors[slot]);
   return c ? { ...pal, [main]: c } : pal;
 }
 /** Main colour of each item (the part the slot colour replaces). */
@@ -48,7 +48,7 @@ const fj = new Float32Array(JOINT_N * 2);
 const X = (j: Float32Array, k: number): number => j[k * 2];
 const Y = (j: Float32Array, k: number): number => j[k * 2 + 1];
 
-/** Female proportions: shoulders pulled in, hips pushed out (limbs follow their root joint). Returns a copy. */
+/** Female proportions: shoulders pulled in, hips pushed out (limbs follow their root joint), longer legs. Render-only. Returns a copy. */
 export function femaleJoints(f: Fighter, j: Float32Array): Float32Array {
   if (f.kind !== 'player' || HERO_LOOK.body !== 'female') return j;
   fj.set(j);
@@ -67,6 +67,12 @@ export function femaleJoints(f: Fighter, j: Float32Array): Float32Array {
     // knees follow halfway, feet stay planted
     fj[kn * 2] += dx * 0.5;
     void ft;
+  }
+  // slightly taller, all in the legs: everything above the knees rises, the knees half as much, the feet stay put
+  const up = 6 * s;
+  for (let q = 0; q < JOINT_N; q++) {
+    if (q === J.footA || q === J.footB) continue;
+    fj[q * 2 + 1] -= q === J.kneeA || q === J.kneeB ? up * 0.5 : up;
   }
   return fj;
 }
@@ -309,21 +315,6 @@ function drawHairFront(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Arra
   }
 }
 
-/** Female front layer: the hourglass outline round the torso. */
-function drawFemaleFront(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, wpp: number, pal: CosPal): void {
-  const s = f.scale;
-  // hourglass: a slim outline either side of the torso, shoulders in to a pinched waist and out round the hips
-  const hx = X(j, J.hip), hy = Y(j, J.hip), cx = X(j, J.chest), cy = Y(j, J.chest), nx = X(j, J.neck), ny = Y(j, J.neck);
-  const mx = (cx + hx) / 2, my = (cy + hy) / 2, dx = cx - hx, dy = cy - hy, L = Math.hypot(dx, dy) || 1, px = -dy / L, py = dx / L;
-  ctx.strokeStyle = pal.ink; ctx.lineWidth = 2 * wpp + 0.4;
-  ctx.beginPath();
-  for (const sd of [1, -1]) {
-    ctx.moveTo(nx + px * sd * 5 * s, ny + py * sd * 5 * s + 3 * s);
-    ctx.quadraticCurveTo(cx + px * sd * 6 * s, cy + py * sd * 6 * s, mx + px * sd * 3 * s, my + py * sd * 3 * s);
-    ctx.quadraticCurveTo(hx + px * sd * 9 * s, hy + py * sd * 9 * s, hx + px * sd * 6 * s, hy + py * sd * 6 * s + 6 * s);
-  }
-  ctx.stroke();
-}
 
 /** Hair bow: a two-loop bow with a knot, high at the back of the head (colour: the Bow slot, red by default). */
 function drawBow(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32Array, wpp: number): void {
@@ -365,7 +356,6 @@ export function drawHeroFront(ctx: CanvasRenderingContext2D, f: Fighter, j: Floa
   const L = HERO_LOOK, s = f.scale, w = wind(f, time), face = f.anim.dFace || f.facing || 1;
   const fistSkin = f.weapon === 'fists' ? L.skins.fists : 'default';
   if (f.kind !== 'player') return;
-  if (L.body === 'female') { ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; drawFemaleFront(ctx, f, j, wpp, pal); ctx.restore(); }
   if (L.hair === 'wavy' || L.hair === 'bangs') { ctx.save(); drawHairFront(ctx, f, j, pal); ctx.restore(); }
   if (L.bow === 'bow') { ctx.save(); drawBow(ctx, f, j, wpp); ctx.restore(); }
   if (L.headgear === 'horns') { ctx.save(); drawHorns(ctx, f, j, wpp, pal); ctx.restore(); }

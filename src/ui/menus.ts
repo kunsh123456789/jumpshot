@@ -417,6 +417,16 @@ export class Menus {
           b.addEventListener('click', (e) => { e.stopPropagation(); audio.ui('select'); updateHero({ colors: { ...hero().colors, [color]: c.id } }); for (const x of cs.children) x.setAttribute('aria-pressed', String(x === b)); });
           cs.appendChild(b);
         }
+        // custom: any colour from the system picker
+        const cw = document.createElement('label'); cw.className = 'hm-sw sw-custom'; cw.title = 'Any colour'; cw.id = `home-color-${color}-custom`;
+        const ci = document.createElement('input'); ci.type = 'color'; ci.setAttribute('aria-label', `${label} colour: any colour`);
+        const curC = hero().colors[color];
+        ci.value = /^#[0-9a-f]{6}$/i.test(curC) ? curC : '#ff66aa';
+        cw.setAttribute('aria-pressed', String(/^#/.test(curC)));
+        ci.addEventListener('click', (e) => e.stopPropagation());
+        ci.addEventListener('input', () => { updateHero({ colors: { ...hero().colors, [color]: ci.value } }); for (const x of cs.children) x.setAttribute('aria-pressed', String(x === cw)); cw.style.background = ci.value; });
+        if (/^#/.test(curC)) cw.style.background = curC;
+        cw.appendChild(ci); cs.appendChild(cw);
         r.appendChild(cs);
       }
       into.appendChild(r);

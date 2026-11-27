@@ -1,6 +1,6 @@
 import { J, JOINT_N } from './rig';
 import { heldWeapon } from './weaponFx';
-import { HERO_LOOK } from '../data/hero';
+import { HERO_LOOK, colorHex } from '../data/hero';
 import { drawTarget } from './targetArt';
 import { drawHeroGear } from './heroGear';
 import { drawHeroBack, drawHeroFront, femaleJoints, gearPals } from './heroCos';
@@ -58,6 +58,7 @@ packed[PAL.length] = (255 << 24) | (STIPPLE[2] << 16) | (STIPPLE[1] << 8) | STIP
  * turn the reserved dither-key gray into an ordered checkerboard stipple.
  */
 export function quantize(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  syncExtraInks();
   const img = ctx.getImageData(0, 0, w, h);
   const px = new Uint32Array(img.data.buffer);
   const L = LUT32, S = packed[PAL.length], P = paperWord;
@@ -83,6 +84,30 @@ export function setPaperColor(hex: string): void {
 /** LUT straight to packed output colours; 0 marks the dither key. */
 const LUT32 = new Uint32Array(4096);
 for (let i = 0; i < 4096; i++) LUT32[i] = LUT[i] === DITHER_IDX ? 0 : packed[LUT[i]];
+
+/**
+ * Extra inks: the hero's cosmetic colours beyond the page's four (pink, purple, green, orange, or any
+ * custom colour). Only each colour's own 12-bit LUT cell is redirected to it, so everything else in the
+ * game still snaps to the four inks exactly as before; the colour's anti-aliased edges snap as usual.
+ */
+let extraKey = '';
+const extraCells: number[] = [];
+function syncExtraInks(): void {
+  const key = Object.values(HERO_LOOK.colors).join(',');
+  if (key === extraKey) return;
+  extraKey = key;
+  for (const c of extraCells) LUT32[c] = LUT[c] === DITHER_IDX ? 0 : packed[LUT[c]];
+  extraCells.length = 0;
+  for (const id of Object.values(HERO_LOOK.colors)) {
+    const hex = colorHex(id);
+    if (!hex) continue;
+    const n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    const cell = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+    if (LUT[cell] !== DITHER_IDX && packed[LUT[cell]] === ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0) continue; // already a page ink
+    LUT32[cell] = ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
+    extraCells.push(cell);
+  }
+}
 
 // ------------------------------------------------------------ fighters
 const TEAM: Record<string, string> = {
