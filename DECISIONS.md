@@ -774,3 +774,12 @@ The PNGs are gone. Hit detection stays on the dummy's rig; the art is visual onl
   - she has a ponytail.
 - **Scribble green:** the 4-colour Pixel page has no green, so "Scribble green" is drawn in the pencil-grey dither.
 - **Rank pin:** it shows the best style rank ever reached. A new `save.bestRank` field is updated on `rankUp`.
+
+## Standing rule: preview before building
+- The player asked to see options before they are implemented. For each new visual request, first publish a separate options artifact.
+  - It shows real renders from a test build (via the game's own renderer).
+  - The player picks there, and only the pick gets built into the game.
+- The first such page covers the female hero's options:
+  - hair: ponytail, long, bob, space buns, pigtails;
+  - body: wide hips, same as male, hourglass outline, skirt, red dress.
+  - The variant code is kept aside as a patch until the player picks.
