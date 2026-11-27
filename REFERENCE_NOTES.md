@@ -78,3 +78,11 @@ Sent as more reference. What it shows, and what the game takes from it:
 | 242-276 | An indoor stage with stairs, crates and hanging lamps | Stage props drawn as flat outlines with dither shading |
 | 278-298 | A **VS screen**: inverted image, a red jagged "VS", red pixel squares in the corners, "5x" text | (reference for a future VS / boss intro card) |
 
+
+### Clip 3: ideas not yet in the game (report for the player)
+These are candidates, not built yet:
+- **Impact frames:** a red tear impact frame (268); a beam clash ring and glyph (208–210); a stipple flash (72); a dither-to-black cut (168–170).
+- **Movement:** a scanline blur for dashes and blinks (86, 270, 276); a dither pillar (104); a thrown-enemy dithered arc and spike-landing debris (196–202); a KO body slide (98); a blade clash (114–116); a scribble dust ball (120).
+- **Weapons:** a cape weapon (186–198); a war fan or parasol (118, 122); a flame blade (124, 132); an earth dust dome with boulders (134–144); a rolling wrecking ball (184); tapered spread beams (206, 214); planted swords and floor X-slashes (154–162).
+- **World:** a breakable wall (216–238); an indoor stage with stairs, crates and lamps (242–276); rain and a starfield (28, 48); dust that stays after explosions (74).
+- **UI:** a VS boss card (278–298); a dithered title card (10); a camera punch-in (142).
