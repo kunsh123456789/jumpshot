@@ -46,7 +46,7 @@ export function enemyPhysics(w: World, e: Fighter): void {
     e.spinAngle += e.spinVel * (0.4 + 0.6 * (1 - e.stallMix));
 
     // Walls.
-    if (e.x < WALL_L || e.x > WALL_R) {
+    if ((e.x < WALL_L || e.x > WALL_R) && !w.c3.passable(e)) {
       const dir = e.x < WALL_L ? 1 : -1;
       e.x = e.x < WALL_L ? WALL_L : WALL_R;
       const speed = Math.abs(e.vx);
@@ -63,6 +63,7 @@ export function enemyPhysics(w: World, e: Fighter): void {
         w.combo.registerHit('wall', 4, { air: true, multi: false, bounce: true, finisher: false, launcher: false, bowl: false, ko: false });
         e.hp -= 4;
         w.events.emit('wallImpact', { x: e.x - dir * 10, y: e.cy, power: Math.min(1.5, speed / 900), dir });
+        w.c3.wallHit(w, e, dir, speed);
       } else {
         e.vx = dir * speed * 0.25;
         if (speed > 400) w.events.emit('wallImpact', { x: e.x - dir * 10, y: e.cy, power: 0.3, dir });

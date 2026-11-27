@@ -200,6 +200,7 @@ export class EnemyAI {
       w.events.emit('text', { text: 'CRASH!', x: e.x, y: e.y - 200 * e.scale, color: '#ffe14a', size: 26 });
       return;
     }
+    if (!atk.projectile && !e.attackHit && w.c3.tryClash(w, e)) return;
     if (!atk.projectile && !e.attackHit) {
       if (enemyStrike(w, e, atk)) e.attackHit = true;
     }
@@ -221,6 +222,7 @@ export class EnemyAI {
       if (e.ai.stagger === 0) e.poise = e.maxPoise;
     }
     if (phase >= 2) {
+      if (e.kind === 'boss' && w.c3.on && ++e.ai.ballTimer >= 480 / (phase >= 3 ? 1.3 : 1)) { e.ai.ballTimer = 0; w.c3.spawnBall(w, e); }
       if (spec.meteors > 0 && ++e.ai.meteorTimer >= spec.meteors / (phase >= 3 ? 1.4 : 1)) {
         e.ai.meteorTimer = 0;
         w.spawnMeteor(w.player.x + simRng.range(-60, 60));

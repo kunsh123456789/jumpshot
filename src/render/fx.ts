@@ -150,6 +150,8 @@ export class FxDirector {
       this.popup(e.projectile ? 'REFLECT!' : 'PERFECT PARRY', 'next hit is CRITICAL', '#ffe14a', false);
     });
     ev.on('dodge', () => { audio.dodge(); });
+    ev.on('wallBreak', (e) => { audio.boom(); this.cam.shake(16, -e.dir, 0, 0.5); });
+    ev.on('clash', (e) => { if (e.end && e.won) audio.spike(0.7); else audio.block(); this.cam.shake(e.end ? 6 : 10, 0, 0); });
     // New movesets (sim/moveset2.ts): sound, particles and pop-up words per mechanic.
     ev.on('v2fx', (e) => {
       switch (e.kind) {

@@ -210,6 +210,7 @@ export class Renderer {
       g.restore();
     }
 
+    clip3Fx.drawBack(g, world, wpp);
     drawGrappleFx(g, world, alpha, time, wpp);
     drawPowerFx(g, world, alpha, time, wpp);
     for (const f of order) drawInkFighter(g, f, alpha, time, wpp);

@@ -25,6 +25,7 @@ export class WaveDirector {
     this.active = true;
     this.cleared = false;
     w.ai.setWave(wave);
+    w.c3.reset();
     w.events.emit('waveStart', { wave, boss: def.boss, elite: def.elite });
     // Spawn an opening group immediately.
     const opening = Math.min(this.queue.length, 3);

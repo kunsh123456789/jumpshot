@@ -843,3 +843,13 @@ All the effects live in `render/clip3Fx.ts`. They are Pixel look only and render
 - **Rain** falls on every fourth wave from wave 3, and is off with Mobile Performance. A **starfield** sky band with a rising planet appears on the SHADOW boss wave.
 - **Stipples** use a 1-px checker pattern, so they still read with Mobile Performance (no palette snap).
 - **Commits:** these were committed together as one module, not one commit per item, because they share one file. Each one can still be turned off on its own.
+
+## Clip 3 phase 2–3: flame blade, gameplay features (Pixel look only)
+- **Flame blade** is a Staff skin. Daggers has no skin row, so it lives on the Staff, and the skin colour recolours its red outline.
+- **Gameplay gate:** all of these live in `sim/clip3Sim.ts`. They run only in the Pixel look (`DRAW.ink`), the same gate the Ice finisher uses, so Classic and the neon look play frame for frame as before. They are deterministic: frame counters only, no RNG.
+  - **Breakable walls:** the first hard wall bounce cracks a page edge, and the second one (or one faster than 1300) smashes through it, dealing 12 damage. That side stays open for the wave: flying bodies pass through it and are **rung out** (K.O.). Bosses never break walls. The hole is drawn as a black dithered breach with loose bricks.
+  - **Wrecking ball:** the Colossus rolls one from phase 2, every 8 seconds (faster in phase 3). It gets a red "!" warning first. It deals 14 to you if you don't jump or parry it, and bowls over other enemies.
+  - **Blade clash:** when an elite's attack lands while your attack is in its active frames, face to face within 150, the blades lock (a red tear frame and "CLASH!"). Swing again while they're locked to win: the elite is staggered and stunned. Otherwise you are both shoved apart.
+- **Indoor page (render-only):** every fifth wave from wave 4 (not boss waves) has a ceiling and three hanging lamps that swing when hits land nearby, plus stairs with a landing and a railing, a table, and three crates that break into flying planks on heavy hits.
+  - The stairs and landing are **background art only**: the game has one flat floor (spikes, ice walls, cinematics, reflections and AI all rely on it), so nobody walks up them.
+- **Planted swords:** a K.O. with the Staff, Daggers or Scythe leaves a sword standing in the floor until the wave ends.

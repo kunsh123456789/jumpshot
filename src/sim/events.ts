@@ -78,6 +78,9 @@ export interface SimEvents {
   pop: { x: number; y: number };
   chainArc: { x1: number; y1: number; x2: number; y2: number };
   bleed: { x: number; y: number };
+  /** Clip 3 (Pixel look): a page edge smashed open; blades locking and the lock resolving. */
+  wallBreak: { x: number; y: number; dir: number };
+  clash: { x: number; y: number; won: boolean; end: boolean };
   splat: { x: number; y: number; kind: string };
   /** A boss teleported (the witch). */
   bossBlink: { x1: number; x2: number; y: number };

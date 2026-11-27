@@ -17,6 +17,7 @@ import { BOSS, ENEMIES, PROJECTILE, isBoss, type EnemyAttack, type EnemyKind } f
 import { simRng } from '../core/rng';
 import type { RhythmSim } from '../rhythm/simHooks';
 import { WeaponSim } from './weapon';
+import { Clip3Sim } from './clip3Sim';
 import { Moveset2 } from './moveset2';
 import { ko } from './combat';
 import { WEAPONS, weaponById, type WeaponDef } from '../data/weapons';
@@ -43,6 +44,8 @@ export class World {
   readonly wpn = new WeaponSim();
   /** Reworked movesets' mechanics (Settings -> Movesets: New). */
   readonly v2 = new Moveset2();
+  /** Clip 3 gameplay (Pixel look only): breakable walls, the wrecking ball, blade clash. */
+  readonly c3 = new Clip3Sim();
   /** The hero's equipped traits as one modifiers object: the identity unless a run sets them (setTraits). */
   traits: TraitMods = IDENTITY;
   /** Grappling hook mobility (hook, New moveset): roof swings, wall zips, wall clings. */
@@ -116,6 +119,7 @@ export class World {
     this.ctrl.reset();
     this.wpn.reset();
     this.v2.reset();
+    this.c3.reset();
     this.grapple.reset();
     this.powers.reset();
     this.special.reset();
@@ -206,6 +210,7 @@ export class World {
       bowling(this);
       separate(this);
       this.ents.update(this);
+      this.c3.update(this);
     }
 
     // Remove finished enemies (in place, no allocation).

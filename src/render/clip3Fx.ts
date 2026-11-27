@@ -41,6 +41,12 @@ export class Clip3Fx {
   private trails = new Map<number, number[]>();
   private slideAcc = new Map<number, number>();
   private xs: Mark[] = []; private mounds: Mark[] = [];
+  /** Indoor page (242-276): crates (broken = -1 timer), swinging lamps (angle, velocity), planted swords (154). */
+  private crates = [{ x: 0, y: 0, broken: false }, { x: 0, y: 0, broken: false }, { x: 0, y: 0, broken: false }];
+  private lamps = [{ x: 0, a: 0, v: 0 }, { x: 0, a: 0, v: 0 }, { x: 0, a: 0, v: 0 }];
+  private planks: { x: number; y: number; vx: number; vy: number; a: number; va: number; t: number }[] = [];
+  private swords: Mark[] = [];
+  private wave = 0;
   private time = 0;
   private finalBoss = false;
   /** World -> low-res layer transform captured while drawing the world (for screen frames at a world point). */
@@ -57,10 +63,16 @@ export class Clip3Fx {
         effects.invert = 0; // the tear replaces the plain invert
       }
       if (e.kind === 'finisher') this.punch(0.16, 0.12);
+      this.nudgeIndoor(e.x, e.y, e.weight);
       if (e.kind === 'launch') this.pillars.push(mk(v.x, WORLD.groundY, 0.16));
       if (m && (m.sound === 'slash' || BLADES.has(w.weapon.id)) && e.weight >= 0.7 && v.y > WORLD.groundY - 140 && this.xs.length < 24 && !this.xs.some((q) => Math.abs(q.x - v.x) < 40)) this.xs.push(mk(v.x, WORLD.groundY, 9999, (Math.random() - 0.5) * 0.4));
     });
-    ev.on('ko', (e) => { if (DRAW.ink && e.last) this.punch(0.22, 0.14); });
+    ev.on('ko', (e) => {
+      if (!DRAW.ink) return;
+      if (e.last) this.punch(0.22, 0.14);
+      if (BLADES.has(w.weapon.id) && this.swords.length < 8) this.swords.push(mk(e.x + (Math.random() - 0.5) * 40, WORLD.groundY, 9999, (Math.random() - 0.5) * 0.5));
+      this.nudgeIndoor(e.x, e.y, 1.2);
+    });
     ev.on('beam', (e) => { if (DRAW.ink && e.hit && e.heavy) this.rings.push(mk(e.x2, e.y2, 0.3)); });
     ev.on('dodge', (e) => { if (DRAW.ink) this.balls.push(mk(e.x, e.y - 34, 0.3)); });
     ev.on('groundImpact', (e) => {
@@ -76,9 +88,15 @@ export class Clip3Fx {
     ev.on('shockwave', (e) => blast(e.x));
     ev.on('meteor', (e) => blast(e.x));
     ev.on('bossPhase', () => { if (DRAW.ink && !settings.reduceFlashes) this.stipple = 0.1; });
+    ev.on('wallBreak', (e) => { if (DRAW.ink) { this.addMounds(e.x - e.dir * 60, 2); if (!settings.reduceFlashes) this.stipple = 0.08; this.punch(0.14, 0.1); } });
+    ev.on('clash', (e) => { if (DRAW.ink && !e.end && !settings.reduceFlashes) this.tear = { t: 0, life: 0.1, x: e.x, y: e.y, a: -0.2, seed: (Math.random() * 1e9) | 0 }; });
     ev.on('waveClear', () => { if (DRAW.ink) this.cut = this.cutLife; });
     ev.on('waveStart', (e) => {
-      this.xs.length = 0; this.mounds.length = 0; this.trails.clear();
+      this.xs.length = 0; this.mounds.length = 0; this.trails.clear(); this.swords.length = 0; this.planks.length = 0;
+      this.wave = e.wave;
+      const A = WORLD.arenaW;
+      [A * 0.6, A * 0.6 + 58, A * 0.6 + 29].forEach((x, i) => { this.crates[i].x = x; this.crates[i].y = i === 2 ? WORLD.groundY - 56 : WORLD.groundY; this.crates[i].broken = false; });
+      [A * 0.28, A * 0.52, A * 0.78].forEach((x, i) => { this.lamps[i].x = x; this.lamps[i].a = 0; this.lamps[i].v = 0; });
       this.finalBoss = false;
       if (DRAW.ink && e.boss) this.vs = { t: 0, life: 1.6, name: 'YOU', sub: '' };
     });
@@ -90,6 +108,18 @@ export class Clip3Fx {
     });
   }
 
+  /** Indoor page on every fifth wave from wave 4 (not boss waves). */
+  indoor(w: World): boolean { return DRAW.ink && this.wave >= 4 && this.wave % 5 === 4 && !w.enemies.some((e) => e.def?.boss); }
+  /** A hit near a crate breaks it; any hit makes nearby lamps swing (render-only). */
+  private nudgeIndoor(x: number, y: number, weight: number): void {
+    for (const l of this.lamps) { const d = Math.abs(l.x - x); if (d < 260) l.v += (x < l.x ? 1 : -1) * weight * 0.06 * (1 - d / 260); }
+    if (weight < 0.6) return;
+    for (const c of this.crates) {
+      if (c.broken || Math.abs(c.x - x) > 70 || y < c.y - 140) continue;
+      c.broken = true;
+      for (let i = 0; i < 7; i++) this.planks.push({ x: c.x + (Math.random() - 0.5) * 40, y: c.y - 28, vx: (Math.random() - 0.5) * 700, vy: -300 - Math.random() * 500, a: Math.random() * 6, va: (Math.random() - 0.5) * 18, t: 0 });
+    }
+  }
   /** Game over: a dithered card dissolve before the results (frame 10). */
   titleCard(): void { if (DRAW.ink) this.title = this.titleLife; }
   /** Rain on every fourth wave from wave 3 (not on boss waves). */
@@ -111,6 +141,8 @@ export class Clip3Fx {
       for (const k of list) k.t += dt;
       for (let i = list.length - 1; i >= 0; i--) if (list[i].t >= list[i].life) list.splice(i, 1);
     }
+    for (const l of this.lamps) { l.v += -l.a * 30 * dt; l.v *= 1 - 1.6 * dt; l.a += l.v * 60 * dt; l.a = Math.max(-0.9, Math.min(0.9, l.a)); }
+    for (const p of this.planks) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 1600 * dt; p.a += p.va * dt; if (p.y > WORLD.groundY - 3) { p.y = WORLD.groundY - 3; p.vy *= -0.25; p.vx *= 0.5; p.va *= 0.5; } }
     for (const p of this.pebbles) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 1500 * dt; if (p.y > WORLD.groundY) { p.y = WORLD.groundY; p.vy *= -0.3; p.vx *= 0.6; } }
     for (let i = this.pebbles.length - 1; i >= 0; i--) if (this.pebbles[i].t > 0.7) this.pebbles.splice(i, 1);
     if (!DRAW.ink) return;
@@ -151,12 +183,13 @@ export class Clip3Fx {
   }
 
   /** World-space marks (inside the camera transform, before the palette snap). */
-  drawWorld(ctx: CanvasRenderingContext2D, _w: World, wpp: number): void {
+  drawWorld(ctx: CanvasRenderingContext2D, w: World, wpp: number): void {
     if (!DRAW.ink) return;
     this.m = ctx.getTransform();
     const G = WORLD.groundY, step = Math.floor(this.time * 12);
     ctx.save();
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    this.drawSimBits(ctx, w, wpp, G, step);
     // dust mounds that stay: dithered humps along the floor
     for (const d of this.mounds) {
       const wd = 70 * d.a, h = 24 * d.a;
@@ -230,6 +263,119 @@ export class Clip3Fx {
       }
     }
     ctx.restore();
+  }
+
+  /** Background pass (before the fighters): the indoor page's ceiling, lamps, stairs, table and crates. */
+  drawBack(ctx: CanvasRenderingContext2D, w: World, wpp: number): void {
+    if (!DRAW.ink) return;
+    const G = WORLD.groundY;
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // planted swords (154-166): blades left standing in the floor, hilts up
+    ctx.strokeStyle = INK.ink;
+    for (const s of this.swords) {
+      const ux = Math.sin(s.a), uy = -Math.cos(s.a), x0 = s.x - ux * 14, y0 = G + 10;
+      ctx.lineWidth = 2.4 * wpp + 0.6; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + ux * 70, y0 + uy * 70); ctx.stroke();
+      ctx.lineWidth = 3 * wpp + 0.6; ctx.beginPath(); ctx.moveTo(x0 + ux * 56 - uy * 10, y0 + uy * 56 + ux * 10); ctx.lineTo(x0 + ux * 56 + uy * 10, y0 + uy * 56 - ux * 10); ctx.stroke();
+      ctx.strokeStyle = INK.red; ctx.lineWidth = 1.6 * wpp + 0.4; ctx.beginPath(); ctx.moveTo(x0 + ux * 60, y0 + uy * 60); ctx.lineTo(x0 + ux * 70, y0 + uy * 70); ctx.stroke(); ctx.strokeStyle = INK.ink;
+    }
+    if (!this.indoor(w)) { ctx.restore(); return; }
+    const A = WORLD.arenaW, top = G - 560;
+    // ceiling
+    ctx.fillStyle = INK.ink; ctx.fillRect(-400, top - 6, A + 800, 6 * wpp + 4);
+    // stairs up to a landing on the left, shaded with a stipple (background only: nobody climbs them)
+    const sx = 60, landY = G - 150;
+    ctx.save(); ctx.beginPath(); ctx.moveTo(sx, G); ctx.lineTo(sx, landY); ctx.lineTo(sx + 220, landY);
+    for (let i = 0; i < 6; i++) { ctx.lineTo(sx + 220 + i * 26, landY + i * 25); ctx.lineTo(sx + 220 + (i + 1) * 26, landY + i * 25); }
+    ctx.lineTo(sx + 220 + 6 * 26, G); ctx.closePath();
+    ctx.fillStyle = INK.paper; ctx.fill();
+    ctx.lineWidth = 2 * wpp + 0.4; ctx.strokeStyle = INK.ink; ctx.stroke();
+    ctx.clip();
+    if (this.m) { const m = this.m; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = this.pattern(ctx, INK.ink) ?? INK.ink; const a = m.transformPoint(new DOMPoint(sx, landY + 40)), b = m.transformPoint(new DOMPoint(sx + 420, G)); ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y); }
+    ctx.restore();
+    // a railing post
+    ctx.strokeStyle = INK.ink; ctx.lineWidth = 2 * wpp + 0.4; ctx.beginPath(); ctx.moveTo(sx + 216, landY); ctx.lineTo(sx + 216, landY - 90); ctx.lineTo(sx + 392, G - 90); ctx.stroke();
+    // table
+    const tx = A * 0.38; ctx.lineWidth = 3 * wpp + 0.6; ctx.beginPath(); ctx.moveTo(tx - 70, G - 62); ctx.lineTo(tx + 70, G - 62); ctx.moveTo(tx - 60, G - 62); ctx.lineTo(tx - 60, G); ctx.moveTo(tx + 60, G - 62); ctx.lineTo(tx + 60, G); ctx.stroke();
+    // hanging lamps
+    for (const l of this.lamps) {
+      const L = 120, hx = l.x + Math.sin(l.a) * L, hy = top + Math.cos(l.a) * L;
+      ctx.lineWidth = 1.4 * wpp + 0.3; ctx.beginPath(); ctx.moveTo(l.x, top); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.fillStyle = INK.ink; ctx.save(); ctx.translate(hx, hy); ctx.rotate(-l.a);
+      ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(6, 0); ctx.lineTo(22, 18); ctx.lineTo(-22, 18); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = INK.paper; ctx.fillRect(-14, 18, 28, 3); ctx.restore();
+    }
+    // crates (hatched boxes) and their flying planks
+    for (const c of this.crates) {
+      if (c.broken) continue;
+      const S = 56;
+      ctx.fillStyle = INK.paper; ctx.fillRect(c.x - S / 2, c.y - S, S, S);
+      ctx.lineWidth = 2 * wpp + 0.4; ctx.strokeRect(c.x - S / 2, c.y - S, S, S);
+      ctx.lineWidth = 1.2 * wpp + 0.2; ctx.beginPath();
+      for (let k = -2; k <= 2; k++) { ctx.moveTo(c.x - S / 2, c.y - S / 2 + k * 11); ctx.lineTo(c.x - S / 2 + S / 2 - k * 11, c.y - S); }
+      ctx.moveTo(c.x - S / 2, c.y); ctx.lineTo(c.x + S / 2, c.y - S);
+      ctx.stroke();
+    }
+    ctx.lineWidth = 2.2 * wpp + 0.4;
+    for (const p of this.planks) { if (p.t > 2.5) continue; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = INK.paper; ctx.fillRect(-12, -3, 24, 6); ctx.strokeRect(-12, -3, 24, 6); ctx.restore(); }
+    ctx.restore();
+  }
+
+  /** Breakable walls, the wrecking ball and the blade clash (sim/clip3Sim.ts). */
+  private drawSimBits(ctx: CanvasRenderingContext2D, w: World, wpp: number, G: number, step: number): void {
+    const c3 = w.c3, m = this.m!;
+    // page edges: hairline cracks after one hard hit; a black, dithered hole once smashed (216-238)
+    for (const side of [0, 1]) {
+      const x = side === 0 ? WORLD.wallMargin : WORLD.arenaW - WORLD.wallMargin, out = side === 0 ? -1 : 1;
+      if (c3.broken[side]) {
+        sd = 501 + side;
+        const pts: [number, number][] = [];
+        for (let i = 0; i <= 12; i++) { const t = i / 12; pts.push([x - out * (10 + rnd() * 40) * Math.sin(t * Math.PI) - out * 6, G - t * 300]); }
+        ctx.fillStyle = INK.ink; ctx.beginPath(); ctx.moveTo(x + out * 400, G);
+        for (const [px, py] of pts) ctx.lineTo(px, py);
+        ctx.lineTo(x + out * 400, G - 300); ctx.closePath(); ctx.fill();
+        ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = this.pattern(ctx, INK.ink) ?? INK.ink;
+        const a = m.transformPoint(new DOMPoint(Math.min(x - out * 70, x + out * 10), G - 340)), b = m.transformPoint(new DOMPoint(Math.max(x - out * 70, x + out * 10), G));
+        ctx.fillRect(Math.min(a.x, b.x), a.y, Math.abs(b.x - a.x), b.y - a.y);
+        ctx.restore();
+        ctx.strokeStyle = INK.ink; ctx.lineWidth = 1.6 * wpp + 0.3; ctx.beginPath();
+        for (let i = 0; i < 9; i++) { const yy = G - 30 - rnd() * 280, xx = x - out * (40 + rnd() * 50); ctx.rect(xx - 7, yy - 4, 14, 8); }
+        ctx.stroke();
+      } else if (c3.cracks[side] > 0) {
+        sd = 601 + side; ctx.strokeStyle = INK.ink; ctx.lineWidth = 1.6 * wpp + 0.3; ctx.beginPath();
+        let yy = G - 220, xx = x;
+        ctx.moveTo(xx, yy);
+        for (let i = 0; i < 7; i++) { xx = x - out * rnd() * 26; yy += 26 + rnd() * 10; ctx.lineTo(xx, yy); }
+        ctx.stroke();
+      }
+    }
+    // the wrecking ball (184): a big dithered ball with hatched bands rolling along the floor, jagged dust behind
+    for (const b of c3.balls) {
+      const R = 70;
+      if (b.t <= b.warn) {
+        if ((step & 1) === 0) { ctx.fillStyle = INK.red; ctx.font = 'bold 56px monospace'; ctx.textAlign = 'center'; ctx.fillText('!', b.x + b.dir * 90, G - 40); }
+        continue;
+      }
+      const cy = G - R, rot = (b.x / R) * b.dir;
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = this.pattern(ctx, INK.ink) ?? INK.ink;
+      const c = m.transformPoint(new DOMPoint(b.x, cy)), e = m.transformPoint(new DOMPoint(b.x + R, cy));
+      ctx.beginPath(); ctx.arc(c.x, c.y, Math.abs(e.x - c.x), 0, TAU); ctx.fill(); ctx.restore();
+      ctx.strokeStyle = INK.ink; ctx.lineWidth = 2.4 * wpp + 0.6;
+      ctx.beginPath(); ctx.arc(b.x, cy, R, 0, TAU); ctx.stroke();
+      ctx.lineWidth = 3.2 * wpp + 0.6; ctx.beginPath();
+      for (let i = 0; i < 3; i++) { const a = rot + (i * Math.PI) / 3; ctx.moveTo(b.x + Math.cos(a) * R * 0.95, cy + Math.sin(a) * R * 0.95); ctx.quadraticCurveTo(b.x + Math.cos(a + 1.2) * R * 0.2, cy + Math.sin(a + 1.2) * R * 0.2, b.x - Math.cos(a) * R * 0.95, cy - Math.sin(a) * R * 0.95); }
+      ctx.stroke();
+      sd = step * 7 + 3; ctx.lineWidth = 1.6 * wpp + 0.3; ctx.beginPath();
+      for (let i = 0; i < 4; i++) { const x0 = b.x - b.dir * (R + 10 + i * 22), y0 = G - 10 - rnd() * 40; ctx.moveTo(x0, y0); ctx.lineTo(x0 - b.dir * 18, y0 - 12); ctx.lineTo(x0 - b.dir * 8, y0 - 4); ctx.lineTo(x0 - b.dir * 30, y0 - 20); }
+      ctx.stroke();
+    }
+    // blade clash (114-116): red sparks spraying from the locked blades
+    const cl = c3.clash;
+    if (cl) {
+      sd = step * 13 + cl.t; ctx.strokeStyle = INK.red; ctx.lineWidth = 2 * wpp + 0.5; ctx.beginPath();
+      for (let i = 0; i < 12; i++) { const a = rnd() * TAU, r0 = 6 + rnd() * 10, r1 = r0 + 14 + rnd() * 30; ctx.moveTo(cl.x + Math.cos(a) * r0, cl.y + Math.sin(a) * r0); ctx.lineTo(cl.x + Math.cos(a) * r1, cl.y + Math.sin(a) * r1); }
+      ctx.stroke();
+      ctx.strokeStyle = INK.ink; ctx.lineWidth = 3 * wpp + 0.6; ctx.beginPath(); ctx.moveTo(cl.x - 46, cl.y); ctx.lineTo(cl.x + 46, cl.y); ctx.stroke();
+    }
   }
 
   /** Screen frames, drawn on the low-res layer in pixels (before the palette snap). */

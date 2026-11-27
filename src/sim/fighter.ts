@@ -181,6 +181,8 @@ export class Fighter {
     tokenTime: 0,
     pattern: 0,
     meteorTimer: 0,
+    /** Clip 3 (Pixel look): the Colossus's wrecking-ball timer. */
+    ballTimer: 0,
     summonTimer: 0,
     phase: 1,
     spawnWalk: 0,
