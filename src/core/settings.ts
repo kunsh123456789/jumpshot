@@ -1,5 +1,5 @@
 /** Persistent user settings (localStorage). */
-import { HERO_DEFAULT, HERO_LOOK, applyHero, sanitizeHero, type HeroSave } from '../data/hero';
+import { HERO_LOOK, applyHero, heroDefault, sanitizeHero, type HeroSave } from '../data/hero';
 
 export interface Settings {
   masterVolume: number;   // 0..1
@@ -147,7 +147,7 @@ export interface SaveData {
   /** Best style rank ever reached (index into STYLE.ranks): the Rank pin cosmetic shows it. */
   bestRank?: number;
 }
-export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false, weapon: 'fists', weaponTips: [], cheatsUnlocked: [], hero: { ...HERO_DEFAULT, traits: [null, null] } };
+export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false, weapon: 'fists', weaponTips: [], cheatsUnlocked: [], hero: heroDefault() };
 export function loadSave(): void {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -177,6 +177,12 @@ export function wipeAllAndReload(): void {
 /** Change the hero's cosmetics or traits: validated, applied to the renderers and saved. */
 export function updateHero(patch: Partial<HeroSave>): void {
   save.hero = sanitizeHero({ ...save.hero, ...patch });
+  applyHero(save.hero);
+  writeSave();
+}
+/** Reset the character: every cosmetic, colour, skin and both trait slots back to the defaults. */
+export function resetHero(): void {
+  save.hero = heroDefault();
   applyHero(save.hero);
   writeSave();
 }

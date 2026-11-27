@@ -447,6 +447,18 @@ body.perf .sp.ready .bar::after { opacity: .8; }
 .hm-seg { margin: 0; flex-wrap: wrap; }
 .hm-seg .btn { min-width: 0; margin: 0 calc(var(--u) * -1px); }
 .hm-seg .btn[aria-pressed="true"] { background: linear-gradient(180deg, #ff5ca6, var(--magenta) 52%, #b8105c); border-color: #fff; box-shadow: var(--glow-m); }
+/* Character: per-slot colour swatches (the Pixel page's four inks; the first is the item's own colours) */
+.hm-swatches { display: flex; gap: calc(var(--u) * 6px); align-items: center; margin-left: calc(var(--u) * 4px); }
+.hm-sw { width: calc(var(--u) * 26px); height: calc(var(--u) * 26px); min-width: 24px; min-height: 24px; border-radius: 50%; border: 2px solid var(--steel2); cursor: pointer; padding: 0; }
+.hm-sw[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 2px var(--magenta), var(--glow-m); }
+.hm-sw:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.hm-sw.sw-default { background: conic-gradient(#000 0 25%, #e22424 0 50%, #2436e6 0 75%, #fff 0); }
+.hm-sw.sw-black { background: #000; }
+.hm-sw.sw-red { background: #e22424; }
+.hm-sw.sw-blue { background: #2436e6; }
+.hm-sw.sw-white { background: #fff; }
+.hm-reset { display: flex; justify-content: flex-start; margin-top: var(--s3); }
+.hm-canvas { image-rendering: pixelated; }
 .hm-foot { display: flex; gap: var(--s3); justify-content: center; flex-wrap: wrap; padding-top: var(--s2); }
 @media (max-aspect-ratio: 4/5) {
   .hm-grid { grid-template-columns: minmax(0, 1fr); }

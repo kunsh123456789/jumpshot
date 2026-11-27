@@ -1,9 +1,9 @@
-import { settings, saveSettings, save, updateHero, resetSettingsToDefaults } from '../core/settings';
+import { settings, saveSettings, save, updateHero, resetHero, resetSettingsToDefaults } from '../core/settings';
 import { audio } from '../core/audio';
 import { WEAPONS, activeDef, availableWeapons, type WeaponDef, type WeaponId } from '../data/weapons';
 import { MOVES } from '../data/moves';
 import { MovePreview, HeroPreview } from './preview';
-import { BACKS, BADGES, BANDS, BODIES, HAIRS, FEET, GEAR, HANDS, SKINS, SKIN_WEAPONS, TRAITS, TRAIT_SLOTS, traitById, type HeroSave, type SkinWeapon } from '../data/hero';
+import { BACKS, BADGES, BANDS, BODIES, COLORS, HAIRS, LEGS, SHOES, type ColorSlot, GEAR, HANDS, SKINS, SKIN_WEAPONS, TRAITS, TRAIT_SLOTS, traitById, type HeroSave, type SkinWeapon } from '../data/hero';
 import { anyUnlocked, isUnlocked, enterCode } from './cheats';
 import { STYLE } from '../data/tuning';
 import { icon } from './icons';
@@ -133,7 +133,7 @@ export class Menus {
     if (onStart) this.btn(acts, 'FIGHT!', onStart, 'btn primary ttl-fight', 'play').id = 'title-fight';
     const row = document.createElement('div');
     row.className = 'row2';
-    if (loadout) this.btn(row, 'HOME', loadout.open, 'btn', 'home').id = 'title-home';
+    if (loadout) this.btn(row, 'CHARACTER', loadout.open, 'btn', 'home').id = 'title-home';
     this.btn(row, 'SETTINGS', onSettings, 'btn', 'gear').id = 'title-settings';
     acts.appendChild(row);
     el.appendChild(acts);
@@ -161,12 +161,13 @@ export class Menus {
   }
 
   // ---------------- Pause ----------------
-  showPause(onResume: () => void, onSettings: () => void, onRestart: () => void, onQuit: () => void): void {
+  showPause(onResume: () => void, onSettings: () => void, onRestart: () => void, onQuit: () => void, onCharacter?: () => void): void {
     const el = this.layer('pause', 'layer dim pz');
     this.head(el, 'PAUSED', 'pz-head');
     const col = document.createElement('div');
     col.className = 'pz-btns';
     this.btn(col, 'RESUME', onResume, 'btn primary', 'play', true);
+    if (onCharacter) this.btn(col, 'CHARACTER', onCharacter, 'btn', 'home').id = 'pause-character';
     this.btn(col, 'SETTINGS', onSettings, 'btn', 'gear');
     this.btn(col, 'RESTART RUN', onRestart, 'btn', 'retry');
     this.btn(col, 'QUIT TO TITLE', onQuit, 'btn', 'home');
@@ -326,9 +327,9 @@ export class Menus {
    * Home: your fighter alive in a canvas, with the equipped weapon, the two trait slots and the cosmetics.
    * Everything is a real button, so touch, mouse, keyboard and gamepad all reach it.
    */
-  showHome(o: { onWeapon: () => void; onTraining: () => void; onClose: () => void }): void {
+  showHome(o: { onWeapon: () => void; onTraining: () => void; onClose: () => void; fromPause?: boolean }): void {
     const el = this.layer('home', 'layer dim home');
-    this.head(el, 'HOME', 'lo-head');
+    this.head(el, 'CHARACTER', 'lo-head');
     const grid = document.createElement('div');
     grid.className = 'hm-grid';
     // ---- left: the fighter ----
@@ -391,8 +392,9 @@ export class Menus {
     renderTraits();
     // cosmetics
     const cos = document.createElement('div'); cos.className = 'hm-cos';
-    type CosKey = 'band' | 'headgear' | 'hands' | 'body' | 'hair' | 'back' | 'feet' | 'badge';
-    const row = (label: string, key: CosKey | `skin-${SkinWeapon}`, opts: { id: string; name: string }[]) => {
+    type CosKey = 'band' | 'headgear' | 'hands' | 'body' | 'hair' | 'back' | 'shoes' | 'legs' | 'badge';
+    /** One option row, with a row of colour swatches when the slot can be recoloured. */
+    const row = (into: HTMLElement, label: string, key: CosKey | `skin-${SkinWeapon}`, opts: { id: string; name: string }[], color?: ColorSlot) => {
       const sw = key.startsWith('skin-') ? (key.slice(5) as SkinWeapon) : null;
       const cur = (): string => (sw ? hero().skins[sw] : hero()[key as CosKey]);
       const set = (id: string) => updateHero(sw ? { skins: { ...hero().skins, [sw]: id } } : ({ [key]: id } as Partial<HeroSave>));
@@ -405,19 +407,42 @@ export class Menus {
         b.addEventListener('click', (e) => { e.stopPropagation(); audio.ui('select'); set(op.id); for (const x of seg.children) x.setAttribute('aria-pressed', String(x === b)); });
         seg.appendChild(b);
       }
-      r.appendChild(seg); cos.appendChild(r);
+      r.appendChild(seg);
+      if (color) {
+        const cs = document.createElement('div'); cs.className = 'hm-swatches'; cs.setAttribute('role', 'group'); cs.setAttribute('aria-label', label + ' colour');
+        for (const c of COLORS) {
+          const b = document.createElement('button'); b.type = 'button'; b.className = 'hm-sw sw-' + c.id; b.id = `home-color-${color}-${c.id}`;
+          b.title = c.name; b.setAttribute('aria-label', `${label} colour: ${c.name}`);
+          b.setAttribute('aria-pressed', String(hero().colors[color] === c.id));
+          b.addEventListener('click', (e) => { e.stopPropagation(); audio.ui('select'); updateHero({ colors: { ...hero().colors, [color]: c.id } }); for (const x of cs.children) x.setAttribute('aria-pressed', String(x === b)); });
+          cs.appendChild(b);
+        }
+        r.appendChild(cs);
+      }
+      into.appendChild(r);
     };
-    row('Body', 'body', BODIES); row('Hair (female)', 'hair', HAIRS); row('Headband', 'band', BANDS); row('Headgear', 'headgear', GEAR);
-    row('Neck & back', 'back', BACKS); row('Hands', 'hands', HANDS); row('Feet', 'feet', FEET); row('Belts & badges', 'badge', BADGES);
+    row(cos, 'Body', 'body', BODIES); row(cos, 'Hair', 'hair', HAIRS, 'hair'); row(cos, 'Headband', 'band', BANDS); row(cos, 'Headgear', 'headgear', GEAR, 'headgear');
+    row(cos, 'Neck & back', 'back', BACKS, 'back'); row(cos, 'Hands', 'hands', HANDS, 'hands'); row(cos, 'Leg-wear', 'legs', LEGS, 'legs');
+    row(cos, 'Shoes', 'shoes', SHOES, 'shoes'); row(cos, 'Belts & badges', 'badge', BADGES, 'badge');
     const skins = document.createElement('div'); skins.className = 'hm-cos';
-    { const keep = cos; for (const w of SKIN_WEAPONS) { row(w.name, `skin-${w.id}`, SKINS[w.id]); skins.appendChild(keep.lastChild as Node); } }
-    const note = document.createElement('p'); note.className = 'hm-note'; note.textContent = 'New cosmetics and skins show in the Pixel look.';
-    body.append(sec('WEAPON'), wp, sec('TRAITS · 2 SLOTS'), slots, list, sec('COSMETICS'), note, cos, sec('WEAPON SKINS'), skins);
+    SKIN_WEAPONS.forEach((w, i) => row(skins, w.name, `skin-${w.id}`, SKINS[w.id], i === 0 ? 'skin' : undefined));
+    const skinNote = document.createElement('p'); skinNote.className = 'hm-note'; skinNote.textContent = 'The colour on the Fists row recolours every weapon skin.';
+    const note = document.createElement('p'); note.className = 'hm-note'; note.textContent = 'Tap a swatch to recolour a slot (the first swatch is the item\'s own colours). Cosmetics show in the Pixel look.';
+    // reset: tap twice (the first tap arms it)
+    const resetRow = document.createElement('div'); resetRow.className = 'hm-reset';
+    let armed = false;
+    const rb = this.btn(resetRow, 'RESET CHARACTER', () => {
+      if (!armed) { armed = true; rb.querySelector('span')!.textContent = 'TAP AGAIN TO RESET'; rb.classList.add('danger'); return; }
+      resetHero(); preview.stop(); this.close('home'); this.showHome(o);
+    }, 'btn small', 'retry');
+    rb.id = 'home-reset';
+    if (o.fromPause) body.append(sec('COSMETICS'), note, cos, sec('WEAPON SKINS'), skinNote, skins, resetRow);
+    else body.append(sec('WEAPON'), wp, sec('TRAITS · 2 SLOTS'), slots, list, sec('COSMETICS'), note, cos, sec('WEAPON SKINS'), skinNote, skins, resetRow);
     right.appendChild(body);
     grid.append(left, right);
     el.appendChild(grid);
     const foot = document.createElement('div'); foot.className = 'hm-foot';
-    this.btn(foot, 'TRAINING ROOM', () => { preview.stop(); this.close('home'); o.onTraining(); }, 'btn', 'target').id = 'home-training';
+    if (!o.fromPause) this.btn(foot, 'TRAINING ROOM', () => { preview.stop(); this.close('home'); o.onTraining(); }, 'btn', 'target').id = 'home-training';
     this.btn(foot, 'DONE', () => { preview.stop(); this.close('home'); o.onClose(); }, 'btn primary', 'check', true).id = 'home-done';
     el.appendChild(foot);
     preview.start();

@@ -7,8 +7,9 @@ import { Fighter } from '../sim/fighter';
 import { ENEMIES } from '../data/enemies';
 import { MOVES } from '../data/moves';
 import { drawFighter } from '../render/stickman';
-import { drawInkFighter, INK } from '../render/ink';
+import { drawInkFighter, INK, quantize } from '../render/ink';
 import { INKLOOK } from '../data/inkLook';
+import { settings } from '../core/settings';
 import { MOVE, PLAYER, WORLD } from '../data/tuning';
 import { poseFighter } from '../render/poser';
 import type { WeaponDef } from '../data/weapons';
@@ -144,6 +145,8 @@ export class HeroPreview {
   private last = 0;
   private pose = 0;
   private poseT = 0;
+  /** Pixel look: the fighter is drawn into a low-res layer at the game's own pixel density, palette-snapped and blown up. */
+  private low: CanvasRenderingContext2D | null = null;
   readonly poses = ['idle', 'run', 'victory'];
   onPose: (name: string) => void = () => {};
 
@@ -197,6 +200,28 @@ export class HeroPreview {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     const sc = H / 330;
+    if (DRAW.ink) {
+      // Same pixels as in game: world units -> low-res pixels at the game's density, then scaled up unsmoothed.
+      const k = settings.pixelRes * INKLOOK.zoom;
+      const lw = Math.max(16, Math.round((W / sc) * k)), lh = Math.max(16, Math.round((H / sc) * k));
+      if (!this.low) this.low = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+      const g = this.low!;
+      if (g.canvas.width !== lw || g.canvas.height !== lh) { g.canvas.width = lw; g.canvas.height = lh; }
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, lw, lh);
+      g.setTransform(k, 0, 0, k, lw * 0.5, lh * 0.88);
+      g.translate(0, -WORLD.groundY);
+      const wpp = 1 / k;
+      g.fillStyle = INK.ink;
+      g.fillRect(-W / sc, WORLD.groundY - wpp, (2 * W) / sc, 2 * wpp);
+      drawInkFighter(g, h, 1, this.time, wpp);
+      quantize(g, lw, lh);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(g.canvas, 0, 0, lw, lh, 0, 0, c.width, c.height);
+      ctx.imageSmoothingEnabled = true;
+      return;
+    }
     ctx.setTransform(dpr * sc, 0, 0, dpr * sc, dpr * W * 0.5, dpr * H * 0.88);
     ctx.translate(0, -WORLD.groundY);
     const wpp = 1 / (INKLOOK.refRes * INKLOOK.zoom);

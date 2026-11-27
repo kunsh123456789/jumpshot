@@ -795,3 +795,21 @@ The PNGs are gone. Hit detection stays on the dummy's rig; the art is visual onl
   - devil tail and butterfly wings (Neck & back);
   - leg warmers and knee-high socks (Feet).
   - All are Pixel look only. The horns are drawn by `heroCos.ts` and not by the shared `heroGear.ts`, so the neon look is untouched.
+
+## Character screen (was Home): colours, split slots, pause access, reset
+- **Rename:** Home is now **Character**, on the title screen and in its heading. The element ids keep the `home-` prefix so the tests still work.
+- **From the pause menu:** the pause menu has a **Character** button. That version shows only cosmetics and skins, because the weapon and traits change between runs. Done returns to the pause menu.
+- **Colours per slot:** there are swatches for Hair, Headgear, Neck & back, Hands, Leg-wear, Shoes, Belts & badges, and one Skin colour for all weapon skins. The choices are Default (the item's own colours), Black, Red, Blue and White.
+  - The chosen colour replaces the item's main colour (`MAIN_*` tables in `heroCos.ts` and `weaponSkins.ts`).
+  - White hair gets an ink outline so it doesn't vanish into the page.
+  - The headband keeps its own colour row.
+- **Moved and split slots:**
+  - The **Flower** moved from Headband to **Headgear**.
+  - Feet is split into **Leg-wear** (bandages, warmers, socks) and **Shoes** (sneakers, boots, rocket shoes, flip-flops), so boots can be worn over socks or warmers.
+- **Hair** now shows on either body, and has a None option.
+- **Migration (save format v3):**
+  - a flower headband becomes the flower headgear;
+  - the old feet slot goes to Shoes or Leg-wear;
+  - male heroes start with no hair, because before v3 hair only showed on the Female body.
+- **Pixelated preview:** the Character preview draws into a low-res layer at the game's own pixel density, palette-snaps it, and scales it up with smoothing off, so it matches the game.
+- **Reset Character:** a two-tap button resets every cosmetic, colour, skin and both trait slots.

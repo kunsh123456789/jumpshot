@@ -199,7 +199,13 @@ export class Game {
     this.menus.showLoadout(weaponById(save.weapon).id, (id) => { save.weapon = id; writeSave(); this.world.setWeapon(id); }, () => (fromHome ? this.openHome() : this.toTitle()));
   }
 
-  /** Home: the fighter, the equipped weapon, two trait slots and cosmetics. */
+  /** The Character screen from the pause menu: cosmetics only (weapon and traits change between runs); Done goes back to pause. */
+  private openCharacterFromPause(): void {
+    this.menus.close('pause');
+    this.menus.showHome({ onWeapon: () => {}, onTraining: () => {}, onClose: () => { this.paused = false; this.togglePause(); }, fromPause: true });
+  }
+
+  /** Character (was Home): the fighter, the equipped weapon, two trait slots and cosmetics. */
   private openHome(): void {
     this.menus.close('title');
     this.menus.showHome({ onWeapon: () => this.openLoadout(true), onTraining: () => this.startTraining(), onClose: () => this.toTitle() });
@@ -538,6 +544,7 @@ export class Game {
         () => this.openSettings(false),
         () => { this.paused = false; this.tutorial.active = false; if (this.state === 'training') this.startTraining(); else this.startRun(); },
         () => { this.paused = false; this.tutorial.active = false; this.toTitle(); },
+        () => this.openCharacterFromPause(),
       );
       if (this.world.rhythm) this.rhythm.pause(); else audio.stopMusic();
     } else {
