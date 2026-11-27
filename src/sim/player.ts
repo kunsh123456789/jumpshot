@@ -30,7 +30,10 @@ export class PlayerController {
   /** Debug: buffer description. */
   bufDesc = '';
   /** Mid-air jumps left, and the frame of the last tap (double-tap = dodge when tap jumps). */
-  private airJumps = PLAYER.airJumps;
+  private airJumps: number = PLAYER.airJumps;
+  /** Mid-air jumps per airtime: the base plus the Lightfoot trait. */
+  private maxAirJumps(w: World): number { return PLAYER.airJumps + w.traits.airJumps; }
+  resetAirJumps(extra: number): void { this.airJumps = PLAYER.airJumps + extra; }
   private lastTap = -999;
 
   constructor() {
@@ -92,7 +95,7 @@ export class PlayerController {
     // Grapple: anything else that took the hero (a hit, a cinematic) cuts the rope.
     const gr = w.grapple;
     if (gr.active && p.state !== 'swing' && p.state !== 'cling') gr.cut(p);
-    if (gr.active) this.airJumps = PLAYER.airJumps;
+    if (gr.active) this.airJumps = this.maxAirJumps(w);
     if (p.fling > 0 && (p.grounded || p.state === 'move' || p.state === 'hurt')) p.fling = 0;
 
     // Age the buffer only while the player could act: never during hit-stop (above)
@@ -683,6 +686,7 @@ export class PlayerController {
     p.dodgeFromX = p.x;
     p.dodgeToX = clamp(p.x + away * D.distance, WORLD.wallMargin, WORLD.arenaW - WORLD.wallMargin);
     if (D.parry) p.parryWindow = D.parry;
+    p.parryWindow = Math.round(p.parryWindow * w.traits.parry);
     if (D.blink) { p.x = p.dodgeFromX = p.dodgeToX; w.events.emit('bossBlink', { x1: p.dodgeFromX - away * D.distance, x2: p.x, y: p.cy }); }
     if (D.rope) w.wpn.dodgeRope(p, p.dodgeToX);
     if (!p.grounded) { p.vy = Math.min(p.vy, -120); p.stall = 10; p.jumpKind = 'hop'; p.airFrames = 0; }
@@ -750,7 +754,7 @@ export class PlayerController {
     const axis = w.moveAxis;
     const free = p.state === 'idle' || p.state === 'walk' || p.state === 'land';
     if (p.grounded && free) {
-      let target = axis * MOVE.runSpeed * (w.weapon.passive?.skate && w.v2.onIce(p.x) ? V2.skateMult : 1);
+      let target = axis * MOVE.runSpeed * w.traits.run * (w.weapon.passive?.skate && w.v2.onIce(p.x) ? V2.skateMult : 1);
       if (target !== 0) {
         // Soft clamp: slow down near the walls instead of hitting them.
         const dist = target > 0 ? WORLD.arenaW - WORLD.wallMargin - p.x : p.x - WORLD.wallMargin;
@@ -799,7 +803,7 @@ export class PlayerController {
         p.stallCount = 0;
         p.followTarget = null;
         w.combo.onPlayerLanded();
-        this.airJumps = PLAYER.airJumps;
+        this.airJumps = this.maxAirJumps(w);
         w.events.emit('groundImpact', { x: p.x, y: p.y, power: 0.25, fighter: p, bounce: false });
         p.anim.impulseSquash(0.12, -0.2);
         if (p.state === 'ko') p.setState('knockdown', 99999);

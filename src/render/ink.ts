@@ -1,5 +1,7 @@
 import { J, JOINT_N } from './rig';
 import { heldWeapon } from './weaponFx';
+import { HERO_LOOK } from '../data/hero';
+import { drawHeroGear } from './heroGear';
 import type { Fighter } from '../sim/fighter';
 import { TAU } from '../core/math';
 import { WORLD } from '../data/tuning';
@@ -240,14 +242,17 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
   const hx = j[J.head * 2], hy = j[J.head * 2 + 1];
   const face = a.dFace || f.facing || 1;
   if (f.team === 'player') {
-    // Headband tail: a 2-segment red line that only changes with the drawing.
+    // Headband tail: a 2-segment line (the hero's cosmetic colour) that only changes with the drawing.
     const fl = f.grounded ? 0.15 : -0.25;
-    ctx.strokeStyle = INK.red; ctx.lineWidth = 2 * wpp; ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(hx - face * headR * 0.9, hy - headR * 0.25);
-    ctx.lineTo(hx - face * headR * 1.9, hy - headR * (0.05 + fl));
-    ctx.lineTo(hx - face * headR * 2.7, hy + headR * (0.35 - fl));
-    ctx.stroke();
+    if (f.kind === 'player' && HERO_LOOK.band !== 'none') {
+      ctx.strokeStyle = HERO_LOOK.band === 'blue' ? INK.blue : HERO_LOOK.band === 'black' ? INK.ink : INK.red; ctx.lineWidth = 2 * wpp; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(hx - face * headR * 0.9, hy - headR * 0.25);
+      ctx.lineTo(hx - face * headR * 1.9, hy - headR * (0.05 + fl));
+      ctx.lineTo(hx - face * headR * 2.7, hy + headR * (0.35 - fl));
+      ctx.stroke();
+    }
+    if (f.kind === 'player') drawHeroGear(ctx, j, hx, hy, headR, face, s, wpp, { ink: INK.ink, paper: INK.paper, red: INK.red, blue: INK.blue });
   }
   if (winding) burst(ctx, hx, hy - headR * 1.9, headR * 0.9, 5, f.id * 31 + step, INK.red, 2 * wpp);
   if (f.kind === 'shield' && f.guardBroken <= 0 && f.alive) {

@@ -77,7 +77,11 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   dmg *= w.wpn.x.preHit(w, v); // frozen victims shatter, bubbled ones pop
   if (crit) dmg *= PLAYER.critMult;
   if (w.rhythm) dmg *= w.rhythm.damageMult(w);
+  // Traits: damage dealt, the Executioner's bonus on weakened enemies, and Leech.
+  dmg *= w.traits.dmgOut;
+  if (v.hp < v.maxHp * 0.3) dmg *= w.traits.dmgLow;
   dmg = Math.max(1, dmg);
+  if (w.traits.lifesteal > 0 && p.alive) p.hp = Math.min(p.maxHp, p.hp + dmg * w.traits.lifesteal);
   if (w.rhythm) w.rhythm.onPlayerHit(w, v, dmg);
 
   // ---- Poise / armor ----
@@ -397,7 +401,7 @@ export function hurtPlayer(w: World, dmg: number, dirX: number, kbX: number, kbY
   const p = w.player;
   if (p.invuln > 0 || !p.alive) return;
   if (settings.cheatGod) return; // cheat: never take damage
-  dmg *= dmgScale(w.wave);
+  dmg *= dmgScale(w.wave) * w.traits.dmgIn;
   // Super armor (hammer swings): the hit hurts (half) but doesn't interrupt the swing.
   if (p.state === 'move' && p.move?.x2?.armor) {
     p.hp -= dmg * 0.5; p.flash = 4; p.invuln = 12;

@@ -1,3 +1,5 @@
+import { HERO_LOOK } from '../data/hero';
+import { drawHeroGear } from './heroGear';
 import { Ch, J, JOINT_N, POSE_N, computeJoints, ik2, lerpPose } from './rig';
 import { heldWeapon } from './weaponFx';
 import { SCARF_N, TRAIL_CAP } from './animator';
@@ -170,10 +172,10 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
   ctx.globalAlpha = fade;
 
   // Scarf ribbon (behind the body).
-  if (a.hasScarf && a.scarfInit) {
+  if (a.hasScarf && a.scarfInit && !(f.kind === 'player' && HERO_LOOK.band === 'none')) {
     for (let i = 0; i < SCARF_N * 2; i++) sc[i] = a.scarfPrev[i] + (a.scarf[i] - a.scarfPrev[i]) * alpha;
     sc[0] = hx - face * 7 * s; sc[1] = hy - 2 * s;
-    ctx.strokeStyle = flashing ? '#fff' : f.accent;
+    ctx.strokeStyle = flashing ? '#fff' : f.kind === 'player' && HERO_LOOK.band === 'blue' ? '#4a8cff' : f.kind === 'player' && HERO_LOOK.band === 'black' ? '#cfd6e6' : f.accent;
     ctx.lineWidth = 5 * s;
     strokeScarf(ctx);
   }
@@ -214,6 +216,7 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
   ctx.beginPath(); ctx.arc(jt[J.hip * 2], jt[J.hip * 2 + 1], w * 0.62, 0, TAU); ctx.fill();
 
   if (f.team === 'player') heldWeapon(ctx, f, jt, col, 1.6);
+  if (f.kind === 'player') drawHeroGear(ctx, jt, hx, hy, headR, face, s, 1.6, { ink: '#06070d', paper: '#e8eefc', red: '#ff4a4a', blue: '#4a8cff' });
   // Minimal details.
   if (f.team === 'player') {
     ctx.strokeStyle = flashing ? '#fff' : f.accent;

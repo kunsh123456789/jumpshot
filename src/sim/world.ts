@@ -1,4 +1,5 @@
 import { Grapple } from './grapple';
+import { IDENTITY, combineTraits, type TraitMods } from '../data/hero';
 import { EventBus } from '../core/events';
 import { Fighter } from './fighter';
 import type { SimEvents } from './events';
@@ -41,6 +42,8 @@ export class World {
   readonly wpn = new WeaponSim();
   /** Reworked movesets' mechanics (Settings -> Movesets: New). */
   readonly v2 = new Moveset2();
+  /** The hero's equipped traits as one modifiers object: the identity unless a run sets them (setTraits). */
+  traits: TraitMods = IDENTITY;
   /** Grappling hook mobility (hook, New moveset): roof swings, wall zips, wall clings. */
   readonly grapple = new Grapple();
   gameOver = false;
@@ -87,8 +90,17 @@ export class World {
     return p;
   }
 
+  /** Equip trait modifiers for the coming run / training session (call right after reset(); reset() clears them). */
+  setTraits(ids: (string | null)[]): void {
+    this.traits = combineTraits(ids);
+    const p = this.player;
+    p.hp = p.maxHp = Math.round(PLAYER.maxHp * this.traits.hp);
+    this.ctrl.resetAirJumps(this.traits.airJumps);
+  }
+
   /** Fresh run. */
   reset(): void {
+    this.traits = IDENTITY;
     this.player = this.makePlayer();
     this.enemies.length = 0;
     Object.assign(this.combo, new ComboTracker(this.events));

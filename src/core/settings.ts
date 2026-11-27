@@ -1,4 +1,6 @@
 /** Persistent user settings (localStorage). */
+import { HERO_DEFAULT, applyHero, sanitizeHero, type HeroSave } from '../data/hero';
+
 export interface Settings {
   masterVolume: number;   // 0..1
   musicVolume: number;    // 0..1
@@ -125,13 +127,17 @@ export interface SaveData {
   cheatsUnlocked: string[];
   /** The first-READY Special hint was shown. */
   specialHintSeen?: boolean;
+  /** The character: cosmetics and the two trait slots (data/hero.ts). */
+  hero: HeroSave;
 }
-export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false, weapon: 'fists', weaponTips: [], cheatsUnlocked: [] };
+export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false, weapon: 'fists', weaponTips: [], cheatsUnlocked: [], hero: { ...HERO_DEFAULT, traits: [null, null] } };
 export function loadSave(): void {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (raw) Object.assign(save, JSON.parse(raw));
   } catch { /* ignore */ }
+  save.hero = sanitizeHero(save.hero);
+  applyHero(save.hero);
 }
 /**
  * Reset the whole game: delete everything it ever stored in this browser (settings, high score,

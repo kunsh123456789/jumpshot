@@ -62,7 +62,7 @@ export class SpecialSystem {
   /** Add charge (ignored while a Special runs). Announces READY once per full charge. */
   add(w: World, amount: number): void {
     if (this.busy || amount <= 0) return;
-    this.charge = Math.min(this.max, this.charge + amount);
+    this.charge = Math.min(this.max, this.charge + amount * w.traits.special);
     if (this.charge >= SPECIAL.full && !this.announced) {
       this.announced = true;
       this.everReady = true;
