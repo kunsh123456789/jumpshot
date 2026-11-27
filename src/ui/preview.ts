@@ -9,7 +9,8 @@ import { MOVES } from '../data/moves';
 import { drawFighter } from '../render/stickman';
 import { drawInkFighter, INK } from '../render/ink';
 import { INKLOOK } from '../data/inkLook';
-import { WORLD } from '../data/tuning';
+import { MOVE, PLAYER, WORLD } from '../data/tuning';
+import { poseFighter } from '../render/poser';
 import type { WeaponDef } from '../data/weapons';
 
 /**
@@ -128,5 +129,80 @@ export class MovePreview {
       if (DRAW.ink) drawInkFighter(ctx, f, 1, this.time, wpp);
       else drawFighter(ctx, f, 1, this.time, 0);
     }
+  }
+}
+
+/**
+ * Home screen: the hero alive in a canvas (the real idle / run / victory animations with the weapon's grip, the headband
+ * and every cosmetic), exactly as the game draws it. Tap the canvas to cycle the pose.
+ */
+export class HeroPreview {
+  private hero = new Fighter('player', null);
+  private time = 0;
+  private acc = 0;
+  private raf = 0;
+  private last = 0;
+  private pose = 0;
+  private poseT = 0;
+  readonly poses = ['idle', 'run', 'victory'];
+  onPose: (name: string) => void = () => {};
+
+  constructor(private canvas: HTMLCanvasElement) {
+    this.hero.scale = PLAYER.scale;
+    this.hero.facing = 1;
+    this.hero.x = this.hero.px = 0;
+    this.hero.y = this.hero.py = WORLD.groundY;
+  }
+  setWeapon(id: string): void { this.hero.weapon = id; this.hero.weaponOut = false; }
+  nextPose(): void { this.pose = (this.pose + 1) % this.poses.length; this.poseT = 0; this.applyPose(true); this.onPose(this.poses[this.pose]); }
+  private applyPose(fresh: boolean): void {
+    const h = this.hero;
+    h.vx = this.pose === 1 ? MOVE.runSpeed : 0;
+    h.state = this.pose === 1 ? 'walk' : 'idle';
+    if (fresh && this.pose === 2) { h.cue = 'victory'; h.cueSerial++; }
+  }
+  start(): void {
+    if (this.raf) return;
+    this.last = performance.now();
+    this.applyPose(false);
+    const loop = (now: number) => {
+      this.raf = requestAnimationFrame(loop);
+      const dt = Math.min(0.05, (now - this.last) / 1000);
+      this.last = now;
+      if (!this.canvas.isConnected) { this.stop(); return; }
+      this.frame(dt);
+    };
+    this.raf = requestAnimationFrame(loop);
+  }
+  stop(): void { if (this.raf) cancelAnimationFrame(this.raf); this.raf = 0; }
+
+  private frame(dt: number): void {
+    syncDrawStyle();
+    const h = this.hero;
+    // The same fixed 60 Hz step the sim uses: pose the fighter, then advance its animator.
+    this.acc += dt;
+    while (this.acc >= 1 / 60) {
+      this.acc -= 1 / 60; this.time += 1 / 60; this.poseT += 1 / 60;
+      // victory is a one-shot: after a few seconds it falls back to idle
+      if (this.pose === 2 && this.poseT > 3.2) { this.poseT = 0; h.cue = 'victory'; h.cueSerial++; }
+      h.stateFrame++; h.idleFrames++;
+      poseFighter(h, this.time);
+      h.anim.step(h.x, h.y, h.facing, h.scale, h.vx, 0, false, false);
+      h.px = h.x; h.py = h.y;
+    }
+    const c = this.canvas, ctx = c.getContext('2d')!;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = c.clientWidth || 320, H = c.clientHeight || 320;
+    if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const sc = H / 330;
+    ctx.setTransform(dpr * sc, 0, 0, dpr * sc, dpr * W * 0.5, dpr * H * 0.88);
+    ctx.translate(0, -WORLD.groundY);
+    const wpp = 1 / (INKLOOK.refRes * INKLOOK.zoom);
+    ctx.strokeStyle = DRAW.ink ? INK.ink : '#cfd6e6'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-W / sc, WORLD.groundY); ctx.lineTo(W / sc, WORLD.groundY); ctx.stroke();
+    if (DRAW.ink) drawInkFighter(ctx, h, 1, this.time, wpp);
+    else drawFighter(ctx, h, 1, this.time, 0);
   }
 }

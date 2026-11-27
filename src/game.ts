@@ -14,6 +14,7 @@ import { Keyboard } from './core/keyboard';
 import { DebugOverlay } from './ui/debug';
 import { Menus } from './ui/menus';
 import { Tutorial } from './ui/tutorial';
+import { TrainingRoom } from './ui/training';
 import { PopDetector } from './ui/popDetector';
 import { AnimLab } from './ui/lab';
 import { CAMERA, PAD, WAVES_T, WORLD, SCORE } from './data/tuning';
@@ -36,7 +37,7 @@ import { CodeListener, enforceLocks } from './ui/cheats';
 import { SpecialInput } from './ui/specialInput';
 import { UiNav } from './ui/nav';
 
-type GState = 'title' | 'tutorial' | 'countdown' | 'playing' | 'breather' | 'gameover';
+type GState = 'title' | 'tutorial' | 'training' | 'countdown' | 'playing' | 'breather' | 'gameover';
 
 /** Top-level game: owns world, renderer, input, UI and the state machine. */
 export class Game {
@@ -52,6 +53,7 @@ export class Game {
   readonly world = new World();
   readonly fx: FxDirector;
   readonly tutorial: Tutorial;
+  readonly training: TrainingRoom;
   readonly pops = new PopDetector();
   readonly lab = new AnimLab();
   // ---- Rhythm Mode (src/rhythm). Inert in Classic Mode: world.rhythm stays null. ----
@@ -93,8 +95,8 @@ export class Game {
     this.pad.attach(canvas);
     this.keyboard = new Keyboard(this.pad);
     this.specialInput = new SpecialInput(this.pad, this.keyboard, this.cam, this.rhythm);
-    this.nav = new UiNav(this.pad, () => !this.paused && !this.specialInput?.active && (this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'breather'));
-    this.nav.onPause = () => { if (this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'breather') this.togglePause(); };
+    this.nav = new UiNav(this.pad, () => !this.paused && !this.specialInput?.active && (this.state === 'playing' || this.state === 'tutorial' || this.state === 'training' || this.state === 'countdown' || this.state === 'breather'));
+    this.nav.onPause = () => { if (this.state === 'playing' || this.state === 'tutorial' || this.state === 'training' || this.state === 'countdown' || this.state === 'breather') this.togglePause(); };
     this.keyboard.onToggleDebug = () => { this.debug.visible = !this.debug.visible; settings.debug = this.debug.visible; };
     this.keyboard.onPause = () => this.togglePause();
     // Easter-egg cheat codes typed anywhere.
@@ -118,17 +120,18 @@ export class Game {
     this.fx = new FxDirector(this.cam, this.time, this.pad);
     this.fx.bind(this.world);
     this.tutorial = new Tutorial(this.pad, this.menus, () => this.endTutorial());
+    this.training = new TrainingRoom(this.menus);
     this.renderer.resize();
     this.renderer.bg.preload();
     window.addEventListener('resize', () => { this.renderer.resize(); this.publishPadTop(); });
-    window.addEventListener('blur', () => { if ((this.state === 'playing' || this.state === 'tutorial') && !this.paused) this.togglePause(); });
-    document.addEventListener('visibilitychange', () => { if (document.hidden && (this.state === 'playing' || this.state === 'tutorial') && !this.paused) this.togglePause(); });
+    window.addEventListener('blur', () => { if ((this.state === 'playing' || this.state === 'tutorial' || this.state === 'training') && !this.paused) this.togglePause(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && (this.state === 'playing' || this.state === 'tutorial' || this.state === 'training') && !this.paused) this.togglePause(); });
     this.world.events.on('waveClear', () => this.onWaveClear());
     // Special (pass 8): the input phases open after the activation beat; first READY shows a hint.
     this.world.events.on('specialInput', () => this.specialInput.begin(this.world));
     this.world.events.on('specialReady', () => {
       audio.ready();
-      if (!save.specialHintSeen && (this.state === 'playing' || this.state === 'tutorial')) {
+      if (!save.specialHintSeen && (this.state === 'playing' || this.state === 'tutorial' || this.state === 'training')) {
         save.specialHintSeen = true; writeSave();
         this.menus.banner('SPECIAL READY!', 'hold still on the pad (or press X) to unleash it', 2200);
       }
@@ -159,6 +162,7 @@ export class Game {
 
   toTitle(): void {
     this.menus.closeAll();
+    this.training.active = false;
     this.world.reset();
     this.renderer.bg.set('dojo');
     this.setState('title');
@@ -168,8 +172,8 @@ export class Game {
     this.hud.visible = false;
     this.menus.showTitle(save.highScore, () => this.openSettings(true),
       { rhythm: settings.rhythmMode, onToggle: (r) => { settings.rhythmMode = r; saveSettings(); } },
-      { name: weaponById(save.weapon).name, open: () => this.openLoadout() }, () => this.startFromTitle(),
-      { tutorial: () => { audio.unlock(); this.startTutorial(); }, roadmap: () => this.menus.showRoadmap(save.bestWave, () => {}), reset: () => wipeAllAndReload() });
+      { name: weaponById(save.weapon).name, open: () => this.openHome() }, () => this.startFromTitle(),
+      { tutorial: () => { audio.unlock(); this.startTutorial(); }, training: () => { audio.unlock(); this.startTraining(); }, roadmap: () => this.menus.showRoadmap(save.bestWave, () => {}), reset: () => wipeAllAndReload() });
     this.cam.targetX = this.world.player.x;
     this.cam.snap();
     audio.stopMusic();
@@ -189,9 +193,15 @@ export class Game {
   }
 
   /** Pre-run loadout (from the title). */
-  private openLoadout(): void {
+  private openLoadout(fromHome = false): void {
     this.menus.close('title');
-    this.menus.showLoadout(weaponById(save.weapon).id, (id) => { save.weapon = id; writeSave(); this.world.setWeapon(id); }, () => this.toTitle());
+    this.menus.showLoadout(weaponById(save.weapon).id, (id) => { save.weapon = id; writeSave(); this.world.setWeapon(id); }, () => (fromHome ? this.openHome() : this.toTitle()));
+  }
+
+  /** Home: the fighter, the equipped weapon, two trait slots and cosmetics. */
+  private openHome(): void {
+    this.menus.close('title');
+    this.menus.showHome({ onWeapon: () => this.openLoadout(true), onTraining: () => this.startTraining(), onClose: () => this.toTitle() });
   }
 
   /** Equip a weapon for this run (loadout choice or a between-wave swap); first time: show its tooltip. */
@@ -371,6 +381,30 @@ export class Game {
     this.tutorial.start(this.world);
   }
 
+  /** The Training Room: your weapon and traits against a target, no waves, no game over. */
+  startTraining(): void {
+    this.menus.closeAll();
+    this.endRhythm();
+    this.world.reset();
+    this.world.setTraits(save.hero.traits);
+    this.world.tapJump = settings.tapAction === 'jump';
+    this.effectsReset();
+    this.equip(save.weapon, false);
+    this.renderer.bg.set('dojo');
+    paper.resetTransitions();
+    paper.setPage(this.pageFor(1));
+    this.pad.demo = false;
+    this.hud.visible = true;
+    this.hud.waveLabel = 'TRAINING ROOM';
+    audio.stopMusic();
+    this.setState('training');
+    this.menus.setPlayButtons(true);
+    this.training.start(this.world, {
+      onExit: () => { this.training.stop(this.world); this.paused = false; this.toTitle(); this.openHome(); },
+      onWeapon: () => this.menus.showSwap(this.world.weapon.id, (id) => this.equip(id, true)),
+    });
+  }
+
   private endTutorial(): void {
     save.tutorialDone = true;
     writeSave();
@@ -387,6 +421,7 @@ export class Game {
   startRun(): void {
     this.menus.closeAll();
     this.world.reset();
+    this.world.setTraits(save.hero.traits);
     this.nextWave = 1;
     this.pad.demo = false;
     this.pad.hint = -1;
@@ -500,7 +535,7 @@ export class Game {
       this.menus.showPause(
         () => this.togglePause(),
         () => this.openSettings(false),
-        () => { this.paused = false; this.tutorial.active = false; this.startRun(); },
+        () => { this.paused = false; this.tutorial.active = false; if (this.state === 'training') this.startTraining(); else this.startRun(); },
         () => { this.paused = false; this.tutorial.active = false; this.toTitle(); },
       );
       if (this.world.rhythm) this.rhythm.pause(); else audio.stopMusic();
@@ -508,7 +543,7 @@ export class Game {
       this.menus.close('pause');
       this.menus.close('settings');
       if (this.world.rhythm) this.rhythm.resume();
-      else if (this.state !== 'tutorial') audio.startMusic();
+      else if (this.state !== 'tutorial' && this.state !== 'training') audio.startMusic();
     }
   }
 
@@ -526,7 +561,7 @@ export class Game {
         if (e.kind === 'swipe' || e.kind === 'tap' || e.kind === 'jump') { ev.length = 0; this.startFromTitle(); return; }
       }
     }
-    const acceptInput = this.state === 'playing' || this.state === 'tutorial' || this.state === 'countdown' || this.state === 'breather';
+    const acceptInput = this.state === 'playing' || this.state === 'tutorial' || this.state === 'training' || this.state === 'countdown' || this.state === 'breather';
     if (acceptInput) for (let i = 0; i < ev.length; i++) this.inputs.push(ev[i]);
     ev.length = 0;
     syncDrawStyle();
@@ -634,6 +669,9 @@ export class Game {
         break;
       case 'tutorial':
         this.tutorial.update(this.world, dt);
+        break;
+      case 'training':
+        this.training.update(this.world);
         break;
       case 'gameover':
         this.overTimer += dt;

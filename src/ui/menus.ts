@@ -1,8 +1,9 @@
-import { settings, saveSettings } from '../core/settings';
+import { settings, saveSettings, save, updateHero } from '../core/settings';
 import { audio } from '../core/audio';
 import { WEAPONS, activeDef, availableWeapons, type WeaponDef, type WeaponId } from '../data/weapons';
 import { MOVES } from '../data/moves';
-import { MovePreview } from './preview';
+import { MovePreview, HeroPreview } from './preview';
+import { BANDS, GEAR, HANDS, TRAITS, TRAIT_SLOTS, traitById, type HeroSave } from '../data/hero';
 import { anyUnlocked, isUnlocked, enterCode } from './cheats';
 import { STYLE } from '../data/tuning';
 import { icon } from './icons';
@@ -96,7 +97,7 @@ export class Menus {
   // ---------------- Title ----------------
   showTitle(high: number, onSettings: () => void, mode: { rhythm: boolean; onToggle: (rhythm: boolean) => void } | null = null,
     loadout: { name: string; open: () => void } | null = null, onStart: (() => void) | null = null,
-    extra: { tutorial: () => void; roadmap: () => void; reset: () => void } | null = null): void {
+    extra: { tutorial: () => void; roadmap: () => void; training: () => void; reset: () => void } | null = null): void {
     const el = this.layer('title', 'layer passthrough ttl');
     el.innerHTML = `<div class="ttl-scrim"></div><h1 class="ttl-logo">JUMPSHOT</h1><div class="ttl-sub">SWIPE · LAUNCH · JUGGLE · SPIKE</div>`;
     // Easter egg: tap the logo 5 times for a cheat-code box (touch devices; keyboards can just type).
@@ -132,13 +133,14 @@ export class Menus {
     if (onStart) this.btn(acts, 'FIGHT!', onStart, 'btn primary ttl-fight', 'play').id = 'title-fight';
     const row = document.createElement('div');
     row.className = 'row2';
-    if (loadout) this.btn(row, `WEAPON: ${loadout.name}`, loadout.open, 'btn', WEAPONS[settingsWeapon(loadout.name)]?.id ?? 'fists').id = 'title-weapon';
+    if (loadout) this.btn(row, 'HOME', loadout.open, 'btn', 'home').id = 'title-home';
     this.btn(row, 'SETTINGS', onSettings, 'btn', 'gear').id = 'title-settings';
     acts.appendChild(row);
     el.appendChild(acts);
     if (extra) {
       const row3 = document.createElement('div');
       row3.className = 'row2 ttl-extra';
+      this.btn(row3, 'TRAINING', extra.training, 'btn small', 'target').id = 'title-training';
       this.btn(row3, 'TUTORIAL', extra.tutorial, 'btn small', 'target').id = 'title-tutorial';
       this.btn(row3, 'ROADMAP', extra.roadmap, 'btn small', 'target').id = 'title-roadmap';
       this.btn(row3, 'RESET GAME', () => this.confirmReset(extra.reset), 'btn small danger', 'retry').id = 'title-reset';
@@ -281,6 +283,115 @@ export class Menus {
     this.btn(foot, 'DONE', () => { this.close('settings'); onClose(); }, 'btn primary', 'check', true);
     p.appendChild(foot);
     el.appendChild(p);
+  }
+
+  // ---------------- Training room ----------------
+  /** The Training Room's control bar and readout. Returns functions to refresh the labels and the numbers. */
+  showTraining(o: { onExit: () => void; onTarget: () => string; onMode: () => string; onWeapon: () => void; onSpecial: () => void; onReset: () => void; target: string; mode: string }): { stats: (s: string) => void } {
+    const el = this.layer('training', 'layer passthrough tr');
+    const bar = document.createElement('div'); bar.className = 'tr-bar';
+    const stat = document.createElement('div'); stat.className = 'tr-stat'; stat.setAttribute('aria-live', 'off'); stat.textContent = 'Hit the target';
+    const row = document.createElement('div'); row.className = 'tr-row';
+    const tgt = this.btn(row, 'TARGET: ' + o.target, () => { tgt.querySelector('span')!.textContent = 'TARGET: ' + o.onTarget(); }, 'btn small', 'target'); tgt.id = 'tr-target';
+    const mode = this.btn(row, 'DUMMY: ' + o.mode, () => { mode.querySelector('span')!.textContent = 'DUMMY: ' + o.onMode(); }, 'btn small', 'bolt'); mode.id = 'tr-mode';
+    this.btn(row, 'WEAPON', o.onWeapon, 'btn small', 'check').id = 'tr-weapon';
+    this.btn(row, 'FILL SPECIAL', o.onSpecial, 'btn small', 'star').id = 'tr-special';
+    this.btn(row, 'RESET', o.onReset, 'btn small', 'retry').id = 'tr-reset';
+    this.btn(row, 'EXIT', o.onExit, 'btn small danger', 'back', true).id = 'tr-exit';
+    bar.append(row, stat); el.appendChild(bar);
+    return { stats: (s) => { if (stat.textContent !== s) stat.textContent = s; } };
+  }
+
+  // ---------------- Home ----------------
+  /**
+   * Home: your fighter alive in a canvas, with the equipped weapon, the two trait slots and the cosmetics.
+   * Everything is a real button, so touch, mouse, keyboard and gamepad all reach it.
+   */
+  showHome(o: { onWeapon: () => void; onTraining: () => void; onClose: () => void }): void {
+    const el = this.layer('home', 'layer dim home');
+    this.head(el, 'HOME', 'lo-head');
+    const grid = document.createElement('div');
+    grid.className = 'hm-grid';
+    // ---- left: the fighter ----
+    const left = document.createElement('div');
+    left.className = 'panel hm-hero';
+    left.innerHTML = '<div class="ph">YOUR FIGHTER</div>';
+    const cv = document.createElement('canvas'); cv.className = 'hm-canvas'; cv.setAttribute('aria-label', 'Your fighter. Tap to change the pose.');
+    const cap = document.createElement('div'); cap.className = 'lo-cap'; cap.textContent = 'idle · tap to change pose';
+    const preview = new HeroPreview(cv);
+    preview.onPose = (n) => { cap.textContent = n + ' · tap to change pose'; };
+    cv.addEventListener('click', (e) => { e.stopPropagation(); audio.ui('move'); preview.nextPose(); });
+    const stats = document.createElement('div'); stats.className = 'hm-stats';
+    stats.innerHTML = `<span>BEST <b>${save.highScore.toLocaleString()}</b></span><span>WAVE <b>${save.bestWave}</b></span><span>COMBO <b>${save.bestCombo}</b></span>`;
+    left.append(cv, cap, stats);
+    // ---- right: weapon, traits, cosmetics ----
+    const right = document.createElement('div'); right.className = 'panel hm-right';
+    const body = document.createElement('div'); body.className = 'pad hm-body';
+    const sec = (title: string) => { const h = document.createElement('div'); h.className = 'hm-h'; h.textContent = title; return h; };
+    // weapon
+    const wp = document.createElement('div'); wp.className = 'hm-weapon';
+    const renderWeapon = () => {
+      const w = activeDef(WEAPONS[save.weapon as WeaponId] ?? WEAPONS.fists);
+      wp.innerHTML = `<div class="hm-wname">${icon(w.id)} <b>${w.name.toUpperCase()}</b></div><div class="hint">${w.desc}</div>`;
+      this.btn(wp, 'CHANGE WEAPON', () => { preview.stop(); this.close('home'); o.onWeapon(); }, 'btn small', 'check').id = 'home-weapon';
+      preview.setWeapon(w.id);
+    };
+    renderWeapon();
+    // traits
+    const slots = document.createElement('div'); slots.className = 'hm-slots';
+    const list = document.createElement('div'); list.className = 'hm-traits'; list.setAttribute('role', 'group'); list.setAttribute('aria-label', 'Traits');
+    let active = 0;
+    const hero = (): HeroSave => save.hero;
+    const renderTraits = () => {
+      slots.textContent = ''; list.textContent = '';
+      for (let i = 0; i < TRAIT_SLOTS; i++) {
+        const t = traitById(hero().traits[i]);
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'hm-slot'; b.id = 'home-slot' + i;
+        b.setAttribute('aria-pressed', String(active === i));
+        b.innerHTML = `<small>SLOT ${i + 1}</small><b>${t ? t.name : 'EMPTY'}</b><span>${t ? '▲ ' + t.up + '<br>▼ ' + t.down : 'Pick a trait below'}</span>`;
+        b.addEventListener('click', (e) => { e.stopPropagation(); audio.ui('move'); active = i; renderTraits(); });
+        slots.appendChild(b);
+      }
+      for (const t of TRAITS) {
+        const at = hero().traits.indexOf(t.id);
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'hm-trait'; b.id = 'home-trait-' + t.id;
+        b.setAttribute('aria-pressed', String(at >= 0));
+        b.innerHTML = `<b>${t.name}</b><span class="up">▲ ${t.up}</span><span class="dn">▼ ${t.down}</span>${at >= 0 ? `<em>SLOT ${at + 1}</em>` : ''}`;
+        b.addEventListener('click', (e) => {
+          e.stopPropagation(); audio.ui('select');
+          const tr = hero().traits.slice();
+          if (at >= 0) tr[at] = null;           // equipped: take it off
+          else { const other = tr.indexOf(t.id); if (other >= 0) tr[other] = null; tr[active] = t.id; }
+          updateHero({ traits: tr }); renderTraits();
+        });
+        list.appendChild(b);
+      }
+    };
+    renderTraits();
+    // cosmetics
+    const cos = document.createElement('div'); cos.className = 'hm-cos';
+    const row = (label: string, key: 'band' | 'headgear' | 'hands', opts: { id: string; name: string }[]) => {
+      const r = document.createElement('div'); r.className = 'hm-row'; r.setAttribute('role', 'group'); r.setAttribute('aria-label', label);
+      const l = document.createElement('span'); l.className = 'glabel'; l.textContent = label; r.appendChild(l);
+      const seg = document.createElement('div'); seg.className = 'seg2 hm-seg';
+      for (const op of opts) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small'; b.textContent = op.name; b.id = `home-${key}-${op.id}`;
+        b.setAttribute('aria-pressed', String(hero()[key] === op.id));
+        b.addEventListener('click', (e) => { e.stopPropagation(); audio.ui('select'); updateHero({ [key]: op.id } as Partial<HeroSave>); for (const x of seg.children) x.setAttribute('aria-pressed', String(x === b)); });
+        seg.appendChild(b);
+      }
+      r.appendChild(seg); cos.appendChild(r);
+    };
+    row('Headband', 'band', BANDS); row('Headgear', 'headgear', GEAR); row('Hands', 'hands', HANDS);
+    body.append(sec('WEAPON'), wp, sec('TRAITS · 2 SLOTS'), slots, list, sec('COSMETICS'), cos);
+    right.appendChild(body);
+    grid.append(left, right);
+    el.appendChild(grid);
+    const foot = document.createElement('div'); foot.className = 'hm-foot';
+    this.btn(foot, 'TRAINING ROOM', () => { preview.stop(); this.close('home'); o.onTraining(); }, 'btn', 'target').id = 'home-training';
+    this.btn(foot, 'DONE', () => { preview.stop(); this.close('home'); o.onClose(); }, 'btn primary', 'check', true).id = 'home-done';
+    el.appendChild(foot);
+    preview.start();
   }
 
   // ---------------- Loadout ----------------
@@ -557,10 +668,6 @@ export class Menus {
 }
 
 /** The weapon id for a loadout button label (the title passes the weapon's display name). */
-function settingsWeapon(name: string): WeaponId {
-  const e = Object.values(WEAPONS).find((w) => w.name === name);
-  return (e?.id ?? 'fists') as WeaponId;
-}
 
 /** Swipe cheat-sheet for a weapon: direction -> light / heavy move names (ground, then air). */
 function cheatSheet(w: WeaponDef): string {

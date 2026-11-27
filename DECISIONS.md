@@ -699,3 +699,11 @@ Yank and Rodeo reuse the hook's tether moves; Disarm needed a new `x2.disarm`.
 - **Bosses:** the existing boss wrapper (three hits first) applies, so the Hammer finisher is the closer of those.
 - **Other weapons:** not affected. The hammer's air finisher and the Original moveset are unchanged.
 
+## Standing rule: updates target the Pixel look only
+
+**From the user:** "from now on, when I ask for any update, do it only to the Pixel main style, not the neon or the interpolated animation."
+- New visuals (cosmetics, sprites, effects, drawings) are built for the Pixel ink look (`DRAW.ink`, Settings → Look → Pixel).
+- The neon look (`stickman.ts`, Look: Smooth) and the Smooth / interpolated animation style are left as they were. They keep working, but get no new art and no tuning.
+- Shared sim and data changes (traits, moves, UI screens) are look-independent and apply everywhere.
+- Hero cosmetics, the Training Room sprites and the Ice Spear finisher art are therefore drawn only by `render/ink.ts` and its helpers; in the neon look the hero and the dummy draw as before.
+

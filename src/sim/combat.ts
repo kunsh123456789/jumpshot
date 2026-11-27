@@ -106,6 +106,7 @@ export function playerHit(w: World, m: MoveDef, v: Fighter, multi: boolean): voi
   }
 
   v.hp -= dmg;
+  if (v.kind === 'dummy') v.spriteVel += dirX * Math.min(8, 1.6 + dmg * 0.1); // training targets swing back
   v.flash = JUICE.flashFrames;
   v.impact = ANIM.impactSnapFrames;
   v.hitSerial++;

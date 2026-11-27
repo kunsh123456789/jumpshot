@@ -132,7 +132,7 @@ export class SpecialSystem {
     const wid = r.weapon ?? w.weapon.id;
     const fam = familyOf(wid);
     const p = w.player;
-    const live = (e: Fighter) => e.alive && e.state !== 'ko' && e.state !== 'dead' && e.kind !== 'dummy';
+    const live = (e: Fighter) => e.alive && e.state !== 'ko' && e.state !== 'dead' && (e.kind !== 'dummy' || w.trainingRoom);
     let main: Fighter | null = null;
     let group: Fighter[] = [];
     const own = specialKind(wid) !== fam;   // a weapon with its own Special (pass 9): everyone on screen

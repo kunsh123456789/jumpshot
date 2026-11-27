@@ -104,6 +104,9 @@ export class Fighter {
   koLaunched = false;
   deadTimer = 0;
   guardBroken = 0;
+  /** Training targets: which drawn sprite this dummy wears ('' = the stick figure) and its swing / lean (render only). */
+  sprite: '' | 'dummy' | 'bag' = '';
+  spriteAng = 0; spriteVel = 0;
   /** Shield enemies: hits blocked since the guard last broke. */
   blocks = 0;
   blockFlash = 0;

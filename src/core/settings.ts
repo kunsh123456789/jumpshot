@@ -129,6 +129,8 @@ export interface SaveData {
   specialHintSeen?: boolean;
   /** The character: cosmetics and the two trait slots (data/hero.ts). */
   hero: HeroSave;
+  /** Training room: the last target picked ('dummy' | 'bag' | '' for the stick figure). */
+  trainTarget?: '' | 'dummy' | 'bag';
 }
 export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false, weapon: 'fists', weaponTips: [], cheatsUnlocked: [], hero: { ...HERO_DEFAULT, traits: [null, null] } };
 export function loadSave(): void {
@@ -150,6 +152,12 @@ export function wipeAllAndReload(): void {
     for (const k of keys) localStorage.removeItem(k);
   } catch { /* storage blocked: nothing was saved anyway */ }
   location.reload();
+}
+/** Change the hero's cosmetics or traits: validated, applied to the renderers and saved. */
+export function updateHero(patch: Partial<HeroSave>): void {
+  save.hero = sanitizeHero({ ...save.hero, ...patch });
+  applyHero(save.hero);
+  writeSave();
 }
 export function writeSave(): void {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* ignore */ }

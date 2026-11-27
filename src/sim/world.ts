@@ -49,6 +49,8 @@ export class World {
   gameOver = false;
   /** Tutorial: whether the training dummy attacks. */
   dummyAttacks = false;
+  /** Training room: the dummy counts as a target for Specials (so you can practise them on it). */
+  trainingRoom = false;
   /** Visible world range, provided by the camera each frame (spawn placement). */
   camLeft = 0;
   camRight: number = WORLD.viewW;
@@ -101,6 +103,7 @@ export class World {
   /** Fresh run. */
   reset(): void {
     this.traits = IDENTITY;
+    this.trainingRoom = false;
     this.player = this.makePlayer();
     this.enemies.length = 0;
     Object.assign(this.combo, new ComboTracker(this.events));
@@ -252,6 +255,8 @@ export class World {
     poseFighter(p, t);
     p.anim.step(p.x, p.y, p.facing, p.scale, p.vx, p.vy, p.hitstop > 0, p.state === 'move');
     for (const e of this.enemies) {
+      // training targets swing / lean back and settle (a spring; render only)
+      if (e.kind === 'dummy') { e.spriteVel += (-90 * e.spriteAng - 5 * e.spriteVel) / 60; e.spriteAng += e.spriteVel / 60; }
       e.hasLook = p.alive && e.alive;
       e.lookX = p.cx; e.lookY = p.cy - 30;
       poseFighter(e, t);
