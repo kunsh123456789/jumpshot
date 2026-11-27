@@ -323,7 +323,9 @@ export class Menus {
     cv.addEventListener('click', (e) => { e.stopPropagation(); audio.ui('move'); preview.nextPose(); });
     const stats = document.createElement('div'); stats.className = 'hm-stats';
     stats.innerHTML = `<span>BEST <b>${save.highScore.toLocaleString()}</b></span><span>WAVE <b>${save.bestWave}</b></span><span>COMBO <b>${save.bestCombo}</b></span>`;
-    left.append(cv, cap, stats);
+    left.append(cv, cap);
+    this.btn(left, 'CHANGE POSE', () => preview.nextPose(), 'btn small hm-pose', 'retry').id = 'home-pose';
+    left.append(stats);
     // ---- right: weapon, traits, cosmetics ----
     const right = document.createElement('div'); right.className = 'panel hm-right';
     const body = document.createElement('div'); body.className = 'pad hm-body';

@@ -211,6 +211,34 @@ const koHammer: CineScript = {
   },
   end: (c) => { const m = c.main; if (m && m.state === 'cine') { m.deathStyle = 0; strike(c, m, 0, { vx: facing(c) * 120, vy: -380, release: true }); } },
 };
+/**
+ * Ice KO (designed from the player's sketch): the last enemy is dazed, the hero coils and lunges, an ice spear drives
+ * clean through its body (an impact frame as it lands), the enemy hangs on it, then the spear shatters.
+ */
+const koIce: CineScript = {
+  id: 'ko.ice', name: 'ICE SPEAR', len: () => 74,
+  start: (c) => { koSetup(c, 175); fx(c, 'slowmo', c.p.x, c.p.cy, 0.3); fx(c, 'focus', c.p.x, c.p.cy, 0.35); c.v.x0 = c.p.x; },
+  frame: (c) => {
+    const p = c.p, m = c.main!, f = c.f, d = facing(c);
+    heroHit(c, 'cine_lunge', 16);
+    // the lunge: a fast step in to arm's length
+    if (f >= 8 && f < 16) place(p, tween(c, 8, 16, c.v.x0, m.x - d * 54), G);
+    // the spear: drawn back while coiling, then driven through (butt behind the hero, tip well past the target)
+    const y = p.cy - 4;
+    if (f < 8) c.vis.spear = { x1: p.x - d * 118, y1: y, x2: p.x + d * 112, y2: y };
+    else if (f < 46) { const tx = f < 16 ? tween(c, 8, 16, p.x + d * 112, m.x + d * 96) : m.x + d * 96; c.vis.spear = { x1: tx - d * 250, y1: y, x2: tx, y2: y }; }
+    else c.vis.spear = null;
+    if (f < 16) { pose(m, 'stunned', f); if (f % 6 === 0) fx(c, 'stars', m.x, m.cy - 70, 0.4); }
+    else if (f < 46) pose(m, 'hurtHeavy', 0);
+    if (f === 16) { fx(c, 'invert', m.x, m.cy); fx(c, 'shake', m.x, m.cy, 1.8); fx(c, 'sparks', m.x, m.cy); fx(c, 'boom', m.x, m.cy); }
+    if (f > 16 && f < 46 && f % 5 === 0) fx(c, 'sparks', m.x, m.cy, 0.35);
+    if (f === 46) {
+      c.w.events.emit('shatter', { x: m.x, y: m.cy });
+      m.deathStyle = 0; strike(c, m, 0, { vx: d * 520, vy: -420, release: true, kind: 'finisher', weight: 1.2 });
+    }
+  },
+  end: (c) => { c.vis.spear = null; const m = c.main; if (m && m.state === 'cine') { m.deathStyle = 0; strike(c, m, 0, { vx: facing(c) * 520, vy: -420, release: true }); } },
+};
 const koStaff: CineScript = {
   id: 'ko.staff', name: 'X-SLASH', len: () => 58,
   start: (c) => { koSetup(c, 90); fx(c, 'slowmo', c.p.x, c.p.cy, 0.3); fx(c, 'focus', c.p.x, c.p.cy, 0.3); c.v.x0 = c.p.x; },
@@ -663,7 +691,7 @@ const AIR: Record<Family, CineScript> = { fists: airFists, staff: airStaff, lase
 const KO: Record<Family, CineScript> = { fists: koFists, staff: koStaff, laser: koLaser, hook: koHook, throw: koThrow };
 const SP: Record<Family, CineScript> = { fists: spFists, staff: spStaff, laser: spLaser, hook: spHook, throw: spThrow };
 /** Weapons with their own KO finisher instead of their family's. */
-const KO_OWN: Record<string, CineScript> = { hammer: koHammer };
+const KO_OWN: Record<string, CineScript> = { hammer: koHammer, ice: koIce };
 const BOSS_KO: Record<string, CineScript> = {};
 
 export function familyOf(weapon: string): Family { return WEAPON_FAMILY[weapon] ?? 'fists'; }

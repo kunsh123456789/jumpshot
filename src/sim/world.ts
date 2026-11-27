@@ -1,4 +1,5 @@
 import { Grapple } from './grapple';
+import { Powers } from './powers';
 import { IDENTITY, combineTraits, type TraitMods } from '../data/hero';
 import { EventBus } from '../core/events';
 import { Fighter } from './fighter';
@@ -46,6 +47,8 @@ export class World {
   traits: TraitMods = IDENTITY;
   /** Grappling hook mobility (hook, New moveset): roof swings, wall zips, wall clings. */
   readonly grapple = new Grapple();
+  /** Laser Eyes: hover fuel, eye beams and burning (sim/powers.ts). */
+  readonly powers = new Powers();
   gameOver = false;
   /** Tutorial: whether the training dummy attacks. */
   dummyAttacks = false;
@@ -114,6 +117,7 @@ export class World {
     this.wpn.reset();
     this.v2.reset();
     this.grapple.reset();
+    this.powers.reset();
     this.special.reset();
     this.cine.reset();
     this.pendingKO = null;

@@ -63,6 +63,8 @@ export interface CineVisual {
   bw: number;
   scythe: { x: number; y: number; a: number; r: number } | null;
   marks: number[];
+  /** Ice Spear finisher: the spear held in the hero's hands, as a line from its butt to its tip. */
+  spear: { x1: number; y1: number; x2: number; y2: number } | null;
 }
 
 export interface CineScript {
@@ -76,7 +78,7 @@ export interface CineScript {
   end: (c: CineCtx) => void;
 }
 
-const emptyVis = (): CineVisual => ({ beam: null, ropes: [], tornado: null, slash: [], bubble: null, dark: 0, crack: null, freeze: 0, bw: 0, scythe: null, marks: [] });
+const emptyVis = (): CineVisual => ({ beam: null, ropes: [], tornado: null, slash: [], bubble: null, dark: 0, crack: null, freeze: 0, bw: 0, scythe: null, marks: [], spear: null });
 
 export class CinePlayer {
   script: CineScript | null = null;

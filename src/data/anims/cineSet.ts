@@ -117,5 +117,16 @@ export const hammerSlam = drawn({ id: 'cine_hammerSlam', strike: 'arm', drawings
   { hold: 12, p: CROUCH },
 ] });
 
-const ALL: AnimDef[] = [axeWind, axeHit, hammerUp, hammerSlam, roundhouse, xslash, spinGrab, hurl, pileDrive, erupt, charge, beamHold, activate, activateAir, plantSplit];
+/**
+ * Ice Spear KO (from the player's sketch): coil back with the spear drawn behind, then a deep lunge, front knee bent,
+ * back leg stretched out, both arms driving the spear straight through the target (held for the impact frame).
+ */
+export const iceLunge = drawn({ id: 'cine_lunge', strike: 'arm', drawings: [
+  { hold: 10, p: { rootY: -36, lean: -0.12, head: 0.1, aU: 1.0, aL: 0.5, bU: 0.75, bL: 1.0, footA: 22, footB: -34, flex: -4 } },
+  { hold: 4, p: { rootY: -48, lean: 0.35, head: -0.1, aU: 1.4, aL: 0.15, bU: 1.3, bL: 0.2, footA: 48, footB: -50, flex: -3, stretch: 1.06 }, smear: ['handA', 'handB'] },
+  { hold: 8, p: { rootY: -56, lean: 0.72, head: -0.25, aU: 1.58, aL: 0.0, bU: 1.5, bL: 0.05, footA: 64, footB: -60, flex: -6, stretch: 1.1 }, smear: ['handA'], impact: true },
+  { hold: 60, p: { rootY: -55, lean: 0.7, head: -0.22, aU: 1.56, aL: 0.0, bU: 1.48, bL: 0.06, footA: 63, footB: -59, flex: -6, stretch: 1.09 } },
+] });
+
+const ALL: AnimDef[] = [axeWind, axeHit, hammerUp, hammerSlam, iceLunge, roundhouse, xslash, spinGrab, hurl, pileDrive, erupt, charge, beamHold, activate, activateAir, plantSplit];
 registerAnims(ALL, 'cineSet (pass 8)');

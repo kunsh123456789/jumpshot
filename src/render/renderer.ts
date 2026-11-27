@@ -4,6 +4,7 @@ import { drawExtraFx } from './weaponFx2';
 import { drawCineFx } from './cineFx';
 import { drawMoveset2Fx } from './moveset2Fx';
 import { drawGrappleFx } from './grappleFx';
+import { drawPowerFx } from './powerFx';
 import type { Camera } from '../core/camera';
 import { ANIM, WORLD } from '../data/tuning';
 import { settings } from '../core/settings';
@@ -209,6 +210,7 @@ export class Renderer {
     }
 
     drawGrappleFx(g, world, alpha, time, wpp);
+    drawPowerFx(g, world, alpha, time, wpp);
     for (const f of order) drawInkFighter(g, f, alpha, time, wpp);
     drawWeaponFx(g, world, alpha, time, wpp);
     drawMoveset2Fx(g, world, time, wpp);

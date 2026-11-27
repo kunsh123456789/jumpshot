@@ -36,8 +36,9 @@ export interface TraitMods {
   /** Parry window multiplier. */ parry: number;
   /** Extra mid-air jumps. */ airJumps: number;
   /** Fraction of damage dealt returned as HP. */ lifesteal: number;
+  /** 1 = Laser Eyes: hover on a fuel tank and fire eye beams while flying (sim/powers.ts). */ fly: number;
 }
-export const IDENTITY: TraitMods = { hp: 1, dmgOut: 1, dmgLow: 1, dmgIn: 1, run: 1, special: 1, parry: 1, airJumps: 0, lifesteal: 0 };
+export const IDENTITY: TraitMods = { hp: 1, dmgOut: 1, dmgLow: 1, dmgIn: 1, run: 1, special: 1, parry: 1, airJumps: 0, lifesteal: 0, fly: 0 };
 
 export interface TraitDef { id: string; name: string; up: string; down: string; mods: Partial<TraitMods> }
 /** Every trait is a trade-off: a real upside and a real cost. */
@@ -48,6 +49,7 @@ export const TRAITS: TraitDef[] = [
   { id: 'lightfoot', name: 'Lightfoot', up: '+1 air jump, +10% run speed', down: '-10% damage dealt', mods: { airJumps: 1, run: 1.1, dmgOut: 0.9 } },
   { id: 'parry', name: 'Steady Nerves', up: 'Parry window +50%', down: '-10% damage dealt', mods: { parry: 1.5, dmgOut: 0.9 } },
   { id: 'vampire', name: 'Leech', up: 'Heal 5% of damage dealt', down: '-20% max HP', mods: { lifesteal: 0.05, hp: 0.8 } },
+  { id: 'eyes', name: 'Laser Eyes', up: 'Hold jump to FLY; eye beams burn what you face', down: '-15% max HP, -10% damage dealt', mods: { fly: 1, hp: 0.85, dmgOut: 0.9 } },
   { id: 'exec', name: 'Executioner', up: '+55% damage to enemies under 30% HP', down: '-10% damage to healthy ones', mods: { dmgLow: 1.55, dmgOut: 0.9 } },
 ];
 export const traitById = (id: string | null | undefined): TraitDef | null => TRAITS.find((t) => t.id === id) ?? null;
@@ -63,7 +65,7 @@ export function combineTraits(ids: (string | null)[]): TraitMods {
     const x = t.mods;
     if (x.hp) m.hp *= x.hp; if (x.dmgOut) m.dmgOut *= x.dmgOut; if (x.dmgLow) m.dmgLow *= x.dmgLow; if (x.dmgIn) m.dmgIn *= x.dmgIn;
     if (x.run) m.run *= x.run; if (x.special) m.special *= x.special; if (x.parry) m.parry *= x.parry;
-    if (x.airJumps) m.airJumps += x.airJumps; if (x.lifesteal) m.lifesteal += x.lifesteal;
+    if (x.airJumps) m.airJumps += x.airJumps; if (x.lifesteal) m.lifesteal += x.lifesteal; if (x.fly) m.fly = 1;
   }
   return m;
 }

@@ -125,6 +125,26 @@ The interface is a bold arcade-fighter design: navy plates, a cyan / magenta / g
 
 **Menus** (title, loadout, settings, pause, results, song picker, calibration) work with touch, mouse, keyboard and gamepad.
 
+**Home, traits and cosmetics.** The title screen's **HOME** button opens your fighter: the hero alive in a canvas (tap to change pose), your equipped weapon (CHANGE WEAPON opens the loadout and returns here), **two trait slots**, and cosmetics. Everything is saved in your browser; RESET GAME clears it.
+- **Traits** are small trade-offs (an upside and a cost), equipped two at a time and applied to every run and the Training Room (not the tutorial). With none equipped the game plays exactly as before.
+
+| Trait | Up | Down |
+|---|---|---|
+| Iron Skin | +25% max HP | -10% run speed |
+| Glass Cannon | +20% damage dealt | +25% damage taken |
+| Adrenaline | Special bar fills 40% faster | -10% max HP |
+| Lightfoot | +1 air jump, +10% run speed | -10% damage dealt |
+| Steady Nerves | Parry window +50% | -10% damage dealt |
+| Leech | Heal 5% of damage dealt | -20% max HP |
+| Laser Eyes | Hold jump to **fly** (hover and slowly climb on a small tank that refills on landing); eye beams burn the nearest enemy you face | -15% max HP, -10% damage dealt |
+| Executioner | +55% damage to enemies under 30% HP | -10% damage to healthy ones |
+
+- **Cosmetics** (Pixel look): headband colour (red, blue, black, none), headgear (cap, top hat, crown, halo, cat ears, goggles) and hands (wraps, mitts).
+
+**Training Room.** HOME → TRAINING ROOM (or the title's TRAINING button). A dojo with one target and no waves or game over: your drawn **Dummy**, your drawn **Punching Bag** (hangs and swings when hit) or the stick figure. The bar has TARGET, DUMMY: STILL / ATTACKS (so you can practise dodging and parrying), WEAPON (swap), FILL SPECIAL (Specials can hit the dummy here), RESET and EXIT, with live LAST / COMBO / TOTAL / DPS readouts. Pause → Restart restarts the Training Room.
+
+**Finishers from your sketches.** Hammer: **HAMMER CRUSH**. Ice: **ICE SPEAR**: the last enemy is dazed, you lunge, a spear drives clean through it with an impact-frame flash, then it shatters.
+
 **Roadmap.** The title screen's **ROADMAP** button shows waves 1-40 as four stages of ten, each ending in a boss. Tap (or focus) a wave for its enemies, what is new, the arena and page, the HP and damage scaling, and boss notes; cleared waves are green and your best wave is outlined. It is built from the real wave tables, and the same data is written out in `ROADMAP.md`.
 
 **Tutorial and Reset.** The title screen has a **TUTORIAL** button (replay the training at any time) and a **RESET GAME** button (both are also under Settings → Other). Reset asks first, then deletes everything the game saved in this browser and restarts it as a first launch: high score, best combo and wave, tutorial progress, unlocked codes, weapon choice and every setting. On short landscape screens the two buttons sit in the top-left corner.

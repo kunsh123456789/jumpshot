@@ -95,6 +95,20 @@ export function drawCineFx(ctx: CanvasRenderingContext2D, w: World, _alpha: numb
     ctx.strokeStyle = paperCol; ctx.lineWidth = (4 * k + 1) * wpp;
     ctx.beginPath(); ctx.moveTo(s.x1 + (s.x2 - s.x1) * 0.1, s.y1 + (s.y2 - s.y1) * 0.1); ctx.lineTo(s.x2 - (s.x2 - s.x1) * 0.1, s.y2 - (s.y2 - s.y1) * 0.1); ctx.stroke();
   }
+  // ---- Ice Spear finisher (Pixel look only): a blue spear with a triangular ice head ----
+  if (v.spear && DRAW.ink) {
+    const sp2 = v.spear, dx = sp2.x2 - sp2.x1, dy = sp2.y2 - sp2.y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+    ctx.strokeStyle = INK.blue; ctx.lineWidth = 5.5 * wpp + 1;
+    ctx.beginPath(); ctx.moveTo(sp2.x1, sp2.y1); ctx.lineTo(sp2.x2 - ux * 22, sp2.y2 - uy * 22); ctx.stroke();
+    // the head: a hollow triangle (paper inside, blue outline) like the sketch
+    const hx = sp2.x2, hy = sp2.y2, nx = -uy, ny = ux;
+    ctx.fillStyle = INK.paper; ctx.lineWidth = 3.2 * wpp + 0.8;
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx - ux * 40 + nx * 16, hy - uy * 40 + ny * 16); ctx.lineTo(hx - ux * 40 - nx * 16, hy - uy * 40 - ny * 16); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // frost ticks along the shaft
+    ctx.lineWidth = 2 * wpp + 0.5; sd = 1301 + step * 5; ctx.beginPath();
+    for (let k = 0; k < 4; k++) { const t = 0.15 + k * 0.2 + rnd() * 0.06, px = sp2.x1 + dx * t, py = sp2.y1 + dy * t; ctx.moveTo(px + nx * 7, py + ny * 7); ctx.lineTo(px - nx * 7, py - ny * 7); }
+    ctx.stroke();
+  }
   // ---- weapon Specials (pass 9) ----
   if (v.crack) {
     // the floor splitting both ways: a jagged rift with slabs lifting along it

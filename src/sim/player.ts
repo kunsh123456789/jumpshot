@@ -9,6 +9,7 @@ import type { SwipeEvent } from '../ui/pad';
 import { clamp, ease } from '../core/math';
 import { overlaps, playerHit, sideHit } from './combat';
 import { airGravity } from './physics';
+import { EYES } from './powers';
 import { GRAPPLE, WEAPON_T } from '../data/weapons/tuning';
 
 interface Buffered { ev: SwipeEvent; age: number; heavy: boolean; used: boolean }
@@ -148,6 +149,7 @@ export class PlayerController {
         if (p.vy > 0) p.setState('fall');
         break;
     }
+    w.powers.update(w);
     this.locomotion(w);
     this.physics(w);
     if (p.grounded) { p.airFrames = 0; if (p.state !== 'jumpSquat') p.jumpKind = 'none'; } else p.airFrames++;
@@ -784,7 +786,8 @@ export class PlayerController {
     if (!p.grounded) {
       if (!dashing && !hanging) {
         const g = PHYS.gravity * airGravity(p);
-        p.vy = Math.min(PHYS.maxFall, p.vy + g / 60);
+        if (w.powers.hovering) p.vy += (EYES.riseVy - p.vy) * 0.2; // Laser Eyes: hover and slowly climb
+        else p.vy = Math.min(PHYS.maxFall, p.vy + g / 60);
         p.y += p.vy / 60;
         p.x += p.vx / 60;
         if (p.fling > 0) { p.fling--; p.vx *= GRAPPLE.flingDrag; } else p.vx *= 0.96;
@@ -804,6 +807,7 @@ export class PlayerController {
         p.followTarget = null;
         w.combo.onPlayerLanded();
         this.airJumps = this.maxAirJumps(w);
+        w.powers.refuel();
         w.events.emit('groundImpact', { x: p.x, y: p.y, power: 0.25, fighter: p, bounce: false });
         p.anim.impulseSquash(0.12, -0.2);
         if (p.state === 'ko') p.setState('knockdown', 99999);

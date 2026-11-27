@@ -302,6 +302,7 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
     ctx.lineTo(hx - face * headR * 2.8, hy + headR * 0.4);
     ctx.stroke();
   }
+  if (f.burn > 0 && f.alive) drawFlames(ctx, j, f, wpp, step);
   if (scribbled) scribbleOut(ctx, j, f, wpp);
   if (f.state === 'stunned' || f.dizzy > 0) {
     ctx.strokeStyle = INK.ink; ctx.lineWidth = 1.5 * wpp;
@@ -313,6 +314,18 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
     }
     ctx.stroke();
   }
+}
+
+/** Laser Eyes: a burning enemy wears a few flickering flame tongues (red ink, boiling per drawing). */
+function drawFlames(ctx: CanvasRenderingContext2D, j: Float32Array, f: Fighter, wpp: number, step: number): void {
+  const cx = j[J.chest * 2], cy = (j[J.chest * 2 + 1] + j[J.hip * 2 + 1]) / 2, s = f.scale;
+  ctx.save(); ctx.strokeStyle = INK.red; ctx.lineWidth = 2.4 * wpp + 0.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (let k = 0; k < 5; k++) {
+    const side = k - 2, base = cx + side * 15 * s, h = (46 + ((step * 7 + k * 13) % 21)) * s, sway = (((step + k * 3) % 4) - 1.5) * 4 * s;
+    const by = cy + 38 * s - Math.abs(side) * 6 * s;
+    ctx.beginPath(); ctx.moveTo(base - 7 * s, by); ctx.quadraticCurveTo(base - 9 * s + sway, by - h * 0.6, base + sway, by - h); ctx.quadraticCurveTo(base + 9 * s + sway, by - h * 0.6, base + 7 * s, by); ctx.stroke();
+  }
+  ctx.restore();
 }
 
 /** Scribbled-out death: a pen scribble covers the body, denser each drawing (seeded per fighter). */

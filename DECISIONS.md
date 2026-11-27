@@ -707,3 +707,26 @@ Yank and Rodeo reuse the hook's tether moves; Disarm needed a new `x2.disarm`.
 - Shared sim and data changes (traits, moves, UI screens) are look-independent and apply everywhere.
 - Hero cosmetics, the Training Room sprites and the Ice Spear finisher art are therefore drawn only by `render/ink.ts` and its helpers; in the neon look the hero and the dummy draw as before.
 
+## Home, traits, cosmetics, Training Room, Ice Spear and Laser Eyes
+
+**Asked:** a Home menu (character, cosmetics, 2 trait slots, equipped weapon), a Training Room with a dummy the user draws, plus the sketches they sent (Dummy, Punching Bag, Ice Spear Finisher, Laser Eyes "can also fly"). All visuals are Pixel look only (see the standing rule above).
+
+**Traits.**
+- They bring back stat modifiers (perks were removed for balance in P7-1), so each one is a trade-off with a real cost.
+- They combine into one `TraitMods` object (`data/hero.ts`) that is exactly the identity when nothing is equipped; the Classic fingerprint test confirms it. `world.setTraits()` applies it at run start and in training (not the tutorial).
+- A test measures every trait's number against a no-trait baseline (max HP, damage out and in, low-HP bonus, Special gain, run speed, parry frames, air jumps, lifesteal).
+
+**Cosmetics.** Colour choices stick to the Pixel look's four ink colours (red, blue, black); everything else is shape-based (headgear and hand gear drawn in `render/heroGear.ts`). The hero body stays black so it never blends into the blue and red enemies.
+
+**Training Room.** A new `'training'` state next to `'tutorial'`: no wave spawns, the hero is healed so it can't die (even with the dummy attacking), Specials may target the dummy (`World.trainingRoom`), and Pause → Restart restarts training. The dummy walks back to its spot after a hit; the bag never moves and only swings (a spring on `Fighter.spriteAng`, render only).
+
+**Sprites.** The sketches were trimmed, turned into transparent ink-coloured PNGs (`src/assets/targets/`) and bundled like the audio. Hit detection stays on the dummy's rig; the sprite is visual only.
+
+**Ice Spear finisher** (`ko.ice`): a lunge drawing (`cine_lunge`), the spear as a cine visual drawn by `render/cineFx.ts`, an invert flash as the impact frame, then the existing shatter effect.
+
+**Laser Eyes** is a trait (`sim/powers.ts`), not a separate system, so it uses the same two slots.
+- Hold jump after the apex to hover and climb slowly (150 frames of fuel, refilled by landing).
+- While flying, every 10 frames the nearest enemy in front takes a small hit and burns for 200 frames (1 damage per 20 frames, never lethal on its own).
+- The cost is -15% max HP and -10% damage.
+- Flames, beams and the fuel bar are Pixel look only.
+

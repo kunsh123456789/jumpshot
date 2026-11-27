@@ -485,3 +485,7 @@ Per-move numbers (damage, frames, shockwave range/speed, ice radius/frames, vani
 
 The boss meteor numbers are in `BOSS` (`meteorWarn` frames of warning, `meteorRadius`); the warning zone is drawn at the real hit width, `meteorRadius + 20` (`render/meteorWarn.ts`).
 
+## Traits (`TRAITS` in data/hero.ts) and Laser Eyes (`EYES` in sim/powers.ts)
+
+Each trait's `mods` (hp, dmgOut, dmgLow, dmgIn, run, special, parry, airJumps, lifesteal, fly) multiply or add as listed in the README table. `EYES`: `fuelFrames` 150, `riseVy` -90, `every` 10 frames between eye shots, `range` 820, `burnFrames` 200.
+

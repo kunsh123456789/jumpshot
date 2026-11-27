@@ -105,6 +105,8 @@ export class Fighter {
   deadTimer = 0;
   guardBroken = 0;
   /** Training targets: which drawn sprite this dummy wears ('' = the stick figure) and its swing / lean (render only). */
+  /** Laser Eyes: frames left burning (a small damage over time, drawn as flames). */
+  burn = 0;
   sprite: '' | 'dummy' | 'bag' = '';
   spriteAng = 0; spriteVel = 0;
   /** Shield enemies: hits blocked since the guard last broke. */
