@@ -8,6 +8,19 @@ There are two modes, switched on the title screen or in Settings:
 - **Rhythm Mode** (default): the music is the clock. You swipe whenever you like, and every attack **snaps onto the beat grid**, so each hit is part of the song. Swiping *on* the beat makes hits land harder and builds a streak. Enemies attack on the beat too. See [Rhythm Mode](#rhythm-mode).
 - **Classic Mode**: the original game, unchanged.
 
+## Your hero (Home)
+The **Home** screen lets you dress the hero. These cosmetics show in the Pixel look:
+- **Body:** Male or Female.
+- **Neck and back:** red scarf, ninja scarf, cape, tattered cape, notebook-page cape, ribbon, backpack, line-art wings.
+- **Hands:** tape wraps, mitts, fingerless gloves, spiked gauntlets, glow band, brass knuckles, flaming fists.
+- **Feet:** sneakers, boots, bandaged feet, rocket shoes, flip-flops.
+- **Belts and badges:** champion belt, sheriff star, and a Rank pin showing your best style rank.
+- **Weapon skins:**
+  - Fists: boxing gloves, oven mitts, lobster claws, foam hands.
+  - Staff: bamboo, bone, candy cane, glow staff, paintbrush, broom.
+  - Laser: toy ray gun, banana, hand cannon, scribble blue, red or green.
+  - Hook: pirate hook, chain, fishing rod, rope and anchor.
+
 ## Run it
 
 ```bash

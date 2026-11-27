@@ -1,5 +1,5 @@
 /** Persistent user settings (localStorage). */
-import { HERO_DEFAULT, applyHero, sanitizeHero, type HeroSave } from '../data/hero';
+import { HERO_DEFAULT, HERO_LOOK, applyHero, sanitizeHero, type HeroSave } from '../data/hero';
 
 export interface Settings {
   masterVolume: number;   // 0..1
@@ -144,6 +144,8 @@ export interface SaveData {
   hero: HeroSave;
   /** Training room: the last target picked ('dummy' | 'bag' | '' for the stick figure). */
   trainTarget?: '' | 'dummy' | 'bag';
+  /** Best style rank ever reached (index into STYLE.ranks): the Rank pin cosmetic shows it. */
+  bestRank?: number;
 }
 export const save: SaveData = { highScore: 0, tutorialDone: false, bestCombo: 0, bestWave: 0, padHintSeen: false, weapon: 'fists', weaponTips: [], cheatsUnlocked: [], hero: { ...HERO_DEFAULT, traits: [null, null] } };
 export function loadSave(): void {
@@ -153,6 +155,12 @@ export function loadSave(): void {
   } catch { /* ignore */ }
   save.hero = sanitizeHero(save.hero);
   applyHero(save.hero);
+  HERO_LOOK.rank = typeof save.bestRank === 'number' ? save.bestRank : 0;
+}
+/** Remember a new best style rank (for the Rank pin). */
+export function noteRank(rank: number): void {
+  if (rank <= (save.bestRank ?? 0)) return;
+  save.bestRank = rank; HERO_LOOK.rank = rank; writeSave();
 }
 /**
  * Reset the whole game: delete everything it ever stored in this browser (settings, high score,

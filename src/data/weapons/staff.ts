@@ -165,7 +165,7 @@ const anims = [
 ];
 
 /** The staff line through both hands: [grip x, grip y, tip x, tip y, butt x, butt y]. */
-function staffLine(j: Float32Array, scale: number, out: Float32Array): void {
+export function staffLine(j: Float32Array, scale: number, out: Float32Array): void {
   const ax = j[J.handA * 2], ay = j[J.handA * 2 + 1], bx = j[J.handB * 2], by = j[J.handB * 2 + 1];
   let dx = ax - bx, dy = ay - by;
   let L = Math.hypot(dx, dy);

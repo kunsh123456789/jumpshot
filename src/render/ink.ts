@@ -3,6 +3,7 @@ import { heldWeapon } from './weaponFx';
 import { HERO_LOOK } from '../data/hero';
 import { drawTarget } from './targetArt';
 import { drawHeroGear } from './heroGear';
+import { drawHeroBack, drawHeroFront, femaleJoints } from './heroCos';
 import type { Fighter } from '../sim/fighter';
 import { TAU } from '../core/math';
 import { WORLD } from '../data/tuning';
@@ -189,7 +190,7 @@ export const inkHooks: InkHooks = { smear: null };
  */
 export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: number, time: number, wpp: number): void {
   if (f.sprite && drawTarget(ctx, f, alpha, time, wpp)) return;
-  const j = interpJoints(f, alpha, time);
+  const j = femaleJoints(f, interpJoints(f, alpha, time));
   const a = f.anim;
   const step = Math.floor(time * 12);
   // Fades are impossible in 1-bit: dying and invulnerable figures blink on alternate drawings instead.
@@ -228,6 +229,8 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
   if ((a.dSmear || a.dSpin) && inkHooks.smear) inkHooks.smear(ctx, f, j, col, wpp);
 
   const flashing = f.flash > 0;
+  const COS = { ink: INK.ink, paper: INK.paper, red: INK.red, blue: INK.blue, dither: INK.dither };
+  if (f.kind === 'player') drawHeroBack(ctx, f, j, a.rig.headR * f.scale * INKLOOK.headScale, time, wpp, COS);
   if (flashing) {
     // Hit flash: white figure with a black outline.
     const { limb } = weights(f);
@@ -255,7 +258,7 @@ export function drawInkFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha:
       ctx.lineTo(hx - face * headR * 2.7, hy + headR * (0.35 - fl));
       ctx.stroke();
     }
-    if (f.kind === 'player') drawHeroGear(ctx, j, hx, hy, headR, face, s, wpp, { ink: INK.ink, paper: INK.paper, red: INK.red, blue: INK.blue });
+    if (f.kind === 'player') { drawHeroGear(ctx, j, hx, hy, headR, face, s, wpp, { ink: INK.ink, paper: INK.paper, red: INK.red, blue: INK.blue }); drawHeroFront(ctx, f, j, time, wpp, COS); }
   }
   if (winding) burst(ctx, hx, hy - headR * 1.9, headR * 0.9, 5, f.id * 31 + step, INK.red, 2 * wpp);
   if (f.kind === 'shield' && f.guardBroken <= 0 && f.alive) {

@@ -3,7 +3,7 @@ import { audio } from '../core/audio';
 import { WEAPONS, activeDef, availableWeapons, type WeaponDef, type WeaponId } from '../data/weapons';
 import { MOVES } from '../data/moves';
 import { MovePreview, HeroPreview } from './preview';
-import { BANDS, GEAR, HANDS, TRAITS, TRAIT_SLOTS, traitById, type HeroSave } from '../data/hero';
+import { BACKS, BADGES, BANDS, BODIES, FEET, GEAR, HANDS, SKINS, SKIN_WEAPONS, TRAITS, TRAIT_SLOTS, traitById, type HeroSave, type SkinWeapon } from '../data/hero';
 import { anyUnlocked, isUnlocked, enterCode } from './cheats';
 import { STYLE } from '../data/tuning';
 import { icon } from './icons';
@@ -391,20 +391,28 @@ export class Menus {
     renderTraits();
     // cosmetics
     const cos = document.createElement('div'); cos.className = 'hm-cos';
-    const row = (label: string, key: 'band' | 'headgear' | 'hands', opts: { id: string; name: string }[]) => {
+    type CosKey = 'band' | 'headgear' | 'hands' | 'body' | 'back' | 'feet' | 'badge';
+    const row = (label: string, key: CosKey | `skin-${SkinWeapon}`, opts: { id: string; name: string }[]) => {
+      const sw = key.startsWith('skin-') ? (key.slice(5) as SkinWeapon) : null;
+      const cur = (): string => (sw ? hero().skins[sw] : hero()[key as CosKey]);
+      const set = (id: string) => updateHero(sw ? { skins: { ...hero().skins, [sw]: id } } : ({ [key]: id } as Partial<HeroSave>));
       const r = document.createElement('div'); r.className = 'hm-row'; r.setAttribute('role', 'group'); r.setAttribute('aria-label', label);
       const l = document.createElement('span'); l.className = 'glabel'; l.textContent = label; r.appendChild(l);
       const seg = document.createElement('div'); seg.className = 'seg2 hm-seg';
       for (const op of opts) {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small'; b.textContent = op.name; b.id = `home-${key}-${op.id}`;
-        b.setAttribute('aria-pressed', String(hero()[key] === op.id));
-        b.addEventListener('click', (e) => { e.stopPropagation(); audio.ui('select'); updateHero({ [key]: op.id } as Partial<HeroSave>); for (const x of seg.children) x.setAttribute('aria-pressed', String(x === b)); });
+        b.setAttribute('aria-pressed', String(cur() === op.id));
+        b.addEventListener('click', (e) => { e.stopPropagation(); audio.ui('select'); set(op.id); for (const x of seg.children) x.setAttribute('aria-pressed', String(x === b)); });
         seg.appendChild(b);
       }
       r.appendChild(seg); cos.appendChild(r);
     };
-    row('Headband', 'band', BANDS); row('Headgear', 'headgear', GEAR); row('Hands', 'hands', HANDS);
-    body.append(sec('WEAPON'), wp, sec('TRAITS · 2 SLOTS'), slots, list, sec('COSMETICS'), cos);
+    row('Body', 'body', BODIES); row('Headband', 'band', BANDS); row('Headgear', 'headgear', GEAR);
+    row('Neck & back', 'back', BACKS); row('Hands', 'hands', HANDS); row('Feet', 'feet', FEET); row('Belts & badges', 'badge', BADGES);
+    const skins = document.createElement('div'); skins.className = 'hm-cos';
+    { const keep = cos; for (const w of SKIN_WEAPONS) { row(w.name, `skin-${w.id}`, SKINS[w.id]); skins.appendChild(keep.lastChild as Node); } }
+    const note = document.createElement('p'); note.className = 'hm-note'; note.textContent = 'New cosmetics and skins show in the Pixel look.';
+    body.append(sec('WEAPON'), wp, sec('TRAITS · 2 SLOTS'), slots, list, sec('COSMETICS'), note, cos, sec('WEAPON SKINS'), skins);
     right.appendChild(body);
     grid.append(left, right);
     el.appendChild(grid);

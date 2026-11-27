@@ -757,3 +757,20 @@ The PNGs are gone. Hit detection stays on the dummy's rig; the art is visual onl
   4. The shatter: a black impact frame with white wedges and red streaks, taken from frame 62 of the reference clip and skipped with Reduce Flashes, then shards fly.
   - The old Deep Freeze still plays otherwise, and always in the neon look. `data/cines.ts` reads `DRAW.ink` for this, as `handDrawn.ts` already does. The Classic fingerprint is unaffected.
 - **Fix:** the hero no longer blinks through cinematics in the Pixel look. The cinematic invulnerability was triggering the invulnerability blink.
+
+## Wardrobe: capes, scarves, footwear, badges, weapon skins, Female body (Pixel look only)
+- **Where it is drawn:** everything new is drawn only by the Pixel renderer, in `render/heroCos.ts` and `render/weaponSkins.ts`, called from `ink.ts` and gated on `DRAW.ink`. The neon look keeps the old headband, headgear, wraps and mitts.
+- **How it moves:** capes, scarves, the ribbon and the ponytail are stateless. They trail opposite the hero's velocity, rise when airborne, and wobble per drawing step, so they boil like the page.
+- **Slots added to the Home screen:**
+  - Body (Male / Female);
+  - Neck & back (8 items);
+  - Hands (now 8 items, merging the "general" list: tape wraps, fingerless gloves, brass knuckles, flaming fists, plus spiked gauntlets and the glow band);
+  - Feet (5 items);
+  - Belts & badges (3 items);
+  - a per-weapon skin row each for Fists, Staff, Laser and Hook.
+- **"Throw gloves" became Fists skins:** there is no Throw weapon any more, so the boxing gloves, oven mitts, lobster claws and foam hands are skins for the Fists.
+- **Female body:**
+  - shoulders are pulled in and hips pushed out (a copy of the joints, render-only, so the hitboxes and the sim are unchanged);
+  - she has a ponytail.
+- **Scribble green:** the 4-colour Pixel page has no green, so "Scribble green" is drawn in the pencil-grey dither.
+- **Rank pin:** it shows the best style rank ever reached. A new `save.bestRank` field is updated on `rankUp`.

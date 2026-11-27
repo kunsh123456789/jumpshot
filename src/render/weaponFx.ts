@@ -4,6 +4,7 @@ import { weaponById } from '../data/weapons';
 import { DRAW } from './drawStyle';
 import { INK } from './ink';
 import { drawToss, drawStyledBeam } from './weaponFx2';
+import { drawWeaponSkin } from './weaponSkins';
 
 /**
  * Weapon visuals in world space (revision pass 7), shared by every look:
@@ -23,6 +24,8 @@ export function heldWeapon(ctx: CanvasRenderingContext2D, f: Fighter, j: Float32
   if (f.team !== 'player' || f.state === 'ko') return;
   // Ice Spear finisher: the hero holds the spear (drawn by cineFx) instead of the weapon.
   if (f.state === 'cine' && (f.cineAnim === 'cine_lunge' || f.cineAnim === 'cine_point')) return;
+  // Pixel look only: the player's chosen weapon skin replaces the weapon's own drawing.
+  if (DRAW.ink && f.kind === 'player' && drawWeaponSkin(ctx, f, j, wpp, performance.now() / 1000)) return;
   const wd = weaponById(f.weapon);
   if (wd.held) wd.held(ctx, f, j, col, wpp);
 }

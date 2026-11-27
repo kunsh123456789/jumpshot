@@ -13,7 +13,7 @@ export function drawHeroGear(
   ctx: CanvasRenderingContext2D, j: Float32Array, hx: number, hy: number, headR: number, face: number, s: number, wpp: number, pal: GearPalette,
 ): void {
   const g = HERO_LOOK.headgear, h = HERO_LOOK.hands;
-  if (g === 'none' && h === 'none') return;
+  if (g === 'none' && h !== 'wraps' && h !== 'mitts') return;
   ctx.save();
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   const lw = 2.2 * wpp + 0.4;
@@ -63,7 +63,7 @@ export function drawHeroGear(
     }
   }
   ctx.lineWidth = lw; ctx.strokeStyle = pal.ink; ctx.fillStyle = pal.ink;
-  if (h !== 'none') {
+  if (h === 'wraps' || h === 'mitts') {
     for (const [hand, elbow] of [[J.handA, J.elbA], [J.handB, J.elbB]] as const) {
       const x = j[hand * 2], y = j[hand * 2 + 1], ex = j[elbow * 2], ey = j[elbow * 2 + 1];
       if (h === 'mitts') { ctx.beginPath(); ctx.arc(x, y, 5.5 * s, 0, TAU); ctx.fill(); continue; }

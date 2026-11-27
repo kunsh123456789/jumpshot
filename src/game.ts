@@ -1,7 +1,7 @@
 import { layout } from './core/layout';
 import { Camera } from './core/camera';
 import { TimeControl } from './core/time';
-import { save, saveSettings, settings, wipeAllAndReload, writeSave } from './core/settings';
+import { noteRank, save, saveSettings, settings, wipeAllAndReload, writeSave } from './core/settings';
 import { audio } from './core/audio';
 import { World } from './sim/world';
 import { Renderer } from './render/renderer';
@@ -127,6 +127,7 @@ export class Game {
     window.addEventListener('blur', () => { if ((this.state === 'playing' || this.state === 'tutorial' || this.state === 'training') && !this.paused) this.togglePause(); });
     document.addEventListener('visibilitychange', () => { if (document.hidden && (this.state === 'playing' || this.state === 'tutorial' || this.state === 'training') && !this.paused) this.togglePause(); });
     this.world.events.on('waveClear', () => this.onWaveClear());
+    this.world.events.on('rankUp', (e) => noteRank(e.rank));
     // Special (pass 8): the input phases open after the activation beat; first READY shows a hint.
     this.world.events.on('specialInput', () => this.specialInput.begin(this.world));
     this.world.events.on('specialReady', () => {
