@@ -59,24 +59,24 @@ export const V2 = {
  */
 export const GRAPPLE = {
   /** The roof the hook bites into: this far above the floor (the hero can never go above it). */
-  roofHeight: 470,
+  roofHeight: 650,
   /** Hip height above the feet, and the hands' distance from the hip with arms raised (the rig). */
   hipH: 68, handOff: 100,
   /** Rope length to the hip: shortest (a tight hang under the roof) and longest (feet skim the floor). */
-  minLen: 150, maxLen: 380,
+  minLen: 170, maxLen: 560,
   /** How far ahead of the hip a swing rope lands (plus some of the current speed). */
-  ahead: 230, aheadPerSpeed: 0.14, aheadMax: 140,
+  ahead: 290, aheadPerSpeed: 0.16, aheadMax: 170,
   /** Swing physics: gravity, the forward pump on the downswing, reeling speed, top speed. */
-  gravity: 2350, pump: 1150, steer: 700, reel: 950, reelUp: 2100, maxSpeed: 1650,
+  gravity: 2050, pump: 1600, steer: 950, reel: 760, reelUp: 2100, maxSpeed: 1950,
   /** Off the floor: the running start along the arc, how far ahead the rope lands, and how high
    *  above the floor the bottom of that first swing passes. */
-  yank: 720, aheadGround: 300, groundClear: 45,
+  yank: 820, aheadGround: 360, groundClear: 40,
   /** A flick swings one arc and lets go once this far past the anchor (fraction of the rope) on the way up. */
-  releaseAt: 0.4,
+  releaseAt: 0.78,
   /** Holding the input keeps swinging up to this long; an un-held swing lets go by this time anyway. */
-  maxHold: 260, maxAuto: 95,
+  maxHold: 420, maxAuto: 150,
   /** Let-go pop (upward speed added) and the low air drag after a let-go (frames). */
-  pop: 170, jumpPop: 780, fling: 48, flingDrag: 0.992,
+  pop: 260, jumpPop: 800, fling: 70, flingDrag: 0.994,
   /** Dodge zip-up: hang under the roof this long before dropping (unless the input is held). */
   hang: 46,
   /** Wall zip speed and the cling: slide speed, when the slide speeds up, how long you can stay. */

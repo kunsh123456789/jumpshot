@@ -40,6 +40,8 @@ export class Grapple {
   side = 0;
   /** Rope shot: 0..1 while the hook flies out (drawing only). */
   shot = 1;
+  /** Frames since the hook bit: the rope's grip eases in over the first few (no jolt on the bite). */
+  bite = 0;
   /** Fading bite marks left on the roof and walls (drawing only). */
   marks: Mark[] = [];
   /** World-space body rotation for the renderer (top of the body toward the anchor). */
@@ -74,7 +76,7 @@ export class Grapple {
       this.vx = ny * this.dir * G.yank; this.vy = -nx * this.dir * G.yank;
     }
     this.hang = hang;
-    this.shot = 0;
+    this.shot = 0; this.bite = 0;
     this.t = 0;
     this.phase = 'swing';
     this.enter(w, p, 'swing');
@@ -183,6 +185,7 @@ export class Grapple {
       this.shot = Math.min(1, this.shot + 0.34);
       if (this.shot >= 1) w.events.emit('v2fx', { kind: 'gAttach', x: this.ax, y: this.ay, a: this.phase === 'zip' ? 1 : 0.6 });
     }
+    if (this.shot >= 1) this.bite++; else this.bite = 0;
     if (this.phase === 'swing') this.tickSwing(w, p);
     else if (this.phase === 'zip') this.tickZip(w, p);
     else if (this.phase === 'cling') this.tickCling(w, p);
@@ -219,21 +222,32 @@ export class Grapple {
       if (this.shot >= 1) {
         const tx = ny * this.dir, ty = -nx * this.dir; // tangent toward the swing direction
         const ahead = (this.hx - this.ax) * this.dir;
-        if (ahead < this.len * 0.25 && (held || this.t < G.maxAuto || this.hang > 0)) { this.vx += tx * G.pump * dt; this.vy += ty * G.pump * dt; }
+        // the pump fades out smoothly as the hip swings past the anchor (no jolt when it stops)
+        const k = clamp((this.len * 0.35 - ahead) / (this.len * 0.5), 0, 1);
+        if (k > 0 && (held || this.t < G.maxAuto || this.hang > 0)) { const pk = G.pump * k * k * (3 - 2 * k); this.vx += tx * pk * dt; this.vy += ty * pk * dt; }
         const ax = w.moveAxis;
         if (ax !== 0) { this.vx += ny * ax * G.steer * dt; this.vy += -nx * ax * G.steer * dt; }
       }
       this.hx += this.vx * dt; this.hy += this.vy * dt;
-      // reel toward the wanted length
-      const reel = (this.hang > 0 || this.lenT <= G.minLen * s + 1 ? G.reelUp : G.reel) * dt;
-      this.len += clamp(this.lenT - this.len, -reel, reel);
+      // while the hook is still flying the rope pays out (no snap when it bites)
+      if (this.shot < 1) this.len = Math.max(this.len, Math.hypot(this.hx - this.ax, this.hy - this.ay));
+      // reel toward the wanted length: eased in (a soft pull, not a yank); the zip-up hang winches at full speed
+      const fast = this.hang > 0 || this.lenT <= G.minLen * s + 1;
+      const reel = (fast ? G.reelUp : G.reel) * dt;
+      const want = this.lenT - this.len;
+      this.len += clamp(fast ? want : want * Math.min(1, 7 * dt), -reel, reel);
+      // the rope reels in its own slack once the hook has bitten (like a web retracting), so the hero rides
+      // one continuous arc instead of falling free and snapping taut
+      if (this.shot >= 1 && this.hang === 0) { const dd = Math.hypot(this.hx - this.ax, this.hy - this.ay); if (dd < this.len) this.len = Math.max(G.minLen * s, dd); }
       // rope: never longer than len
       nx = this.hx - this.ax; ny = this.hy - this.ay; d = Math.hypot(nx, ny) || 1;
-      if (d > this.len && this.shot >= 1) { this.hx = this.ax + (nx / d) * this.len; this.hy = this.ay + (ny / d) * this.len; }
+      // a slightly elastic rope: it catches the hero over a few substeps instead of snapping taut
+      const grip = Math.min(1, this.bite / 6);
+      if (d > this.len && this.shot >= 1) { const L = this.len + (d - this.len) * (1 - 0.55 * grip); this.hx = this.ax + (nx / d) * L; this.hy = this.ay + (ny / d) * L; }
       // a hang is a winch: it stops at its length instead of flinging the hero past the anchor
       else if (this.hang > 0 && this.len <= this.lenT + 1 && d < this.lenT) { this.hx = this.ax + (nx / d) * this.lenT; this.hy = this.ay + (ny / d) * this.lenT; }
       // the floor: skim it and take the slack out of the rope; never through the roof
-      if (this.hy > maxHipY) { this.hy = maxHipY; this.lenT = Math.min(this.lenT, Math.hypot(this.hx - this.ax, this.hy - this.ay)); }
+      if (this.hy > maxHipY) { this.hy = maxHipY; const fl = Math.hypot(this.hx - this.ax, this.hy - this.ay); this.lenT = Math.min(this.lenT, fl); if (this.shot >= 1) this.len = Math.min(this.len, fl); }
       if (this.hy < minHipY) { this.hy = minHipY; this.vx *= 0.9; }
       this.hx = clamp(this.hx, WALL_L, WALL_R);
       this.vx = (this.hx - ox) / dt; this.vy = (this.hy - oy) / dt;
@@ -242,7 +256,10 @@ export class Grapple {
       if (this.shot >= 1 && d >= Math.min(this.len, this.hang > 0 ? this.lenT : this.len) - 0.5) {
         nx /= d; ny /= d;
         const vr = this.vx * nx + this.vy * ny;
-        this.vx -= nx * vr; this.vy -= ny * vr;
+        // outward speed is soaked up gradually (the stretch), inward speed (reeling) is removed outright
+        const keep = vr > 0 ? 0.35 : 0;
+        const g2 = Math.min(1, this.bite / 6);
+        this.vx -= nx * vr * (1 - keep) * g2; this.vy -= ny * vr * (1 - keep) * g2;
       }
       const sp = Math.hypot(this.vx, this.vy);
       if (sp > G.maxSpeed) { this.vx *= G.maxSpeed / sp; this.vy *= G.maxSpeed / sp; }

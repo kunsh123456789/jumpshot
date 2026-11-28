@@ -887,3 +887,24 @@ All the effects live in `render/clip3Fx.ts`. They are Pixel look only and render
   3. ten rapid lashes, one every 6 frames, round-robin over them, each a curved cord from the hand with a crack burst and a one-frame impact flash (cine fx `flick`, skipped with Reduce Flashes);
   4. one big final crack that launches them.
 - **Same as the Ice finisher:** it's gated on `DRAW.ink` in `data/cines.ts`, so Classic and the neon look are unchanged.
+
+## Grappling hook: a higher roof, smoother and swingier
+- **Roof:** raised from 470 to 650 above the floor. The camera keeps the roof band in view while you swing (anchor + 60 instead of + 160).
+- **Longer, bigger, carrying swings:**
+  - longer ropes (up to 560);
+  - a stronger downswing pump (1600), lighter gravity (2050) and more steering (950);
+  - a later let-go on the upswing (78% past the anchor);
+  - longer auto and held swings;
+  - a bigger let-go pop and a longer low-drag carry afterwards.
+- **Smoothness:**
+  - the rope pays out while the hook flies, and its grip eases in over the first 6 frames after the bite;
+  - the reel eases toward its length instead of yanking;
+  - the rope reels in its own slack, so you ride one continuous arc instead of falling free and snapping taut;
+  - outward speed is soaked up with a little stretch;
+  - the pump fades out smoothly past the anchor instead of switching off.
+- **Measured** on a floor swing (`t_swing.cjs`):
+  - peak height 112 → 245;
+  - airtime after letting go 33 → 55 frames;
+  - distance 862 → 1157;
+  - worst jolt 55.9k → 17.9k (units/s³).
+- **Tests:** all the existing grapple tests and the fuzz pass, and Classic is unchanged.
